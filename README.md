@@ -72,7 +72,7 @@ User Interfaces
          │
     Query API (FastAPI)
          │
-    ┌────┴────┬──────────┬────────┐
+    ┌────┴────┬─────────┐
 OpenSearch  Neptune     S3
 (Vector)    (Graph)   (JSON Source)
 ```
@@ -200,7 +200,7 @@ Pure vector search misses multi-hop connections. Pure graph misses semantic simi
 - Graph: BRCA1 → increases_risk → breast cancer → treated_by → olaparib
 - Result: Drugs with evidence for BRCA-mutated subtype specifically
 
-[Complete design decisions →](docs/design-principles.md)
+[Complete design decisions →](./DESIGN_DECISIONS.md)
 
 ---
 
@@ -226,7 +226,7 @@ class MedicalRelationship:
     contradicted_by: list[str] # Track conflicts
 ```
 
-[Full schema documentation →](schema/unified_schema.py)
+[Full schema documentation →](./schema/README.md)
 
 ---
 
@@ -269,7 +269,8 @@ class MedicalRelationship:
 }
 ```
 
-[Query language specification →](docs/query-language.md) | [More examples →](docs/query-examples.md)
+<!-- TODO these links need to be replaced -->
+** [Query language specification →](client/QUERY_LANGUAGE.md) | [More examples →](client/curl/EXAMPLES.md)
 
 ---
 

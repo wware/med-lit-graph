@@ -662,14 +662,3 @@ For each major architectural decision, we follow this process:
 6. **Document the decision** for future reference
 
 **Principle**: Choose simplicity and correctness over performance. Medical applications require trustworthiness above all else.
-
----
-
-## Feedback
-
-These decisions are not set in stone. If you have suggestions or concerns, please:
-- Open a discussion on GitHub
-- Email us at architecture@medgraph.com
-- Join our Discord community
-
-We welcome constructive feedback and are open to revisiting decisions based on new information.
