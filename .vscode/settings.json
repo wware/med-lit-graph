@@ -1,0 +1,70 @@
+{
+    // Editor settings
+    "editor.rulers": [
+        200
+    ],
+    "editor.wordWrap": "off",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "explicit"
+    },
+    // Python settings
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+    "python.formatting.provider": "black",
+    "python.formatting.blackArgs": [
+        "--line-length=200"
+    ],
+    "python.linting.enabled": true,
+    "python.linting.lintOnSave": true,
+    "python.linting.pylintEnabled": true,
+    "python.linting.pylintArgs": [
+        "--max-line-length=200"
+    ],
+    "python.linting.flake8Enabled": true,
+    "python.linting.flake8Args": [
+        "--max-line-length=200",
+        "--extend-ignore=E203,E266,E501,W503"
+    ],
+    "python.linting.mypyEnabled": false,
+    "python.linting.ruffEnabled": false,
+    // File associations
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter",
+        "editor.formatOnSave": true,
+        "editor.rulers": [
+            200
+        ],
+        "editor.tabSize": 4,
+        "editor.insertSpaces": true
+    },
+    // Ruff settings (if using ruff extension) - this is the modern linter
+    "ruff.enable": true,
+    "ruff.lineLength": 200,
+    "ruff.lint.args": [
+        "--line-length=200"
+    ],
+    "ruff.format.args": [
+        "--line-length=200"
+    ],
+    "ruff.codeAction.fixViolation": {
+        "enable": true
+    },
+    // File exclusions
+    "files.exclude": {
+        "**/__pycache__": true,
+        "**/*.pyc": true,
+        "**/.pytest_cache": true,
+        "**/.mypy_cache": true,
+        "**/med_lit_graph.egg-info": true
+    },
+    // Search exclusions
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/__pycache__": true,
+        "**/*.pyc": true,
+        "**/.pytest_cache": true,
+        "**/.mypy_cache": true,
+        "**/med_lit_graph.egg-info": true,
+        "**/uv.lock": true
+    }
+}

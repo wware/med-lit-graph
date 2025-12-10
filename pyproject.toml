@@ -1,0 +1,73 @@
+[build-system]
+requires = ["setuptools>=61.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "med-lit-graph"
+version = "0.1.0"
+description = "A knowledge graph schema and query language for medical literature"
+readme = "README.md" # Recommended: Add a reference to your readme file
+
+authors = [
+    {name = "Will Ware", email = "will.ware@gmail.com"},
+]
+
+# Use requires-python to define the compatible Python version range
+requires-python = ">=3.9"
+
+# license = {text = "MIT"}
+
+# Required runtime dependencies for your project
+dependencies = [
+    "black>=25.11.0",
+    "mypy>=1.19.0",
+    "numpy>=2.0.2",
+    "pydantic>=2.0", # Highly useful for defining a rigid 'schema'
+    # NOTE: You must fill this in based on the packages you 'import' in your code.
+    # Common libraries for a graph/literature project might include:
+    # "networkx",
+    # "pandas",
+    # "requests",
+    "pylint>=3.3.9",
+    "pytest>=8.4.2",
+    "requests>=2.32.5",
+    "ruff>=0.14.8",
+    "tqdm>=4.67.1",
+    "tqdm-stubs>=0.2.1",
+]
+
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+
+    # New, more specific classifiers for discovery:
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Scientific/Engineering :: Medical Science Apps",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Text Processing :: General",
+]
+
+[tool.setuptools]
+# This section tells setuptools exactly which folders to treat as Python packages.
+packages = ["mcp", "schema", "client"]
+
+[tool.black]
+line-length = 200
+
+[tool.ruff]
+line-length = 200
+
+# [tool.ruff.lint]
+# line-length = 200
+
+[tool.pylint.main]
+max-line-length = 200
+
+[tool.flake8]
+max-line-length = 200
+extend-ignore = ["E203", "E266", "E501", "W503"]
