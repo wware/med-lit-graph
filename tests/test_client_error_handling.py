@@ -47,9 +47,7 @@ def test_client_handles_400_bad_request():
             self.headers = {}
 
         def post(self, url, json=None, timeout=None):
-            return FakeErrorResponse(
-                400, {"error": "VALIDATION_ERROR", "message": "field 'find' is required"}
-            )
+            return FakeErrorResponse(400, {"error": "VALIDATION_ERROR", "message": "field 'find' is required"})
 
     client.session = BadRequestSession()
 
@@ -273,7 +271,7 @@ def test_client_sets_content_type_header():
 
     # Verify JSON was sent
     assert json_sent is not None
-    assert "find" in json_sent
+    assert "find" in (json_sent or {})
 
 
 def test_client_handles_401_unauthorized():
@@ -310,9 +308,7 @@ def test_client_handles_429_rate_limit():
             self.headers = {}
 
         def post(self, url, json=None, timeout=None):
-            return FakeErrorResponse(
-                429, {"error": "Rate limit exceeded", "retry_after": 60}
-            )
+            return FakeErrorResponse(429, {"error": "Rate limit exceeded", "retry_after": 60})
 
     client.session = RateLimitSession()
 

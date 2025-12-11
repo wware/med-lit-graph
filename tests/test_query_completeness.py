@@ -8,7 +8,6 @@ Every query pattern shown in the docs should be buildable and executable.
 import json
 
 
-
 def test_example_1_find_treatments_for_disease(http_medical_graph_client):
     """
     Test Example 1 from QUERY_LANGUAGE.md: Find drugs that treat breast cancer.

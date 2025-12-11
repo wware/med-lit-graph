@@ -11,6 +11,7 @@ Usage in tests:
         assert isinstance(res, dict)
         assert "results" in res
 """
+
 from __future__ import annotations
 import json
 import threading
@@ -33,6 +34,7 @@ from client.python.client import MedicalGraphClient
 #
 # Adapt to the repository's actual node/edge shape if needed.
 
+
 @pytest.fixture
 def small_graph():
     nodes = [
@@ -42,7 +44,7 @@ def small_graph():
         {"id": "author:alice", "type": "Author", "props": {"name": "Alice Smith", "orcid": "0000-0001"}},
         {"id": "author:bob", "type": "Author", "props": {"name": "Bob Jones", "orcid": "0000-0002"}},
         {"id": "venue:confA", "type": "Venue", "props": {"name": "Conf A", "issn": "1234-5678"}},
-        {"id": "concept:kg", "type": "Concept", "props": {"label": "Knowledge Graph"}}
+        {"id": "concept:kg", "type": "Concept", "props": {"label": "Knowledge Graph"}},
     ]
 
     edges = [
@@ -52,7 +54,7 @@ def small_graph():
         {"source": "paper:002", "target": "paper:001", "type": "CITES"},
         {"source": "paper:003", "target": "paper:001", "type": "CITES"},
         {"source": "paper:001", "target": "venue:confA", "type": "PUBLISHED_IN"},
-        {"source": "paper:002", "target": "concept:kg", "type": "MENTIONS"}
+        {"source": "paper:002", "target": "concept:kg", "type": "MENTIONS"},
     ]
 
     # Return a mutable object that tests can pass to query executors.
@@ -64,20 +66,10 @@ def example_queries():
     # Example JSON-query language snippets. Adapt keys to match your JSON query language.
     # These are intentionally generic and cover basic operations: filter, traverse, aggregate.
     return {
-        "select_papers_2020": {
-            "select": {"type": "Paper", "fields": ["id", "title", "year"]},
-            "where": {"props.year": {"$eq": 2020}},
-            "limit": 10
-        },
-        "authors_of_paper_001": {
-            "select": {"from": {"type": "Paper", "id": "paper:001"}, "expand": [{"edge": "AUTHORED_BY", "direction": "out"}], "fields": ["id", "props.name"]}
-        },
-        "citation_traversal_depth_1": {
-            "select": {"from": {"type": "Paper", "id": "paper:002"}, "traverse": {"edge": "CITES", "direction": "out", "depth": 1}, "fields": ["id", "props.title"]}
-        },
-        "invalid_query_missing_select": {
-            "where": {"props.year": {"$eq": 2020}}
-        }
+        "select_papers_2020": {"select": {"type": "Paper", "fields": ["id", "title", "year"]}, "where": {"props.year": {"$eq": 2020}}, "limit": 10},
+        "authors_of_paper_001": {"select": {"from": {"type": "Paper", "id": "paper:001"}, "expand": [{"edge": "AUTHORED_BY", "direction": "out"}], "fields": ["id", "props.name"]}},
+        "citation_traversal_depth_1": {"select": {"from": {"type": "Paper", "id": "paper:002"}, "traverse": {"edge": "CITES", "direction": "out", "depth": 1}, "fields": ["id", "props.title"]}},
+        "invalid_query_missing_select": {"where": {"props.year": {"$eq": 2020}}},
     }
 
 
@@ -110,10 +102,9 @@ def small_entities():
     }
 
 
-
-
 class _ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     """HTTPServer with thread-per-request handling."""
+
     daemon_threads = True
     allow_reuse_address = True
 
@@ -273,6 +264,7 @@ def http_medical_graph_client(mock_med_graph_server) -> MedicalGraphClient:
 
 
 ##############################
+
 
 class FakeResponse:
     def __init__(self, payload, status_code=200):

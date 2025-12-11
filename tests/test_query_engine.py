@@ -6,15 +6,7 @@ from client.python.client import QueryBuilder, EntityType
 
 
 def test_query_builder_serialization_and_execute(mocked_medical_graph_client):
-    qb = (
-        QueryBuilder()
-        .find_nodes(EntityType.DRUG)
-        .with_edge("treats", min_confidence=0.7)
-        .filter_target(EntityType.DISEASE, name="Breast Cancer")
-        .order_by("paper_count", "desc")
-        .limit(5)
-        .build()
-    )
+    qb = QueryBuilder().find_nodes(EntityType.DRUG).with_edge("treats", min_confidence=0.7).filter_target(EntityType.DISEASE, name="Breast Cancer").order_by("paper_count", "desc").limit(5).build()
 
     # Ensure GraphQuery serializes via pydantic model_dump (v2)
     dumped = qb.model_dump(exclude_none=True)

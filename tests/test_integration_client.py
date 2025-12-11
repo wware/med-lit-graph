@@ -11,6 +11,7 @@ def test_find_treatments_against_mock_server(http_medical_graph_client):
         first = res["results"][0]
         assert "pmc_id" in first or "title" in first
 
+
 def test_execute_raw_returns_paths(http_medical_graph_client):
     # direct raw paths query (the mock server responds with plausible path results)
     raw_query = {
