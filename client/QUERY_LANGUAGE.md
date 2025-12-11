@@ -835,6 +835,90 @@ Use descriptive variable names instead of generic ones:
 }
 ```
 
+## Query Translation
+
+The JSON query language translates to native graph query languages including Cypher (Neo4j), openCypher (Neptune), and Gremlin. Here are two examples to illustrate the translation:
+
+### Example 1: Simple Node Query
+
+**JSON Query:**
+```json
+{
+  "find": "nodes",
+  "node_pattern": {
+    "node_type": "drug",
+    "var": "drug"
+  },
+  "filters": [
+    {
+      "field": "drug.name",
+      "operator": "contains",
+      "value": "metformin"
+    }
+  ],
+  "limit": 10
+}
+```
+
+**Translates to Cypher (Neo4j) / openCypher (Neptune):**
+```cypher
+MATCH (drug:Drug)
+WHERE drug.name CONTAINS 'metformin'
+RETURN drug
+LIMIT 10
+```
+
+**Translates to Gremlin:**
+```groovy
+g.V().hasLabel('Drug')
+  .has('name', containing('metformin'))
+  .limit(10)
+```
+
+### Example 2: Query with Edge Pattern
+
+**JSON Query:**
+```json
+{
+  "find": "nodes",
+  "node_pattern": {
+    "node_type": "drug",
+    "var": "drug"
+  },
+  "edge_pattern": {
+    "relation_type": "treats",
+    "direction": "outgoing",
+    "min_confidence": 0.7,
+    "var": "treatment"
+  },
+  "filters": [
+    {
+      "field": "target.name",
+      "operator": "eq",
+      "value": "diabetes"
+    }
+  ]
+}
+```
+
+**Translates to Cypher:**
+```cypher
+MATCH (drug:Drug)-[treatment:TREATS]->(target)
+WHERE treatment.confidence >= 0.7
+  AND target.name = 'diabetes'
+RETURN drug
+```
+
+**Translates to Gremlin:**
+```groovy
+g.V().hasLabel('Drug').as('drug')
+  .outE('TREATS').has('confidence', gte(0.7))
+  .inV().has('name', 'diabetes')
+  .select('drug')
+```
+
+The translation layer handles the complexity of mapping JSON patterns to each database's native query syntax, allowing you to write queries once and target multiple graph databases.
+
 ## Query Validation
 
 All queries are validated before execution. Common validation errors:
