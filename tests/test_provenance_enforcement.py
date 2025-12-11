@@ -12,7 +12,6 @@ from schema.relationship import (
     Treats,
     Causes,
     IncreasesRisk,
-    BaseMedicalRelationship,
     RelationType,
 )
 from schema.entity import Evidence

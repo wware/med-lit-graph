@@ -1,5 +1,3 @@
-import json
-import tempfile
 from schema.entity import (
     Disease,
     Gene,
@@ -7,8 +5,6 @@ from schema.entity import (
     EntityCollection,
     generate_embeddings_for_entities,
 )
-from datetime import datetime
-import os
 
 
 def test_entity_models_basic_validation(small_entities):

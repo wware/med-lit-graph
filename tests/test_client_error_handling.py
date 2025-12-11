@@ -10,7 +10,6 @@ Ensures the client fails gracefully and provides clear error messages when:
 
 import pytest
 import json
-from unittest.mock import Mock, patch
 import requests
 
 from client.python.client import MedicalGraphClient, QueryBuilder
@@ -336,7 +335,7 @@ def test_client_serialization_error_handling():
     """
     Test that client handles objects that can't be JSON serialized.
     """
-    client = MedicalGraphClient(base_url="http://test", api_key=None)
+    MedicalGraphClient(base_url="http://test", api_key=None)
 
     # Create a query with a non-serializable object
     class NonSerializable:
@@ -376,7 +375,7 @@ def test_client_handles_network_unreachable():
     """
     Test that client handles network being unreachable.
     """
-    client = MedicalGraphClient(base_url="http://192.0.2.1", api_key=None, timeout=0.1)
+    MedicalGraphClient(base_url="http://192.0.2.1", api_key=None, timeout=0.1)
 
     # Note: This might actually try to connect in real tests
     # In production, you'd mock the socket layer

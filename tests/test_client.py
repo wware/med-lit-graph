@@ -1,6 +1,4 @@
-import json
-from client.python.client import MedicalGraphClient, QueryBuilder, GraphQuery, NodePattern, EdgePattern, PropertyFilter
-import types
+from client.python.client import MedicalGraphClient, QueryBuilder, GraphQuery
 
 
 def test_query_builder_and_graphquery_serialization():

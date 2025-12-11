@@ -1,12 +1,11 @@
-import pytest
 from client.python.client import QueryBuilder, EntityType
 
 # This test set targets the client QueryBuilder/GraphQuery and MedicalGraphClient.
-# It uses the monkeypatch-based medical_graph_client fixture provided by
+# It uses the monkeypatch-based mocked_medical_graph_client fixture provided by
 # tests/conftest_monkeypatch.py so no network is needed.
 
 
-def test_query_builder_serialization_and_execute(medical_graph_client):
+def test_query_builder_serialization_and_execute(mocked_medical_graph_client):
     qb = (
         QueryBuilder()
         .find_nodes(EntityType.DRUG)
@@ -23,13 +22,13 @@ def test_query_builder_serialization_and_execute(medical_graph_client):
     assert dumped.get("find") == "nodes"
 
     # Execute typed query via the patched client.session
-    res = medical_graph_client.execute(qb)
+    res = mocked_medical_graph_client.execute(qb)
     assert isinstance(res, dict)
     assert "results" in res
     assert isinstance(res["results"], list)
 
 
-def test_execute_raw_paths_returns_path_structure(medical_graph_client):
+def test_execute_raw_paths_returns_path_structure(mocked_medical_graph_client):
     raw_query = {
         "find": "paths",
         "path_pattern": {
@@ -40,7 +39,7 @@ def test_execute_raw_paths_returns_path_structure(medical_graph_client):
         "return_fields": ["drug.name", "target.name", "interaction.relation_type"],
     }
 
-    res = medical_graph_client.execute_raw(raw_query)
+    res = mocked_medical_graph_client.execute_raw(raw_query)
     assert isinstance(res, dict)
     assert "results" in res
     assert isinstance(res["results"], list)
@@ -49,8 +48,8 @@ def test_execute_raw_paths_returns_path_structure(medical_graph_client):
     assert "path" in first or "pmc_id" in first
 
 
-def test_find_treatments_convenience_uses_execute(medical_graph_client):
-    res = medical_graph_client.find_treatments("breast cancer", min_confidence=0.5, limit=3)
+def test_find_treatments_convenience_uses_execute(mocked_medical_graph_client):
+    res = mocked_medical_graph_client.find_treatments("breast cancer", min_confidence=0.5, limit=3)
     assert isinstance(res, dict)
     assert "results" in res
     if res["results"]:
@@ -58,9 +57,9 @@ def test_find_treatments_convenience_uses_execute(medical_graph_client):
         assert "title" in item or "pmc_id" in item
 
 
-def test_unhandled_payload_returns_empty_results(medical_graph_client):
+def test_unhandled_payload_returns_empty_results(mocked_medical_graph_client):
     # Send a payload our fake session doesn't match -> fallback returns {"results": []}
-    res = medical_graph_client.execute_raw({"not_a_valid_query_key": True})
+    res = mocked_medical_graph_client.execute_raw({"not_a_valid_query_key": True})
     assert isinstance(res, dict)
     assert "results" in res
     assert res["results"] == []

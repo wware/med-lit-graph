@@ -6,19 +6,10 @@ Every query pattern shown in the docs should be buildable and executable.
 """
 
 import json
-import pytest
-
-from client.python.client import (
-    MedicalGraphClient,
-    QueryBuilder,
-    GraphQuery,
-    NodePattern,
-    EdgePattern,
-    PropertyFilter,
-)
 
 
-def test_example_1_find_treatments_for_disease(medical_graph_client):
+
+def test_example_1_find_treatments_for_disease(http_medical_graph_client):
     """
     Test Example 1 from QUERY_LANGUAGE.md: Find drugs that treat breast cancer.
 
@@ -50,12 +41,12 @@ def test_example_1_find_treatments_for_disease(medical_graph_client):
     }
 
     # Should execute without errors
-    result = medical_graph_client.execute_raw(query_dict)
+    result = http_medical_graph_client.execute_raw(query_dict)
     assert isinstance(result, dict)
     assert "results" in result
 
 
-def test_example_2_find_genes_associated_with_disease(medical_graph_client):
+def test_example_2_find_genes_associated_with_disease(http_medical_graph_client):
     """
     Test Example 2 from QUERY_LANGUAGE.md: Find genes linked to Alzheimer's disease.
 
@@ -85,12 +76,12 @@ def test_example_2_find_genes_associated_with_disease(medical_graph_client):
         "limit": 50,
     }
 
-    result = medical_graph_client.execute_raw(query_dict)
+    result = http_medical_graph_client.execute_raw(query_dict)
     assert isinstance(result, dict)
     assert "results" in result
 
 
-def test_example_3_drug_mechanism_of_action(medical_graph_client):
+def test_example_3_drug_mechanism_of_action(http_medical_graph_client):
     """
     Test Example 3 from QUERY_LANGUAGE.md: Multi-hop drug mechanism query.
 
@@ -137,12 +128,12 @@ def test_example_3_drug_mechanism_of_action(medical_graph_client):
         ],
     }
 
-    result = medical_graph_client.execute_raw(query_dict)
+    result = http_medical_graph_client.execute_raw(query_dict)
     assert isinstance(result, dict)
     assert "results" in result
 
 
-def test_example_4_differential_diagnosis(medical_graph_client):
+def test_example_4_differential_diagnosis(http_medical_graph_client):
     """
     Test Example 4 from QUERY_LANGUAGE.md: Differential diagnosis from symptoms.
 
@@ -180,7 +171,7 @@ def test_example_4_differential_diagnosis(medical_graph_client):
         "order_by": [["symptom_count", "desc"], ["specificity_score", "desc"]],
     }
 
-    result = medical_graph_client.execute_raw(query_dict)
+    result = http_medical_graph_client.execute_raw(query_dict)
     assert isinstance(result, dict)
     assert "results" in result
 

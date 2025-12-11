@@ -5,16 +5,15 @@ exposes an endpoint POST /api/v1/query that returns plausible JSON results for
 the MedicalGraphClient in client/python/client.py.
 
 Usage in tests:
-    def test_something(mock_med_graph_server, medical_graph_client):
-        # medical_graph_client is pointed at the running mock server
-        res = medical_graph_client.find_treatments("breast cancer", min_confidence=0.5, limit=3)
+    def test_something(mock_med_graph_server, http_medical_graph_client):
+        # http_medical_graph_client is pointed at the running mock server
+        res = http_medical_graph_client.find_treatments("breast cancer", min_confidence=0.5, limit=3)
         assert isinstance(res, dict)
         assert "results" in res
 """
 from __future__ import annotations
 import json
 import threading
-from types import SimpleNamespace
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from socketserver import ThreadingMixIn
 from typing import Generator, Tuple
@@ -262,7 +261,7 @@ def mock_med_graph_server() -> Generator[Tuple[str, int], None, None]:
 
 
 @pytest.fixture
-def medical_graph_client(mock_med_graph_server) -> MedicalGraphClient:
+def http_medical_graph_client(mock_med_graph_server) -> MedicalGraphClient:
     """Return a MedicalGraphClient configured to talk to the mock_med_graph_server.
 
     Tests can use this client directly; its network calls will hit the mock server.
@@ -371,7 +370,7 @@ def fake_session(monkeypatch):
 
 
 @pytest.fixture
-def medical_graph_client(monkeypatch, fake_session) -> MedicalGraphClient:
+def mocked_medical_graph_client(monkeypatch, fake_session) -> MedicalGraphClient:
     """
     Return a MedicalGraphClient configured to use FakeSession (no network).
     This allows tests to exercise serialization + HTTP-path code without sockets.
