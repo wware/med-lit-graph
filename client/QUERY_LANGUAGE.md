@@ -952,9 +952,10 @@ All queries are validated before execution. Common validation errors:
 ### Python
 
 ```python
+import os
 from medgraph import MedicalGraphClient, QueryBuilder, EntityType, RelationType
 
-client = MedicalGraphClient("https://api.medgraph.com")
+client = MedicalGraphClient(os.getenv("MEDGRAPH_SERVER"))
 
 # Using QueryBuilder
 query = (QueryBuilder()
@@ -978,7 +979,7 @@ results = client.execute(query)
 ```typescript
 import { MedicalGraphClient, QueryBuilder, EntityType, RelationType } from '@medgraph/client';
 
-const client = new MedicalGraphClient('https://api.medgraph.com');
+const client = new MedicalGraphClient();
 
 const query = new QueryBuilder()
   .findNodes(EntityType.DRUG)

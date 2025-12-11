@@ -88,9 +88,11 @@ This isn't about replacing doctors—it's about giving them **superpowers for th
 
 **Python**:
 ```python
+import os
 from medgraph import MedicalGraphClient
 
-client = MedicalGraphClient("https://api.medgraph.com")
+# The client will use the MEDGRAPH_SERVER environment variable.
+client = MedicalGraphClient(os.getenv("MEDGRAPH_SERVER"))
 results = client.find_treatments("BRCA-mutated breast cancer")
 
 for drug in results.results:
@@ -100,7 +102,7 @@ for drug in results.results:
 
 **curl**:
 ```bash
-curl -X POST https://api.medgraph.com/api/v1/query -d '{
+curl -X POST $MEDGRAPH_SERVER/api/v1/query -d '{
   "find": "nodes",
   "node_pattern": {"node_type": "drug"},
   "edge_pattern": {"relation_type": "treats", "min_confidence": 0.7},
@@ -114,12 +116,12 @@ Every result includes PMC paper IDs, section locations, and extraction methods s
 
 ## Key Features
 
-🔍 **Provenance-First**: Every relationship traceable to specific papers, sections, and paragraphs  
-🔗 **Graph-Native**: Multi-hop queries across millions of relationships  
-📊 **Evidence-Weighted**: Automatic quality scoring (RCT > meta-analysis > case report)  
-🌐 **Vendor-Neutral**: JSON query language works with any graph database  
-🔓 **Open Source**: Schema, query language, and client libraries all public  
-🤖 **LLM-Ready**: MCP server for Claude, ChatGPT, and other AI assistants  
+🔍 **Provenance-First**: Every relationship traceable to specific papers, sections, and paragraphs
+🔗 **Graph-Native**: Multi-hop queries across millions of relationships
+📊 **Evidence-Weighted**: Automatic quality scoring (RCT > meta-analysis > case report)
+🌐 **Vendor-Neutral**: JSON query language works with any graph database
+🔓 **Open Source**: Schema, query language, and client libraries all public
+🤖 **LLM-Ready**: MCP server for Claude, ChatGPT, and other AI assistants
 
 ---
 
@@ -216,7 +218,7 @@ Different graph databases use different query languages (Cypher, Gremlin, SPARQL
     "edges": [
       {"edge": {"relation_type": "associated_with"}, "node": {"node_type": "gene"}},
       {"edge": {"relation_type": "encodes"}, "node": {"node_type": "protein"}},
-      {"edge": {"relation_type": "binds_to", "direction": "incoming"}, 
+      {"edge": {"relation_type": "binds_to", "direction": "incoming"},
        "node": {"node_type": "drug"}}
     ]
   }
@@ -344,9 +346,11 @@ pip install medgraph-client
 ```
 
 ```python
+import os
 from medgraph import MedicalGraphClient, QueryBuilder
 
-client = MedicalGraphClient("https://api.medgraph.com")
+# The client will use the MEDGRAPH_SERVER environment variable.
+client = MedicalGraphClient(os.getenv("MEDGRAPH_SERVER"))
 
 # High-level convenience methods
 treatments = client.find_treatments("diabetes")
@@ -375,7 +379,7 @@ npm install @medgraph/client
 ```typescript
 import { MedicalGraphClient, QueryBuilder, EntityType, RelationType } from '@medgraph/client';
 
-const client = new MedicalGraphClient('https://api.medgraph.com');
+const client = new MedicalGraphClient();
 
 const treatments = await client.findTreatments('diabetes');
 
@@ -406,7 +410,7 @@ npm install -g @medgraph/mcp-server
       "command": "npx",
       "args": ["@medgraph/mcp-server"],
       "env": {
-        "MEDGRAPH_API_URL": "https://api.medgraph.com"
+        "MEDGRAPH_API_URL": "${MEDGRAPH_SERVER}"
       }
     }
   }
@@ -575,9 +579,9 @@ MIT License - see [LICENSE](LICENSE)
 
 ## Links
 
-- **Documentation**: https://docs.medgraph.com
-- **API Reference**: https://api.medgraph.com/docs
-- **Demo**: https://demo.medgraph.com
+- **Documentation**: [Link to Documentation]
+- **API Reference**: [Link to API Reference]
+- **Demo**: [Link to Demo]
 - **Discussions**: https://github.com/yourusername/medical-knowledge-graph/discussions
 - **Issues**: https://github.com/yourusername/medical-knowledge-graph/issues
 
@@ -585,9 +589,9 @@ MIT License - see [LICENSE](LICENSE)
 
 ## Contact
 
-- Email: contact@medgraph.com
-- Twitter: @medgraph
-- Discord: [Join our community](https://discord.gg/medgraph)
+- Email: [your-contact-email@example.com]
+- Twitter: @[your-twitter-handle]
+- Discord: [Join our community]([your-discord-invite-link])
 
 ---
 

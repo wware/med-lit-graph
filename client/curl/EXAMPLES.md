@@ -6,7 +6,7 @@ Complete set of curl examples for querying the medical knowledge graph API.
 
 ```bash
 # Set your API endpoint and key
-export API_BASE="https://api.medgraph.example.com"
+export MEDGRAPH_SERVER="${MEDGRAPH_SERVER:-https://api.medgraph.example.com}"
 export API_KEY="your-api-key-here"
 
 # Helper function for authenticated requests
@@ -14,7 +14,7 @@ function mgraph() {
     curl -X POST \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer $API_KEY" \
-        "$API_BASE/api/v1/query" \
+        "$MEDGRAPH_SERVER/api/v1/query" \
         -d "$1"
 }
 ```
@@ -26,7 +26,7 @@ function mgraph() {
 **Find drugs that treat breast cancer:**
 
 ```bash
-curl -X POST https://api.medgraph.example.com/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{

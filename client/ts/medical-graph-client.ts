@@ -1,18 +1,19 @@
 /**
  * Medical Knowledge Graph Query Client (TypeScript)
- * 
+ *
  * TypeScript/JavaScript client library for querying the medical knowledge graph
  * using the JSON-based graph query language.
- * 
+ *
  * @example
  * ```typescript
  * import { MedicalGraphClient, QueryBuilder } from './medical-graph-client';
- * 
- * const client = new MedicalGraphClient('https://api.medgraph.example.com');
- * 
+ *
+ * // Client will use MEDGRAPH_SERVER environment variable for the base URL
+ * const client = new MedicalGraphClient();
+ *
  * // Simple query
  * const results = await client.findTreatments('breast cancer');
- * 
+ *
  * // Complex query using builder
  * const query = new QueryBuilder()
  *   .findNodes(EntityType.DRUG)
@@ -20,7 +21,7 @@
  *   .filterTarget(EntityType.DISEASE, { name: 'diabetes' })
  *   .limit(10)
  *   .build();
- * 
+ *
  * const results = await client.execute(query);
  * ```
  */
@@ -52,12 +53,12 @@ export enum RelationType {
   PREVENTS = 'prevents',
   INCREASES_RISK = 'increases_risk',
   DECREASES_RISK = 'decreases_risk',
-  
+
   // Treatment
   TREATS = 'treats',
   MANAGES = 'manages',
   CONTRAINDICATES = 'contraindicates',
-  
+
   // Biological
   BINDS_TO = 'binds_to',
   INHIBITS = 'inhibits',
@@ -66,18 +67,18 @@ export enum RelationType {
   DOWNREGULATES = 'downregulates',
   ENCODES = 'encodes',
   METABOLIZES = 'metabolizes',
-  
+
   // Clinical
   DIAGNOSES = 'diagnoses',
   INDICATES = 'indicates',
   PRECEDES = 'precedes',
   CO_OCCURS_WITH = 'co_occurs_with',
   ASSOCIATED_WITH = 'associated_with',
-  
+
   // Location
   LOCATED_IN = 'located_in',
   AFFECTS = 'affects',
-  
+
   // Provenance
   AUTHORED_BY = 'authored_by',
   CITES = 'cites',
@@ -85,15 +86,15 @@ export enum RelationType {
   SUPPORTS = 'supports'
 }
 
-export type FilterOperator = 
-  | 'eq' 
-  | 'ne' 
-  | 'gt' 
-  | 'gte' 
-  | 'lt' 
-  | 'lte' 
-  | 'in' 
-  | 'contains' 
+export type FilterOperator =
+  | 'eq'
+  | 'ne'
+  | 'gt'
+  | 'gte'
+  | 'lt'
+  | 'lte'
+  | 'in'
+  | 'contains'
   | 'regex';
 
 export type Direction = 'outgoing' | 'incoming' | 'both';
@@ -423,13 +424,20 @@ export class MedicalGraphClient {
   private timeout: number;
   private headers: Record<string, string>;
 
-  constructor(config: ClientConfig | string) {
-    if (typeof config === 'string') {
-      this.baseUrl = config.replace(/\/$/, '');
+  constructor(config?: ClientConfig | string) {
+    const baseUrl = typeof config === 'string'
+        ? config
+        : (config?.baseUrl || process.env.MEDGRAPH_SERVER || '');
+
+    if (!baseUrl) {
+      throw new Error("MedicalGraphClient: baseUrl is required. Provide it in the constructor or set the MEDGRAPH_SERVER environment variable.");
+    }
+    this.baseUrl = baseUrl.replace(/\/$/, '');
+
+    if (typeof config === 'string' || !config) {
       this.timeout = 30000;
       this.headers = {};
     } else {
-      this.baseUrl = config.baseUrl.replace(/\/$/, '');
       this.apiKey = config.apiKey;
       this.timeout = config.timeout || 30000;
       this.headers = config.headers || {};
@@ -495,8 +503,8 @@ export class MedicalGraphClient {
   ): Promise<QueryResult> {
     const query = new QueryBuilder()
       .findNodes(EntityType.DRUG)
-      .withEdge(RelationType.TREATS, { 
-        minConfidence: options.minConfidence || 0.6 
+      .withEdge(RelationType.TREATS, {
+        minConfidence: options.minConfidence || 0.6
       })
       .filterTarget(EntityType.DISEASE, { name: disease })
       .aggregate(
@@ -527,9 +535,9 @@ export class MedicalGraphClient {
       .findNodes(EntityType.GENE)
       .withEdge(
         [RelationType.ASSOCIATED_WITH, RelationType.CAUSES, RelationType.INCREASES_RISK],
-        { 
+        {
           direction: 'incoming',
-          minConfidence: options.minConfidence || 0.5 
+          minConfidence: options.minConfidence || 0.5
         }
       )
       .filterTarget(EntityType.DISEASE, { namePattern: `.*${disease}.*` })
