@@ -12,13 +12,34 @@ This directory contains the test suite for the medical literature knowledge grap
    - Entity collections with CRUD operations
    - Embedding generation and similarity search
 
-2. **Client Library** (`test_client.py`, `test_query_engine.py`)
+2. **Provenance Enforcement** (`test_provenance_enforcement.py`) **NEW**
+   - Evidence requirements and validation
+   - Confidence score bounds checking
+   - Lightweight vs. rich provenance support
+   - Multiple evidence aggregation
+   - Contradictory evidence tracking
+
+3. **Client Library** (`test_client.py`, `test_query_engine.py`, `test_integration_client.py`)
    - `MedicalGraphClient` API methods
    - `QueryBuilder` fluent interface
    - Query serialization and execution
    - Convenience methods (e.g., `find_treatments`)
 
-3. **MCP Server** (`test_mcp_server.py`)
+4. **Query Language Completeness** (`test_query_completeness.py`) **NEW**
+   - All 7 documented examples from QUERY_LANGUAGE.md
+   - Query serialization and JSON roundtrips
+   - Property filters and operators
+   - Aggregations and pagination
+   - Special characters and unicode handling
+
+5. **Client Error Handling** (`test_client_error_handling.py`) **NEW**
+   - HTTP error responses (400, 401, 404, 429, 500, 503)
+   - Network errors (timeout, connection failure, DNS)
+   - Malformed responses
+   - Empty responses
+   - Serialization errors
+
+6. **MCP Server** (`test_mcp_server.py`)
    - Tool listing and initialization
    - Search result formatting
    - OpenSearch integration setup
@@ -47,6 +68,27 @@ This directory contains the test suite for the medical literature knowledge grap
 - Tool discovery mechanism works
 - Search result formatting produces human-readable output
 - OpenSearch client integration is properly configured
+
+### ✅ **Provenance & Trustability** **NEW**
+- Evidence validation enforces mandatory paper_id field
+- Confidence scores are properly bounded (0.0-1.0)
+- Both lightweight (paper IDs only) and rich (full Evidence objects) provenance work
+- Multiple evidence sources can be aggregated
+- Contradictory evidence is properly tracked
+
+### ✅ **Query Language Documentation Accuracy** **NEW**
+- All 7 examples from QUERY_LANGUAGE.md are tested and work
+- Complex multi-hop queries serialize correctly
+- Filters, aggregations, and pagination work as documented
+- Special characters and unicode are handled properly
+- Query structure matches documented specification
+
+### ✅ **Client Robustness** **NEW**
+- Client handles all HTTP error codes gracefully (4xx, 5xx)
+- Network failures (timeout, connection error, DNS failure) raise clear exceptions
+- Malformed JSON responses are detected
+- Empty or unexpected response structures are handled
+- Timeout parameter is properly passed through to requests
 
 ### ✅ **Testability & Mocking**
 - The architecture supports testing without live dependencies
@@ -79,11 +121,28 @@ The `conftest.py` file provides shared fixtures:
 
 Passing all tests demonstrates that:
 1. **The data schema is sound** – entities and relationships model biomedical knowledge correctly
-2. **The query interface is production-ready** – clients can build, execute, and parse complex graph queries
-3. **The system is maintainable** – comprehensive mocking allows fast, reliable testing without external dependencies
-4. **Integration points work** – MCP server, OpenSearch, and HTTP APIs are properly connected
+2. **Provenance is enforced** – evidence requirements match documentation, confidence scores are validated
+3. **The query interface is production-ready** – clients can build, execute, and parse complex graph queries
+4. **Documentation is accurate** – all query examples from docs actually work
+5. **Client is robust** – gracefully handles service errors, network failures, and malformed responses
+6. **The system is maintainable** – comprehensive mocking allows fast, reliable testing without external dependencies
+7. **Integration points work** – MCP server, OpenSearch, and HTTP APIs are properly connected
 
-This test suite provides confidence that the medical literature graph system can correctly: 
+This test suite provides confidence that the medical literature graph system can correctly:
 - Store and retrieve biomedical entities with embeddings
-- Express and execute complex relationship queries
+- Enforce evidence-based provenance for all medical relationships
+- Express and execute complex relationship queries that match documented examples
+- Handle errors and edge cases gracefully
 - Serve as a queryable knowledge base through multiple interfaces (direct client, MCP server)
+
+## Test Statistics
+
+**Total Tests**: 63
+- Provenance enforcement: 11 tests
+- Query completeness: 18 tests
+- Client error handling: 19 tests
+- Schema & entities: 3 tests
+- Relationships: 2 tests
+- Client library: 6 tests
+- Integration: 2 tests
+- MCP server: 2 tests
