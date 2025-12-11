@@ -8,15 +8,77 @@
 
 Transform millions of medical research papers into a queryable knowledge graph with full citation traceability. Every relationship is backed by specific evidence from peer-reviewed literature, enabling doctors and researchers to verify every claim.
 
-**🔬 Try it**: [Demo](https://demo.medgraph.example.com) | [API Docs](https://api.medgraph.example.com/docs) | [Examples](examples/)
+<!-- **🔬 Try it**: TODO - links to non-existent services: [Demo](https://demo.medgraph.example.com) | [API Docs](https://api.medgraph.example.com/docs) | [Examples](examples/) -->
 
 ---
 
 ## Why This Project Exists
 
-My partner's doctor spent weeks being a diagnostic detective—correlating obscure symptoms across dozens of medical papers to find the right diagnosis. Most doctors don't have that time or tenacity, so patients suffer with wrong diagnoses for years.
+### The Problem: Diagnostic Detectives vs. Clinical Reality
 
-**This project makes every doctor that kind of bloodhound.**
+My partner's doctor spent **weeks** being a diagnostic detective—manually correlating obscure symptoms across dozens of medical papers, following citation trails, cross-referencing contradictory studies, and synthesizing evidence from disparate sources to find the right diagnosis. It worked, but most doctors don't have that time or tenacity.
+
+**The result**: Patients with complex or rare conditions suffer with wrong diagnoses for years.
+
+### Existing Tools Fall Short
+
+**PubMed** has 35+ million citations, but search is keyword-based. You can't ask:
+- "What diseases cause fatigue, joint pain, AND butterfly rash together?"
+- "What genes increase breast cancer risk AND have FDA-approved drugs?"
+- "How does metformin → AMPK → glucose metabolism work?"
+
+**UpToDate** offers expert-curated summaries, but:
+- Human curation is slow (months to update)
+- Doesn't excel at rare/complex multi-symptom diagnostics
+- No programmatic access for multi-hop reasoning
+
+**Google Scholar** finds papers but doesn't understand relationships between entities across papers.
+
+### What This Project Does Differently
+
+**Multi-hop graph queries with full provenance**—the kind of research that takes clinicians weeks can happen in milliseconds:
+
+```python
+# Question: "Drug repurposing for Alzheimer's via protein targets"
+# PubMed: 🤷 (keyword search won't find this path)
+# This system: ✅ Graph traversal finds the connection
+
+query = {
+  "find": "paths",
+  "path_pattern": {
+    "start": {"node_type": "disease", "name": "Alzheimer disease"},
+    "edges": [
+      {"edge": {"relation_type": "associated_with"}, "node": {"node_type": "gene"}},
+      {"edge": {"relation_type": "encodes"}, "node": {"node_type": "protein"}},
+      {"edge": {"relation_type": "binds_to", "direction": "incoming"},
+       "node": {"node_type": "drug", "properties": {"fda_approved": true}}}
+    ]
+  }
+}
+# Returns: FDA-approved drugs targeting proteins linked to Alzheimer's
+# With full citation trail showing each connection
+```
+
+**Every result includes**:
+- PMC paper IDs for verification
+- Section locations (results vs. discussion)
+- Study quality (RCT vs. case report)
+- Confidence scores based on evidence strength
+- Contradictory evidence when it exists
+
+### The Value Proposition
+
+This isn't about replacing doctors—it's about giving them **superpowers for the hard cases**:
+
+- **Rare disease diagnosis**: Correlate obscure symptom patterns across thousands of papers instantly
+- **Drug repurposing**: Find FDA-approved drugs for new indications via graph traversal
+- **Evidence synthesis**: Aggregate contradictory studies with quality weighting
+- **Pharmacovigilance**: Track drug interactions across the full corpus
+- **Research acceleration**: Literature reviews that take weeks → seconds
+
+**Built on free, public data (PubMed/PMC)** with transparent, reproducible graph construction.
+
+**Target users**: Physicians and researchers who need to answer complex questions that existing tools can't handle.
 
 ---
 
@@ -86,7 +148,7 @@ PubMed/PMC → Ingestion Pipeline → Per-Paper JSON (Source of Truth)
                   (Semantic Search)              (Graph Queries)
 ```
 
-[Full architecture docs →](docs/architecture.md)
+<!-- TODO file doesn't exist: [Full architecture docs →](docs/architecture.md) -->
 
 ---
 
@@ -303,7 +365,7 @@ query = (QueryBuilder()
 results = client.execute(query)
 ```
 
-[Python docs →](clients/python/) | [API reference →](clients/python/api.md)
+<!-- TODO files don't exist: [Python docs →](client/python/) | [API reference →](client/python/api.md) -->
 
 ### TypeScript/JavaScript
 ```bash
@@ -326,7 +388,7 @@ const query = new QueryBuilder()
 const results = await client.execute(query);
 ```
 
-[TypeScript docs →](clients/typescript/) | [API reference →](clients/typescript/api.md)
+<!-- TODO files don't exist: [TypeScript docs →](client/typescript/) | [API reference →](client/typescript/api.md) -->
 
 ### MCP Server (for LLMs)
 
@@ -356,7 +418,7 @@ Now ask Claude:
 
 Claude will query the graph and cite specific papers.
 
-[MCP server docs →](mcp-server/)
+<!-- TODO directory name is wrong: [MCP server docs →](mcp/) -->
 
 ---
 
@@ -401,7 +463,7 @@ genes = client.find_disease_genes("breast cancer", min_confidence=0.8)
 interactions = client.find_drug_interactions("warfarin", severity=["major"])
 ```
 
-[More use cases →](docs/use-cases.md)
+<!-- TODO file doesn't exist: [More use cases →](docs/use-cases.md) -->
 
 ---
 
@@ -444,7 +506,7 @@ Components:
 - Application Load Balancer
 - Auto-scaling + monitoring
 
-[Deployment guide →](docs/deployment.md)
+<!-- TODO file doesn't exist: [Deployment guide →](docs/deployment.md) -->
 
 ---
 
@@ -480,7 +542,7 @@ Components:
 - [ ] Real-time updates
 - [ ] Multi-region
 
-[Detailed roadmap →](docs/roadmap.md)
+<!-- TODO file doesn't exist: [Detailed roadmap →](docs/roadmap.md) -->
 
 ---
 
@@ -499,7 +561,7 @@ We need help from:
 3. Make your changes with tests
 4. Open a Pull Request
 
-[Contributing guide →](CONTRIBUTING.md) | [Code of conduct →](CODE_OF_CONDUCT.md)
+<!-- TODO files don't exist: [Contributing guide →](CONTRIBUTING.md) | [Code of conduct →](CODE_OF_CONDUCT.md) -->
 
 ---
 
