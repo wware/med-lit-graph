@@ -1,3 +1,0 @@
-client
-mcp
-schema
