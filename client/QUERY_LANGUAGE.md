@@ -648,6 +648,129 @@ Are there conflicting studies about aspirin and heart attacks?
 }
 ```
 
+### Example 8: Track Hypothesis Across Literature
+
+Find all hypotheses related to Alzheimer's disease and their supporting/refuting evidence.
+
+```json
+{
+  "find": "nodes",
+  "node_pattern": {
+    "node_type": "hypothesis",
+    "var": "hypothesis"
+  },
+  "edge_pattern": {
+    "relation_type": "predicts",
+    "direction": "outgoing",
+    "var": "prediction"
+  },
+  "filters": [
+    {
+      "field": "target.node_type",
+      "operator": "eq",
+      "value": "disease"
+    },
+    {
+      "field": "target.name_pattern",
+      "operator": "regex",
+      "value": ".*Alzheimer.*"
+    }
+  ],
+  "return_fields": [
+    "hypothesis.name",
+    "hypothesis.description",
+    "hypothesis.status",
+    "hypothesis.proposed_date",
+    "prediction.confidence"
+  ],
+  "order_by": [["prediction.confidence", "desc"]]
+}
+```
+
+### Example 9: Find Studies Testing a Hypothesis
+
+Find all studies that have tested a specific hypothesis and their outcomes.
+
+```json
+{
+  "find": "paths",
+  "path_pattern": {
+    "start": {
+      "node_type": "hypothesis",
+      "name": "Amyloid Cascade Hypothesis",
+      "var": "hypothesis"
+    },
+    "edges": [
+      {
+        "edge": {
+          "relation_type": "tested_by",
+          "var": "test"
+        },
+        "node": {
+          "node_type": "paper",
+          "var": "paper"
+        }
+      }
+    ]
+  },
+  "return_fields": [
+    "hypothesis.name",
+    "hypothesis.status",
+    "test.test_outcome",
+    "test.methodology",
+    "paper.title",
+    "paper.publication_date",
+    "paper.study_type"
+  ],
+  "order_by": [["paper.publication_date", "desc"]]
+}
+```
+
+### Example 10: Filter Studies by Statistical Method
+
+Find RCTs that used specific statistical methods to analyze drug efficacy.
+
+```json
+{
+  "find": "paths",
+  "path_pattern": {
+    "start": {
+      "node_type": "paper",
+      "properties": {"study_type": "rct"},
+      "var": "paper"
+    },
+    "edges": [
+      {
+        "edge": {
+          "relation_type": "generates",
+          "var": "generation"
+        },
+        "node": {
+          "node_type": "evidence_line",
+          "var": "evidence"
+        }
+      }
+    ]
+  },
+  "filters": [
+    {
+      "field": "evidence.eco_type",
+      "operator": "eq",
+      "value": "ECO:0007673"
+    }
+  ],
+  "return_fields": [
+    "paper.title",
+    "paper.publication_date",
+    "evidence.strength",
+    "evidence.supports",
+    "generation.quality_score"
+  ],
+  "order_by": [["generation.quality_score", "desc"]],
+  "limit": 20
+}
+```
+
 ## Field References
 
 ### Node Field References
@@ -700,6 +823,12 @@ When referencing edge fields:
 - `institution` - Institutions
 - `clinical_trial` - Clinical trials
 
+**Scientific Method Entities:**
+- `hypothesis` - Scientific hypotheses tracked across literature (IAO-based)
+- `study_design` - Study designs and experimental protocols (OBI-based)
+- `statistical_method` - Statistical methods and tests (STATO-based)
+- `evidence_line` - Structured evidence chains (SEPIO-based)
+
 ## Relationship Types
 
 **Causal:**
@@ -738,6 +867,12 @@ When referencing edge fields:
 - `cites` - Citation
 - `contradicts` - Contradiction
 - `supports` - Support
+
+**Hypothesis and Evidence:**
+- `predicts` - Hypothesis predicts an outcome
+- `refutes` - Evidence refutes a hypothesis
+- `tested_by` - Hypothesis tested by a study
+- `generates` - Study generates evidence
 
 ## Pagination
 
