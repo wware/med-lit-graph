@@ -81,9 +81,16 @@ Defines all entity types in the knowledge graph:
 - `Author` - Paper authors
 - `ClinicalTrial` - Clinical trials
 
+**Scientific Method Entities (Ontology-Based):**
+- `Hypothesis` - Scientific hypotheses tracked across literature (IAO:0000018)
+- `StudyDesign` - Study designs and experimental protocols (OBI-based)
+- `StatisticalMethod` - Statistical methods and tests (STATO-based)
+- `EvidenceLine` - Structured evidence chains (SEPIO-based)
+
 **Key Features:**
 - All entities share base properties:  `entity_id`, `name`, `synonyms`, `embedding`
 - Standards-based IDs (UMLS, MeSH, RxNorm, HGNC, UniProt)
+- Ontology references (IAO, OBI, STATO, ECO, SEPIO) for scientific methodology
 - Pre-computed embeddings for semantic search
 - `EntityCollection` for efficient storage and retrieval
 
@@ -97,6 +104,7 @@ Defines all relationship types between entities:
 - **Clinical:** `DIAGNOSED_BY`, `INDICATES`, `CO_OCCURS_WITH`, `ASSOCIATED_WITH`
 - **Drug Interactions:** `INTERACTS_WITH`
 - **Provenance:** `AUTHORED_BY`, `CITES`, `CONTRADICTS`, `SUPPORTS`
+- **Hypothesis and Evidence:** `PREDICTS`, `REFUTES`, `TESTED_BY`, `GENERATES`
 
 **Key Classes:**
 - `BaseRelationship` - Minimal triple (subject, predicate, object)
@@ -136,6 +144,58 @@ treats = create_relationship(
 )
 ```
 
+### Hypothesis Tracking Example
+
+```python
+from schema import Hypothesis, Predicts, TestedBy, Refutes, RelationType
+
+# Create a hypothesis
+hypothesis = Hypothesis(
+    entity_id="HYPOTHESIS:parp_inhibitor_synthetic_lethality",
+    name="PARP Inhibitor Synthetic Lethality in BRCA-Deficient Tumors",
+    iao_id="IAO:0000018",
+    proposed_by="PMC555444",
+    proposed_date="2005-03-15",
+    status="supported",
+    description="PARP inhibitors exploit synthetic lethality in BRCA1/2-mutated cancers",
+    predicts=["C0006142"]  # Breast Cancer
+)
+
+# Hypothesis predicts an outcome
+predicts = Predicts(
+    subject_id=hypothesis.entity_id,
+    predicate=RelationType.PREDICTS,
+    object_id="C0006142",  # Breast Cancer
+    prediction_type="positive",
+    testable=True,
+    source_papers=["PMC555444"],
+    confidence=0.85
+)
+
+# Hypothesis tested by a study
+tested_by = TestedBy(
+    subject_id=hypothesis.entity_id,
+    predicate=RelationType.TESTED_BY,
+    object_id="PMC999888",  # Clinical trial paper
+    test_outcome="supported",
+    methodology="randomized controlled trial",
+    study_design_id="OBI:0000008",  # RCT
+    source_papers=["PMC999888"],
+    confidence=0.92
+)
+
+# Evidence refutes a competing hypothesis
+refutes = Refutes(
+    subject_id="PMC111222",  # Paper with contradicting findings
+    predicate=RelationType.REFUTES,
+    object_id="HYPOTHESIS:competing_mechanism",
+    refutation_strength="moderate",
+    alternative_explanation="Alternative pathway identified",
+    source_papers=["PMC111222"],
+    confidence=0.70
+)
+```
+
 ## Design Principles (from DESIGN_DECISIONS.md)
 
 1. **Clinical utility first** - Schema supports queries doctors actually ask
@@ -154,6 +214,51 @@ The schema integrates with established medical ontologies:
 - **UniProt** - Proteins
 - **MeSH** - Medical subject headings
 - **ClinicalTrials.gov** - Clinical trial identifiers
+
+### Scientific Method Ontologies
+
+The schema also integrates with ontologies for standardized representation of scientific methodology:
+
+- **IAO** (Information Artifact Ontology) - Hypotheses and information content entities (e.g., IAO:0000018 for hypothesis)
+- **OBI** (Ontology for Biomedical Investigations) - Study designs and experimental protocols (e.g., OBI:0000008 for RCT)
+- **STATO** (Statistics Ontology) - Statistical methods and tests (e.g., STATO:0000288 for t-test)
+- **ECO** (Evidence & Conclusion Ontology) - Evidence types and classifications (e.g., ECO:0007673 for RCT evidence)
+- **SEPIO** (Scientific Evidence and Provenance Information Ontology) - Structured evidence chains and assertions
+
+These ontologies enable:
+- **Hypothesis tracking** - Follow scientific hypotheses from proposal through testing to acceptance/refutation
+- **Evidence quality assessment** - Filter by study design quality using standardized OBI classifications
+- **Statistical method standardization** - Track and compare analytical approaches across studies
+- **Structured provenance** - Build evidence chains using SEPIO framework
+
+### Example: Hypothesis Entity with Ontology References
+
+```python
+from schema import Hypothesis, StudyDesign
+
+# Track a hypothesis across literature
+hypothesis = Hypothesis(
+    entity_id="HYPOTHESIS:amyloid_cascade_alzheimers",
+    name="Amyloid Cascade Hypothesis",
+    iao_id="IAO:0000018",  # IAO hypothesis class
+    sepio_id="SEPIO:0000001",  # SEPIO assertion
+    proposed_by="PMC123456",
+    proposed_date="1992",
+    status="controversial",
+    description="Beta-amyloid accumulation drives Alzheimer's disease pathology",
+    predicts=["C0002395"]  # Alzheimer's disease UMLS ID
+)
+
+# Classify study design for evidence quality
+study_design = StudyDesign(
+    entity_id="OBI:0000008",
+    name="Randomized Controlled Trial",
+    obi_id="OBI:0000008",
+    stato_id="STATO:0000402",
+    design_type="interventional",
+    evidence_level=1  # Highest quality evidence
+)
+```
 
 ## Evidence Tracking
 
