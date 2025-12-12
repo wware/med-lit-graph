@@ -561,7 +561,6 @@ class EvidenceLine(BaseMedicalEntity):
     provenance: str | None = None  # Provenance information
 
 
-
 # ============================================================================
 # Evidence and Measurement Classes (from med-lit-graph)
 # ============================================================================
