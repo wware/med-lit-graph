@@ -66,6 +66,12 @@ class EntityType(str, Enum):
     INSTITUTION = "institution"
     CLINICAL_TRIAL = "clinical_trial"
 
+    # Scientific method entities (ontology-based)
+    HYPOTHESIS = "hypothesis"  # IAO:0000018
+    STUDY_DESIGN = "study_design"  # OBI study designs
+    STATISTICAL_METHOD = "statistical_method"  # STATO methods
+    EVIDENCE_LINE = "evidence_line"  # SEPIO evidence structures
+
 
 class BaseMedicalEntity(BaseModel):
     """
@@ -404,6 +410,158 @@ class ClinicalTrial(BaseModel):
 
 
 # ============================================================================
+# Scientific Method Entities (Ontology-Based)
+# ============================================================================
+
+
+class Hypothesis(BaseMedicalEntity):
+    """
+    Represents a scientific hypothesis tracked across the literature.
+
+    Uses IAO (Information Artifact Ontology) for standardized representation
+    of hypotheses as information content entities. Enables tracking of
+    hypothesis evolution: from proposal through testing to acceptance/refutation.
+
+    Attributes:
+        iao_id: IAO identifier (typically IAO:0000018 for hypothesis)
+        sepio_id: SEPIO identifier for assertions (SEPIO:0000001)
+        proposed_by: Paper ID where hypothesis was first proposed
+        proposed_date: Date when hypothesis was first proposed
+        status: Current status (proposed, supported, controversial, refuted)
+        description: Natural language description of the hypothesis
+        predicts: List of entity IDs that this hypothesis predicts outcomes for
+
+    Example:
+        >>> hypothesis = Hypothesis(
+        ...     entity_id="HYPOTHESIS:amyloid_cascade_alzheimers",
+        ...     name="Amyloid Cascade Hypothesis",
+        ...     iao_id="IAO:0000018",
+        ...     sepio_id="SEPIO:0000001",
+        ...     proposed_by="PMC123456",
+        ...     proposed_date="1992",
+        ...     status="controversial",
+        ...     description="Beta-amyloid accumulation drives Alzheimer's disease pathology",
+        ...     predicts=["C0002395"]  # Alzheimer's disease
+        ... )
+    """
+
+    entity_type: Literal[EntityType.HYPOTHESIS] = EntityType.HYPOTHESIS
+    iao_id: str | None = None  # IAO:0000018 (hypothesis)
+    sepio_id: str | None = None  # SEPIO:0000001 (assertion)
+    proposed_by: str | None = None  # Paper ID
+    proposed_date: str | None = None  # ISO date
+    status: Literal["proposed", "supported", "controversial", "refuted"] | None = None
+    description: str | None = None  # Natural language description
+    predicts: list[str] = Field(default_factory=list)  # Entity IDs
+
+
+class StudyDesign(BaseMedicalEntity):
+    """
+    Represents a study design or experimental protocol.
+
+    Uses OBI (Ontology for Biomedical Investigations) to standardize
+    study design classifications. Enables filtering by evidence quality
+    based on study design.
+
+    Attributes:
+        obi_id: OBI identifier for study design type
+        stato_id: STATO identifier for study design (if applicable)
+        design_type: Human-readable design type
+        description: Description of the study design
+        evidence_level: Quality level (1-5, where 1 is highest quality)
+
+    Example:
+        >>> rct = StudyDesign(
+        ...     entity_id="OBI:0000008",
+        ...     name="Randomized Controlled Trial",
+        ...     obi_id="OBI:0000008",
+        ...     stato_id="STATO:0000402",
+        ...     design_type="interventional",
+        ...     evidence_level=1
+        ... )
+    """
+
+    entity_type: Literal[EntityType.STUDY_DESIGN] = EntityType.STUDY_DESIGN
+    obi_id: str | None = None  # OBI study design ID
+    stato_id: str | None = None  # STATO study design ID
+    design_type: str | None = None  # interventional, observational, etc.
+    description: str | None = None
+    evidence_level: int | None = Field(None, ge=1, le=5)  # 1=highest quality
+
+
+class StatisticalMethod(BaseMedicalEntity):
+    """
+    Represents a statistical method or test used in analysis.
+
+    Uses STATO (Statistics Ontology) to standardize statistical method
+    classifications. Enables tracking of analytical approaches across studies.
+
+    Attributes:
+        stato_id: STATO identifier for the statistical method
+        method_type: Category of method (hypothesis_test, regression, etc.)
+        description: Description of the method
+        assumptions: Key assumptions of the method
+
+    Example:
+        >>> ttest = StatisticalMethod(
+        ...     entity_id="STATO:0000288",
+        ...     name="Student's t-test",
+        ...     stato_id="STATO:0000288",
+        ...     method_type="hypothesis_test",
+        ...     description="Parametric test comparing means of two groups"
+        ... )
+    """
+
+    entity_type: Literal[EntityType.STATISTICAL_METHOD] = EntityType.STATISTICAL_METHOD
+    stato_id: str | None = None  # STATO ID
+    method_type: str | None = None  # hypothesis_test, regression, etc.
+    description: str | None = None
+    assumptions: list[str] = Field(default_factory=list)  # Method assumptions
+
+
+class EvidenceLine(BaseMedicalEntity):
+    """
+    Represents a line of evidence using SEPIO framework.
+
+    Uses SEPIO (Scientific Evidence and Provenance Information Ontology)
+    to represent structured evidence chains. Links evidence items to
+    assertions they support or refute.
+
+    Attributes:
+        sepio_type: SEPIO evidence line type ID
+        eco_type: ECO evidence type ID
+        assertion_id: ID of the assertion this evidence supports
+        supports: List of hypothesis IDs this evidence supports
+        refutes: List of hypothesis IDs this evidence refutes
+        evidence_items: List of paper IDs providing evidence
+        strength: Evidence strength classification
+        provenance: Provenance information
+
+    Example:
+        >>> evidence = EvidenceLine(
+        ...     entity_id="EVIDENCE_LINE:olaparib_brca_001",
+        ...     name="Clinical evidence for Olaparib in BRCA-mutated breast cancer",
+        ...     sepio_type="SEPIO:0000084",
+        ...     eco_type="ECO:0007673",
+        ...     assertion_id="ASSERTION:olaparib_brca",
+        ...     supports=["HYPOTHESIS:parp_inhibitor_synthetic_lethality"],
+        ...     evidence_items=["PMC999888", "PMC888777"],
+        ...     strength="strong"
+        ... )
+    """
+
+    entity_type: Literal[EntityType.EVIDENCE_LINE] = EntityType.EVIDENCE_LINE
+    sepio_type: str | None = None  # SEPIO evidence line type
+    eco_type: str | None = None  # ECO evidence type
+    assertion_id: str | None = None  # Assertion this supports
+    supports: list[str] = Field(default_factory=list)  # Hypothesis IDs
+    refutes: list[str] = Field(default_factory=list)  # Hypothesis IDs
+    evidence_items: list[str] = Field(default_factory=list)  # Paper IDs
+    strength: Literal["strong", "moderate", "weak"] | None = None
+    provenance: str | None = None  # Provenance information
+
+
+# ============================================================================
 # Evidence and Measurement Classes (from med-lit-graph)
 # ============================================================================
 
@@ -414,7 +572,8 @@ class Evidence(BaseModel):
 
     Combines lightweight paper tracking with rich provenance when needed.
     Supports both simple paper ID references and detailed text span tracking
-    with extraction metadata.
+    with extraction metadata. Enhanced with ontology references (ECO, OBI, STATO)
+    for standardized evidence classification.
 
     Attributes:
         paper_id: PMC ID of the source paper
@@ -427,6 +586,9 @@ class Evidence(BaseModel):
         study_type: Type of study in the source paper
         sample_size: Number of subjects in the study
         publication_date: When the paper was published
+        eco_type: ECO (Evidence & Conclusion Ontology) evidence type ID
+        obi_study_design: OBI (Ontology for Biomedical Investigations) study design ID
+        stato_methods: List of STATO statistical method IDs used in the study
 
     Example:
         >>> evidence = Evidence(
@@ -436,7 +598,10 @@ class Evidence(BaseModel):
         ...     text_span="Olaparib showed significant efficacy in BRCA-mutated breast cancer",
         ...     study_type="rct",
         ...     sample_size=302,
-        ...     confidence=0.9
+        ...     confidence=0.9,
+        ...     eco_type="ECO:0007673",  # RCT evidence
+        ...     obi_study_design="OBI:0000008",  # Randomized controlled trial
+        ...     stato_methods=["STATO:0000288"]  # t-test
         ... )
     """
 
@@ -458,6 +623,11 @@ class Evidence(BaseModel):
     study_type: Literal["observational", "rct", "meta_analysis", "case_report", "review"] | None = None
     sample_size: int | None = None
     publication_date: str | None = None
+
+    # Ontology references for standardized evidence classification
+    eco_type: str | None = None  # ECO evidence type ID (e.g., "ECO:0007673" for RCT)
+    obi_study_design: str | None = None  # OBI study design ID (e.g., "OBI:0000008" for RCT)
+    stato_methods: list[str] = Field(default_factory=list)  # STATO statistical method IDs
 
 
 class Measurement(BaseModel):
@@ -679,6 +849,10 @@ class EntityCollection(BaseModel):
         procedures: Dictionary mapping entity_id to Procedure entities
         biomarkers: Dictionary mapping entity_id to Biomarker entities
         pathways: Dictionary mapping entity_id to Pathway entities
+        hypotheses: Dictionary mapping entity_id to Hypothesis entities
+        study_designs: Dictionary mapping entity_id to StudyDesign entities
+        statistical_methods: Dictionary mapping entity_id to StatisticalMethod entities
+        evidence_lines: Dictionary mapping entity_id to EvidenceLine entities
         version: Version identifier for the collection
         created_at: Timestamp when collection was created
     """
@@ -691,6 +865,10 @@ class EntityCollection(BaseModel):
     procedures: dict[str, Procedure] = Field(default_factory=dict)
     biomarkers: dict[str, Biomarker] = Field(default_factory=dict)
     pathways: dict[str, Pathway] = Field(default_factory=dict)
+    hypotheses: dict[str, Hypothesis] = Field(default_factory=dict)
+    study_designs: dict[str, StudyDesign] = Field(default_factory=dict)
+    statistical_methods: dict[str, StatisticalMethod] = Field(default_factory=dict)
+    evidence_lines: dict[str, EvidenceLine] = Field(default_factory=dict)
 
     version: str = "v1"
     created_at: datetime = Field(default_factory=datetime.now)
@@ -698,7 +876,20 @@ class EntityCollection(BaseModel):
     @property
     def entity_count(self) -> int:
         """Total number of entities across all types"""
-        return len(self.diseases) + len(self.genes) + len(self.drugs) + len(self.proteins) + len(self.symptoms) + len(self.procedures) + len(self.biomarkers) + len(self.pathways)
+        return (
+            len(self.diseases)
+            + len(self.genes)
+            + len(self.drugs)
+            + len(self.proteins)
+            + len(self.symptoms)
+            + len(self.procedures)
+            + len(self.biomarkers)
+            + len(self.pathways)
+            + len(self.hypotheses)
+            + len(self.study_designs)
+            + len(self.statistical_methods)
+            + len(self.evidence_lines)
+        )
 
     def add_disease(self, entity: Disease):
         """Add a disease entity to the collection"""
@@ -716,6 +907,22 @@ class EntityCollection(BaseModel):
         """Add a protein entity to the collection"""
         self.proteins[entity.entity_id] = entity
 
+    def add_hypothesis(self, entity: Hypothesis):
+        """Add a hypothesis entity to the collection"""
+        self.hypotheses[entity.entity_id] = entity
+
+    def add_study_design(self, entity: StudyDesign):
+        """Add a study design entity to the collection"""
+        self.study_designs[entity.entity_id] = entity
+
+    def add_statistical_method(self, entity: StatisticalMethod):
+        """Add a statistical method entity to the collection"""
+        self.statistical_methods[entity.entity_id] = entity
+
+    def add_evidence_line(self, entity: EvidenceLine):
+        """Add an evidence line entity to the collection"""
+        self.evidence_lines[entity.entity_id] = entity
+
     def get_by_id(self, entity_id: str) -> BaseMedicalEntity | None:
         """Get entity by ID, searching across all types"""
         collections_to_search: list[dict[str, BaseMedicalEntity]] = [
@@ -727,6 +934,10 @@ class EntityCollection(BaseModel):
             cast(dict[str, BaseMedicalEntity], self.procedures),
             cast(dict[str, BaseMedicalEntity], self.biomarkers),
             cast(dict[str, BaseMedicalEntity], self.pathways),
+            cast(dict[str, BaseMedicalEntity], self.hypotheses),
+            cast(dict[str, BaseMedicalEntity], self.study_designs),
+            cast(dict[str, BaseMedicalEntity], self.statistical_methods),
+            cast(dict[str, BaseMedicalEntity], self.evidence_lines),
         ]
         for collection in collections_to_search:
             if entity_id in collection:
@@ -761,6 +972,10 @@ class EntityCollection(BaseModel):
                 ("procedure", self.procedures),
                 ("biomarker", self.biomarkers),
                 ("pathway", self.pathways),
+                ("hypothesis", self.hypotheses),
+                ("study_design", self.study_designs),
+                ("statistical_method", self.statistical_methods),
+                ("evidence_line", self.evidence_lines),
             ]:
                 for entity in cast(dict[str, BaseMedicalEntity], collection).values():
                     data = entity.model_dump()
@@ -806,6 +1021,18 @@ class EntityCollection(BaseModel):
                 elif entity_type == "pathway":
                     entity = Pathway.model_validate(data)
                     collection.pathways[entity.entity_id] = entity
+                elif entity_type == "hypothesis":
+                    entity = Hypothesis.model_validate(data)
+                    collection.hypotheses[entity.entity_id] = entity
+                elif entity_type == "study_design":
+                    entity = StudyDesign.model_validate(data)
+                    collection.study_designs[entity.entity_id] = entity
+                elif entity_type == "statistical_method":
+                    entity = StatisticalMethod.model_validate(data)
+                    collection.statistical_methods[entity.entity_id] = entity
+                elif entity_type == "evidence_line":
+                    entity = EvidenceLine.model_validate(data)
+                    collection.evidence_lines[entity.entity_id] = entity
 
         return collection
 
@@ -873,6 +1100,10 @@ def generate_embeddings_for_entities(collection: EntityCollection, embedding_fun
         cast(dict[str, BaseMedicalEntity], collection.procedures),
         cast(dict[str, BaseMedicalEntity], collection.biomarkers),
         cast(dict[str, BaseMedicalEntity], collection.pathways),
+        cast(dict[str, BaseMedicalEntity], collection.hypotheses),
+        cast(dict[str, BaseMedicalEntity], collection.study_designs),
+        cast(dict[str, BaseMedicalEntity], collection.statistical_methods),
+        cast(dict[str, BaseMedicalEntity], collection.evidence_lines),
     ]
     for entity_collection_dict in collections_to_process:
         for entity in entity_collection_dict.values():
