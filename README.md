@@ -273,6 +273,7 @@ Pure vector search misses multi-hop connections. Pure graph misses semantic simi
 ### Entity Types
 - **Medical**: disease, symptom, drug, gene, protein, pathway, biomarker, test, procedure
 - **Research**: paper, author, institution, clinical_trial
+- **Scientific Method**: hypothesis, study_design, statistical_method, evidence_line
 
 ### Relationship Types
 - **Causal**: causes, prevents, increases_risk, decreases_risk
@@ -280,6 +281,7 @@ Pure vector search misses multi-hop connections. Pure graph misses semantic simi
 - **Biological**: encodes, binds_to, inhibits, activates, upregulates, downregulates
 - **Clinical**: diagnoses, indicates, precedes, associated_with
 - **Provenance**: cites, studied_in, authored_by
+- **Hypothesis & Evidence**: predicts, refutes, tested_by, generates
 
 Every medical relationship includes:
 ```python

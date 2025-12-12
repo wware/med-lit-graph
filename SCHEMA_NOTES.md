@@ -29,6 +29,12 @@ class EntityType(str, Enum):
     # Measurement/observation entities
     MEASUREMENT = "measurement"
     BIOMARKER = "biomarker"
+    
+    # Scientific method entities (ontology-based)
+    HYPOTHESIS = "hypothesis"  # IAO:0000018
+    STUDY_DESIGN = "study_design"  # OBI study designs
+    STATISTICAL_METHOD = "statistical_method"  # STATO methods
+    EVIDENCE_LINE = "evidence_line"  # SEPIO evidence structures
 
 class RelationType(str, Enum):
     # Causal relationships
@@ -67,6 +73,12 @@ class RelationType(str, Enum):
     CITES = "cites"
     CONTRADICTS = "contradicts"
     SUPPORTS = "supports"
+    
+    # Hypothesis and evidence relationships
+    PREDICTS = "predicts"
+    REFUTES = "refutes"
+    TESTED_BY = "tested_by"
+    GENERATES = "generates"
 ```
 
 ### Complete Node Schema
