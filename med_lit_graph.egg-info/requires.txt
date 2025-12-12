@@ -1,0 +1,10 @@
+black>=25.11.0
+mypy>=1.19.0
+numpy>=2.0.2
+pydantic>=2.0
+pylint>=3.3.9
+pytest>=8.4.2
+requests>=2.32.5
+ruff>=0.14.8
+tqdm>=4.67.1
+tqdm-stubs>=0.2.1
