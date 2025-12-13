@@ -14,12 +14,27 @@ Usage:
     # API docs at http://localhost:8000/docs
 """
 
+import sys
+import os
+from pathlib import Path
+
+# Add the mini_server directory to sys.path to allow imports
+SCRIPT_DIR = Path(__file__).parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
 from fastapi import FastAPI, HTTPException, Query, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 from datetime import datetime
 import uvicorn
+import time
+import logging
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 # ============================================================================
@@ -146,15 +161,36 @@ async def query_endpoint(query: Dict[str, Any]):
 
     Accepts queries in the format shown in EXAMPLES.md and returns results.
     """
-    # For now, return empty results with 200 status
-    # TODO: Parse query and execute against synthetic data
-    return {
-        "status": "success",
-        "query": query,
-        "results": [],
-        "total_results": 0,
-        "execution_time_ms": 0
-    }
+    try:
+        logger.info(f"Query received: {query}")
+        logger.info(f"ENTITIES count: {len(ENTITIES)}, RELATIONSHIPS count: {len(RELATIONSHIPS)}")
+        
+        from query_executor import execute_query
+        logger.info("query_executor imported successfully")
+        
+        start_time = time.time()
+        result = execute_query(query, ENTITIES, RELATIONSHIPS)
+        execution_time_ms = int((time.time() - start_time) * 1000)
+        
+        logger.info(f"Query executed successfully, results: {len(result['results'])} rows")
+        
+        return {
+            "status": "success",
+            "query": query,
+            "results": result["results"],
+            "total_results": len(result["results"]),
+            "execution_time_ms": execution_time_ms
+        }
+    except Exception as e:
+        logger.error(f"Query execution failed: {e}", exc_info=True)
+        return {
+            "status": "error",
+            "query": query,
+            "error": str(e),
+            "results": [],
+            "total_results": 0,
+            "execution_time_ms": 0
+        }
 
 
 @api_router.get("/entities", response_model=List[Entity])
