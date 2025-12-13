@@ -30,13 +30,13 @@ def response_contains_expected_data(actual_response: Any, expected_response: Any
     """
     Recursively check if expected_response data appears somewhere in actual_response.
     Returns True if all keys/values from expected appear in actual (at any nesting level).
-    
+
     This is a "contains" check, not an exact match - the actual response may have
     additional fields not in the expected response.
     """
     if expected_response is None:
         return True
-    
+
     if isinstance(expected_response, dict):
         if not isinstance(actual_response, dict):
             return False
@@ -47,7 +47,7 @@ def response_contains_expected_data(actual_response: Any, expected_response: Any
             if not response_contains_expected_data(actual_response[key], expected_value):
                 return False
         return True
-    
+
     elif isinstance(expected_response, list):
         if not isinstance(actual_response, list):
             return False
@@ -61,7 +61,7 @@ def response_contains_expected_data(actual_response: Any, expected_response: Any
             if not found:
                 return False
         return True
-    
+
     else:
         # For primitive values, do an equality check
         return actual_response == expected_response
@@ -70,61 +70,56 @@ def response_contains_expected_data(actual_response: Any, expected_response: Any
 def extract_queries_and_responses(examples_file: str) -> List[Tuple[int, Dict[str, Any], str, Optional[Dict[str, Any]]]]:
     """
     Extract queries and their expected responses from EXAMPLES.md.
-    
+
     Returns list of tuples: (example_index, query_dict, curl_block, expected_response_dict)
     where expected_response_dict is None if no expected response is documented.
     """
     # Split the file into sections by "## Example"
-    example_sections = re.split(r'(?=^## Example)', examples_file, flags=re.MULTILINE)
-    
+    example_sections = re.split(r"(?=^## Example)", examples_file, flags=re.MULTILINE)
+
     queries = []
-    
+
     for section in example_sections:
         if not section.strip() or not section.startswith("## Example"):
             continue
-        
+
         # Extract example number
-        example_match = re.match(r'## Example (\d+)', section)
+        example_match = re.match(r"## Example (\d+)", section)
         if not example_match:
             continue
         example_idx = int(example_match.group(1))
-        
+
         # Find all curl blocks in this section
         curl_blocks = re.findall(r"```bash\n(curl.*?)```", section, re.DOTALL)
-        
+
         for block in curl_blocks:
             # Skip non-query curl blocks
             if "function mgraph" in block or "TOKEN=" in block or "export" in block:
                 continue
             if "@query.json" in block or "@" in block:
                 continue
-            
+
             # Extract JSON query from curl command
             json_match = re.search(JSON_EXTRACTION_PATTERN, block, re.DOTALL | re.MULTILINE)
             if not json_match:
                 continue
-            
+
             try:
                 query = json.loads(json_match.group(1))
             except json.JSONDecodeError:
                 continue
-            
+
             # Look for expected response after this curl block
             # Pattern: **Expected response:** or **Example response:**\n```json\n{...}\n```
             # Find position of current curl block in the section
-            block_pattern = re.escape(block[:50])  # Use first 50 chars as anchor
             block_pos = section.find(block[:50])
             if block_pos == -1:
                 block_pos = 0
-            
+
             # Search for expected response after the curl block
             remaining_section = section[block_pos:]
-            response_match = re.search(
-                r'\*\*(?:Expected|Example) response:\*\*\s*```json\s*(.*?)\s*```',
-                remaining_section,
-                re.DOTALL
-            )
-            
+            response_match = re.search(r"\*\*(?:Expected|Example) response:\*\*\s*```json\s*(.*?)\s*```", remaining_section, re.DOTALL)
+
             expected_response = None
             if response_match:
                 try:
@@ -132,12 +127,12 @@ def extract_queries_and_responses(examples_file: str) -> List[Tuple[int, Dict[st
                 except json.JSONDecodeError as e:
                     # Fail with a clear error message if expected response is invalid
                     pytest.fail(f"Example {example_idx} has invalid expected response JSON: {e}\n{response_match.group(1)}")
-            
+
             queries.append((example_idx, query, block, expected_response))
-            
+
             # Only process the first valid query in each section
             break
-    
+
     return queries
 
 
@@ -437,7 +432,7 @@ class TestCurlExamplesExecution:
                 if response.status_code == 200:
                     result = response.json()
                     assert "results" in result or "error" in result, f"Example {example_idx} response missing 'results' or 'error' field"
-                    
+
                     # Validate that expected response data appears in actual response
                     if expected_response is not None:
                         if not response_contains_expected_data(result, expected_response):
