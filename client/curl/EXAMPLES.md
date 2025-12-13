@@ -849,7 +849,23 @@ curl -X POST $API_BASE/api/v1/query \
 }'
 ```
 
-**Note:** Expected response for this example will be added once path queries and hypothesis entities are implemented (Phase 2/3 features).
+**Expected response:**
+```json
+{
+  "results": [
+    {
+      "hypothesis.name": "Amyloid Cascade Hypothesis",
+      "hypothesis.status": "controversial",
+      "paper.pmc_id": "PMC9876543",
+      "paper.title": "Aducanumab fails to meet primary endpoints",
+      "test_relationship.test_outcome": "refuted",
+      "test_relationship.study_design_id": "OBI:0000008"
+    }
+  ]
+}
+```
+
+**Note:** This example requires path queries and hypothesis entities (Phase 2/3).
 
 ---
 
@@ -963,7 +979,22 @@ curl -X POST $API_BASE/api/v1/query \
 }'
 ```
 
-**Note:** Expected response for this example will be added once path queries and statistical method filtering are implemented (Phase 2/3 features).
+**Expected response:**
+```json
+{
+  "results": [
+    {
+      "drug.name": "pembrolizumab",
+      "disease.name": "melanoma",
+      "treatment.evidence.paper_id": "PMC7654321",
+      "treatment.evidence.stato_methods": ["STATO:0000304", "STATO:0000376"],
+      "treatment.confidence": 0.92
+    }
+  ]
+}
+```
+
+**Note:** This example requires path queries and statistical method filtering (Phase 2/3).
 
 ---
 
@@ -1437,7 +1468,25 @@ curl -X POST $MEDGRAPH_SERVER/api/v1/query \
 }'
 ```
 
-**Note:** Example response will be added once "find: edges" queries are implemented (Phase 2 features).
+**Example response:**
+
+```json
+{
+  "status": "success",
+  "results": [
+    {
+      "subject.name": "Olaparib",
+      "subject.type": "drug",
+      "predicate": "TREATS",
+      "confidence": 0.92,
+      "evidence_count": 1,
+      "papers": ["PMC123456"]
+    }
+  ]
+}
+```
+
+**Note:** This example requires "find: edges" queries (Phase 2).
 
 ---
 
@@ -1479,7 +1528,27 @@ curl -X POST $MEDGRAPH_SERVER/api/v1/query \
 }'
 ```
 
-**Note:** Example response will be added once path queries are implemented (Phase 2 features).
+**Example response:**
+
+```json
+{
+  "status": "success",
+  "results": [
+    {
+      "drug.name": "Metformin",
+      "protein.name": "AMPK",
+      "marker.name": "Glycated Hemoglobin",
+      "activation.confidence": 0.90,
+      "downreg.confidence": 0.88,
+      "path": [
+        "Metformin -> ACTIVATES -> AMPK -> DOWNREGULATES -> HbA1c"
+      ]
+    }
+  ]
+}
+```
+
+**Note:** This example requires path queries (Phase 2).
 
 ---
 
@@ -1520,7 +1589,31 @@ curl -X POST $MEDGRAPH_SERVER/api/v1/query \
 }'
 ```
 
-**Note:** Example response will be added once paper/relationship filtering is implemented (Phase 2 features).
+**Example response:**
+
+```json
+{
+  "status": "success",
+  "results": [
+    {
+      "paper_id": "PMC234567",
+      "title": "Metformin Activation of AMPK and Effects on Glycemic Control",
+      "authors": ["Zhou G", "Myers R", "Li Y", "Chen Y", "Shen X"],
+      "publication_date": "2018-03-15",
+      "journal": "Journal of Clinical Investigation"
+    },
+    {
+      "paper_id": "PMC345678",
+      "title": "Long-term Metformin Use in Type 2 Diabetes: A Cohort Study",
+      "authors": ["Turner RC", "Holman RR", "Cull CA", "Stratton IM"],
+      "publication_date": "2019-06-22",
+      "journal": "Diabetes Care"
+    }
+  ]
+}
+```
+
+**Note:** This example requires paper/relationship filtering (Phase 2).
 
 ---
 
@@ -1559,7 +1652,27 @@ curl -X POST $MEDGRAPH_SERVER/api/v1/query \
 }'
 ```
 
-**Note:** Example response will be added once path queries are implemented (Phase 2 features).
+**Example response:**
+
+```json
+{
+  "status": "success",
+  "results": [
+    {
+      "drug.name": "Aspirin",
+      "disease.name": "Myocardial Infarction",
+      "prevention.confidence": 0.82,
+      "prevention.evidence_count": 2,
+      "prevention.metadata": {
+        "risk_reduction": 0.25,
+        "study_type": "meta_analysis"
+      }
+    }
+  ]
+}
+```
+
+**Note:** This example requires path queries (Phase 2).
 
 ---
 
