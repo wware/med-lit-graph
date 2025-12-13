@@ -133,6 +133,10 @@ def load_synthetic_data():
     logger.info(f"Loaded {len(ENTITIES)} entities, {len(RELATIONSHIPS)} relationships, {len(PAPERS)} papers")
 
 
+# Load data at module import time so it's available when uvicorn imports
+load_synthetic_data()
+
+
 # ============================================================================
 # API Endpoints
 # ============================================================================
@@ -179,7 +183,11 @@ async def query_endpoint(query: Dict[str, Any]):
             "query": query,
             "results": result["results"],
             "total_results": len(result["results"]),
-            "execution_time_ms": execution_time_ms
+            "execution_time_ms": execution_time_ms,
+            "metadata": {
+                "total_results": len(result["results"]),
+                "query_time_ms": execution_time_ms
+            }
         }
     except Exception as e:
         logger.error(f"Query execution failed: {e}", exc_info=True)
@@ -189,7 +197,11 @@ async def query_endpoint(query: Dict[str, Any]):
             "error": str(e),
             "results": [],
             "total_results": 0,
-            "execution_time_ms": 0
+            "execution_time_ms": 0,
+            "metadata": {
+                "total_results": 0,
+                "query_time_ms": 0
+            }
         }
 
 

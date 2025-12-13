@@ -315,11 +315,22 @@ def compute_count(matches: List[Dict], field_ref: str, node_pattern: Dict[str, A
     """
     Count occurrences in matches.
 
-    For nested fields like "treatment.evidence.paper_id", count unique values.
+    For fields like "treatment.evidence.paper_id", count unique paper IDs.
     For "treatment.evidence", count total evidence items.
+    For other fields, count matches.
     """
-    # Handle evidence counting specially
-    if "evidence" in field_ref:
+    # Handle evidence.paper_id - count unique papers
+    if "evidence.paper_id" in field_ref or "evidence" in field_ref and "paper" in field_ref:
+        # Count total papers across all matches
+        total_papers = 0
+        for match in matches:
+            edge = match["edge"]
+            # Use the papers list length
+            total_papers += len(edge.get("papers", []))
+        return total_papers
+    
+    # Handle evidence counting (total evidence)
+    if field_ref.endswith(".evidence"):
         total = 0
         for match in matches:
             edge = match["edge"]

@@ -35,6 +35,28 @@ def generate_entities() -> Dict[str, Dict]:
         "description": "PARP inhibitor used in cancer treatment"
     }
     
+    # Drug: Tamoxifen (for Example 1)
+    entities["RxNorm:10324"] = {
+        "id": "RxNorm:10324",
+        "type": "drug",
+        "name": "tamoxifen",
+        "canonical_id": "RxNorm:10324",
+        "mentions": 1892,
+        "aliases": ["Nolvadex"],
+        "description": "Selective estrogen receptor modulator for breast cancer"
+    }
+    
+    # Drug: Trastuzumab (for Example 1)
+    entities["RxNorm:224905"] = {
+        "id": "RxNorm:224905",
+        "type": "drug",
+        "name": "trastuzumab",
+        "canonical_id": "RxNorm:224905",
+        "mentions": 1456,
+        "aliases": ["Herceptin"],
+        "description": "Monoclonal antibody for HER2-positive breast cancer"
+    }
+    
     # Drug: Metformin
     entities["RxNorm:860975"] = {
         "id": "RxNorm:860975",
@@ -108,6 +130,43 @@ def generate_entities() -> Dict[str, Dict]:
 def generate_relationships() -> List[Dict]:
     """Generate synthetic relationships with full provenance."""
     relationships = []
+    
+    # Tamoxifen TREATS Breast Cancer (for Example 1)
+    # Expected: paper_count=234, avg_confidence=0.89, total_evidence=456
+    relationships.append({
+        "id": "rel_tam_bc",
+        "subject_id": "RxNorm:10324",  # Tamoxifen
+        "predicate": "TREATS",
+        "object_id": "UMLS:C0006142",  # Breast Cancer
+        "confidence": 0.89,
+        "evidence_count": 456,  # total_evidence
+        "papers": ["PMC" + str(i) for i in range(1000, 1234)],  # 234 papers
+        "metadata": {
+            "response_rate": 0.75,
+            "study_type": "rct",
+            "sample_size": 1250,
+            "phase": "III"
+        }
+    })
+    
+    # Trastuzumab TREATS Breast Cancer (for Example 1)
+    # Expected: paper_count=189, avg_confidence=0.92, total_evidence=312
+    relationships.append({
+        "id": "rel_tras_bc",
+        "subject_id": "RxNorm:224905",  # Trastuzumab
+        "predicate": "TREATS",
+        "object_id": "UMLS:C0006142",  # Breast Cancer
+        "confidence": 0.92,
+        "evidence_count": 312,  # total_evidence
+        "papers": ["PMC" + str(i) for i in range(2000, 2189)],  # 189 papers
+        "metadata": {
+            "response_rate": 0.82,
+            "study_type": "rct",
+            "sample_size": 980,
+            "phase": "III",
+            "her2_positive": True
+        }
+    })
     
     # Olaparib TREATS Breast Cancer
     relationships.append({

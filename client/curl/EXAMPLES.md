@@ -87,8 +87,8 @@ curl -X POST $MEDGRAPH_SERVER/api/v1/query \
     }
   ],
   "metadata": {
-    "total_results": 15,
-    "query_time_ms": 45
+    "total_results": 3,
+    "query_time_ms": 0
   }
 }
 ```
