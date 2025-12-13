@@ -261,7 +261,7 @@ class TestCurlExamplesSchemaCompliance:
         missing_entities = pr3_entity_types - covered_entity_types
         missing_relations = pr3_relation_types - covered_relation_types
 
-        # This test is expected to fail initially - it documents what's missing
+        # All PR #3 features should be covered after adding Examples 13-22
         if missing_entities or missing_relations:
             error_msg = "\nPR #3 features not covered in examples:\n"
             if missing_entities:
@@ -325,25 +325,28 @@ class TestCurlExamplesExecution:
         except requests.exceptions.RequestException as e:
             pytest.skip(f"Server not reachable: {e}")
 
-    @pytest.mark.parametrize("example_idx,query", [(i, q) for i, q in []], ids=lambda x: f"Example {x[0]}" if isinstance(x, tuple) else str(x))
-    def test_query_execution(self, server_url, example_idx, query):
+    def test_query_execution(self, server_url, curl_queries):
         """
         Execute each curl example query against the server.
 
-        Note: This test is parametrized but the fixture returns an empty list
-        by default. To enable, the curl_queries fixture should be injected.
+        This test validates that queries can be executed against a live server.
+        Requires MEDGRAPH_SERVER environment variable to be set.
         """
-        endpoint = f"{server_url}/api/v1/query"
+        if not curl_queries:
+            pytest.skip("No queries available to test")
 
-        try:
-            response = requests.post(endpoint, json=query, timeout=30, headers={"Content-Type": "application/json"})
+        for example_idx, query in curl_queries:
+            endpoint = f"{server_url}/api/v1/query"
 
-            # Accept either success or validation errors (since we don't have real data)
-            assert response.status_code in [200, 400, 422], f"Example {example_idx} returned unexpected status {response.status_code}: {response.text}"
+            try:
+                response = requests.post(endpoint, json=query, timeout=30, headers={"Content-Type": "application/json"})
 
-            if response.status_code == 200:
-                result = response.json()
-                assert "results" in result or "error" in result, f"Example {example_idx} response missing 'results' or 'error' field"
+                # Accept either success or validation errors (since we don't have real data)
+                assert response.status_code in [200, 400, 422], f"Example {example_idx} returned unexpected status {response.status_code}: {response.text}"
 
-        except requests.exceptions.RequestException as e:
-            pytest.skip(f"Request failed: {e}")
+                if response.status_code == 200:
+                    result = response.json()
+                    assert "results" in result or "error" in result, f"Example {example_idx} response missing 'results' or 'error' field"
+
+            except requests.exceptions.RequestException as e:
+                pytest.skip(f"Request failed: {e}")
