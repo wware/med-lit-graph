@@ -40,6 +40,10 @@ class TestCurlExamplesSchemaCompliance:
         queries = []
 
         for idx, block in enumerate(curl_blocks, 1):
+            # TODO we are about to skip the non-query curl blocks. BUT SOME OF THESE REPRESENT
+            # EXPECTED RESPONSES and we want to validate those. So we need some regex magic to
+            # find them and assign them to "expected_response" in the "if json_match" block.
+
             # Skip non-query curl blocks
             if "function mgraph" in block or "TOKEN=" in block or "export" in block:
                 continue
@@ -48,9 +52,11 @@ class TestCurlExamplesSchemaCompliance:
 
             json_match = re.search(JSON_EXTRACTION_PATTERN, block, re.DOTALL | re.MULTILINE)
             if json_match:
+                # TODO look up the response for the test case, if it's None, then don't validate
+                expected_reponse = ...
                 try:
                     query = json.loads(json_match.group(1))
-                    queries.append((idx, query, block))
+                    queries.append((idx, query, block, expected_response))
                 except json.JSONDecodeError as e:
                     pytest.fail(f"Example {idx} has invalid JSON: {e}")
 
@@ -341,7 +347,8 @@ class TestCurlExamplesExecution:
         if not curl_queries:
             pytest.skip("No queries available to test")
 
-        for example_idx, query in curl_queries:
+        # queries.append((idx, query, block, expected_response))
+        for example_idx, query, _, expected_reponse in curl_queries:
             endpoint = f"{server_url}/api/v1/query"
 
             try:
@@ -353,6 +360,9 @@ class TestCurlExamplesExecution:
                 if response.status_code == 200:
                     result = response.json()
                     assert "results" in result or "error" in result, f"Example {example_idx} response missing 'results' or 'error' field"
+                    if expected_response is not None:
+                        # TODO assert that result appears SOMEWHERE in the result dict as a value
+                        pass
 
             except requests.exceptions.RequestException as e:
                 pytest.skip(f"Request failed: {e}")
