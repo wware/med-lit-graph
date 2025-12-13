@@ -25,6 +25,9 @@ from schema.relationship import RelationType
 # Matches: -d '{...}' at the end of a curl command block
 JSON_EXTRACTION_PATTERN = r"-d\s+'({.*?})'\s*$"
 
+# Length of query JSON snippet to use for locating expected responses
+QUERY_ANCHOR_LENGTH = 100
+
 
 def response_contains_expected_data(actual_response: Any, expected_response: Any) -> bool:
     """
@@ -108,7 +111,7 @@ def extract_queries_and_responses(examples_file: str) -> List[Tuple[int, Dict[st
             # Pattern: **Expected response:** or **Example response:**\n```json\n{...}\n```
             # Find the position of this curl block in the section to search only after it
             # We use a unique portion of the query JSON to locate the block reliably
-            query_json_snippet = json_match.group(1)[:100]  # Use query JSON as anchor
+            query_json_snippet = json_match.group(1)[:QUERY_ANCHOR_LENGTH]
             block_pos = section.find(query_json_snippet)
             if block_pos == -1:
                 block_pos = 0
