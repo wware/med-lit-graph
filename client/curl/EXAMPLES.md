@@ -443,8 +443,8 @@ curl -X POST $API_BASE/api/v1/query \
     "edges": [
       [
         {
-          "relation_type": "symptom_of",
-          "direction": "outgoing",
+          "relation_type": "causes",
+          "direction": "incoming",
           "var": "symptom_disease"
         },
         {
@@ -651,7 +651,7 @@ curl -X POST $API_BASE/api/v1/query \
     "edges": [
       [
         {
-          "relation_types": ["interacts_with", "potentiates", "antagonizes"],
+          "relation_type": "interacts_with",
           "var": "interaction"
         },
         {
@@ -800,6 +800,533 @@ curl -X POST $API_BASE/api/v1/query \
     }
   }
 }
+```
+
+---
+
+## Example 13: Track Hypothesis Evolution (PR #3 Feature)
+
+**Find papers testing the amyloid cascade hypothesis for Alzheimer's:**
+
+```bash
+curl -X POST $API_BASE/api/v1/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+  "find": "paths",
+  "path_pattern": {
+    "start": {
+      "node_type": "hypothesis",
+      "name": "Amyloid Cascade Hypothesis",
+      "var": "hypothesis"
+    },
+    "edges": [
+      [
+        {
+          "relation_type": "tested_by",
+          "var": "test_relationship"
+        },
+        {
+          "node_type": "paper",
+          "var": "paper"
+        }
+      ]
+    ],
+    "max_hops": 1
+  },
+  "return_fields": [
+    "hypothesis.name",
+    "hypothesis.status",
+    "hypothesis.proposed_date",
+    "paper.pmc_id",
+    "paper.title",
+    "paper.publication_date",
+    "test_relationship.test_outcome",
+    "test_relationship.study_design_id"
+  ],
+  "order_by": [["paper.publication_date", "desc"]],
+  "limit": 20
+}'
+```
+
+**Expected response:**
+```json
+{
+  "results": [
+    {
+      "hypothesis.name": "Amyloid Cascade Hypothesis",
+      "hypothesis.status": "controversial",
+      "paper.pmc_id": "PMC9876543",
+      "paper.title": "Aducanumab fails to meet primary endpoints",
+      "test_relationship.test_outcome": "refuted",
+      "test_relationship.study_design_id": "OBI:0000008"
+    }
+  ]
+}
+```
+
+---
+
+## Example 14: Query by Study Design Quality (PR #3 Feature)
+
+**Find RCT evidence for treatments with high-quality study designs:**
+
+```bash
+curl -X POST $API_BASE/api/v1/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+  "find": "edges",
+  "edge_pattern": {
+    "relation_type": "treats",
+    "min_confidence": 0.7,
+    "var": "treatment"
+  },
+  "filters": [
+    {
+      "field": "source.node_type",
+      "operator": "eq",
+      "value": "drug"
+    },
+    {
+      "field": "target.name",
+      "operator": "eq",
+      "value": "breast cancer"
+    },
+    {
+      "field": "treatment.evidence.obi_study_design",
+      "operator": "eq",
+      "value": "OBI:0000008"
+    },
+    {
+      "field": "treatment.evidence.eco_type",
+      "operator": "eq",
+      "value": "ECO:0007673"
+    }
+  ],
+  "return_fields": [
+    "source.name",
+    "treatment.confidence",
+    "treatment.evidence.paper_id",
+    "treatment.evidence.study_type",
+    "treatment.evidence.sample_size",
+    "treatment.evidence.obi_study_design",
+    "treatment.evidence.eco_type"
+  ],
+  "aggregate": {
+    "group_by": ["source.name"],
+    "aggregations": {
+      "rct_count": ["count", "treatment.evidence.paper_id"],
+      "avg_sample_size": ["avg", "treatment.evidence.sample_size"],
+      "avg_confidence": ["avg", "treatment.confidence"]
+    }
+  },
+  "order_by": [
+    ["rct_count", "desc"],
+    ["avg_confidence", "desc"]
+  ]
+}'
+```
+
+---
+
+## Example 15: Statistical Methods Analysis (PR #3 Feature)
+
+**What statistical methods are used in studies of a specific treatment?**
+
+```bash
+curl -X POST $API_BASE/api/v1/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+  "find": "paths",
+  "path_pattern": {
+    "start": {
+      "node_type": "drug",
+      "name": "pembrolizumab",
+      "var": "drug"
+    },
+    "edges": [
+      [
+        {
+          "relation_type": "treats",
+          "var": "treatment"
+        },
+        {
+          "node_type": "disease",
+          "var": "disease"
+        }
+      ]
+    ],
+    "max_hops": 1
+  },
+  "return_fields": [
+    "drug.name",
+    "disease.name",
+    "treatment.evidence.paper_id",
+    "treatment.evidence.stato_methods",
+    "treatment.confidence"
+  ],
+  "filters": [
+    {
+      "field": "treatment.evidence.stato_methods",
+      "operator": "contains",
+      "value": "STATO:0000304"
+    }
+  ]
+}'
+```
+
+**Expected response:**
+```json
+{
+  "results": [
+    {
+      "drug.name": "pembrolizumab",
+      "disease.name": "melanoma",
+      "treatment.evidence.paper_id": "PMC7654321",
+      "treatment.evidence.stato_methods": ["STATO:0000304", "STATO:0000376"],
+      "treatment.confidence": 0.92
+    }
+  ]
+}
+```
+
+---
+
+## Example 16: Evidence Line Tracking (PR #3 Feature)
+
+**Find evidence lines supporting a specific therapeutic assertion:**
+
+```bash
+curl -X POST $API_BASE/api/v1/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+  "find": "paths",
+  "path_pattern": {
+    "start": {
+      "node_type": "evidence_line",
+      "var": "evidence_line"
+    },
+    "edges": [
+      [
+        {
+          "relation_type": "supports",
+          "var": "support_rel"
+        },
+        {
+          "node_type": "hypothesis",
+          "var": "hypothesis"
+        }
+      ]
+    ],
+    "max_hops": 1
+  },
+  "filters": [
+    {
+      "field": "hypothesis.name",
+      "operator": "contains",
+      "value": "PARP inhibitor"
+    }
+  ],
+  "return_fields": [
+    "evidence_line.name",
+    "evidence_line.strength",
+    "evidence_line.sepio_type",
+    "evidence_line.eco_type",
+    "evidence_line.evidence_items",
+    "hypothesis.name",
+    "hypothesis.status"
+  ],
+  "order_by": [["evidence_line.strength", "desc"]]
+}'
+```
+
+---
+
+## Example 17: Hypothesis Predictions (PR #3 Feature)
+
+**What does a hypothesis predict and what evidence supports/refutes it?**
+
+```bash
+curl -X POST $API_BASE/api/v1/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+  "find": "paths",
+  "path_pattern": {
+    "start": {
+      "node_type": "hypothesis",
+      "entity_id": "HYPOTHESIS:parp_inhibitor_synthetic_lethality",
+      "var": "hypothesis"
+    },
+    "edges": [
+      [
+        {
+          "relation_type": "predicts",
+          "var": "prediction"
+        },
+        {
+          "node_type": "disease",
+          "var": "disease"
+        }
+      ]
+    ],
+    "max_hops": 1
+  },
+  "return_fields": [
+    "hypothesis.name",
+    "hypothesis.description",
+    "hypothesis.status",
+    "disease.name",
+    "prediction.prediction_type",
+    "prediction.testable",
+    "prediction.confidence"
+  ]
+}'
+```
+
+---
+
+## Example 18: Find Papers that Generate Evidence (PR #3 Feature)
+
+**Which papers generate evidence lines for a specific disease?**
+
+```bash
+curl -X POST $API_BASE/api/v1/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+  "find": "paths",
+  "path_pattern": {
+    "start": {
+      "node_type": "paper",
+      "var": "paper"
+    },
+    "edges": [
+      [
+        {
+          "relation_type": "generates",
+          "var": "generation"
+        },
+        {
+          "node_type": "evidence_line",
+          "var": "evidence"
+        }
+      ]
+    ],
+    "max_hops": 1
+  },
+  "filters": [
+    {
+      "field": "paper.study_type",
+      "operator": "eq",
+      "value": "rct"
+    },
+    {
+      "field": "generation.quality_score",
+      "operator": "gte",
+      "value": 0.8
+    }
+  ],
+  "return_fields": [
+    "paper.pmc_id",
+    "paper.title",
+    "paper.study_type",
+    "evidence.name",
+    "evidence.strength",
+    "generation.quality_score",
+    "generation.eco_type"
+  ],
+  "order_by": [["generation.quality_score", "desc"]],
+  "limit": 20
+}'
+```
+
+---
+
+## Example 19: Protein-Centric Query (Coverage for Protein Entity)
+
+**Find proteins targeted by FDA-approved drugs:**
+
+```bash
+curl -X POST $API_BASE/api/v1/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+  "find": "paths",
+  "path_pattern": {
+    "start": {
+      "node_type": "drug",
+      "var": "drug"
+    },
+    "edges": [
+      [
+        {
+          "relation_types": ["binds_to", "inhibits", "activates"],
+          "var": "drug_target"
+        },
+        {
+          "node_type": "protein",
+          "var": "protein"
+        }
+      ]
+    ],
+    "max_hops": 1
+  },
+  "filters": [
+    {
+      "field": "drug.properties.fda_approved",
+      "operator": "eq",
+      "value": true
+    }
+  ],
+  "return_fields": [
+    "drug.name",
+    "drug.drug_class",
+    "protein.name",
+    "protein.uniprot_id",
+    "protein.function",
+    "drug_target.relation_type",
+    "drug_target.confidence"
+  ],
+  "aggregate": {
+    "group_by": ["protein.name", "protein.uniprot_id"],
+    "aggregations": {
+      "drug_count": ["count", "drug.name"],
+      "avg_confidence": ["avg", "drug_target.confidence"]
+    }
+  },
+  "order_by": [
+    ["drug_count", "desc"],
+    ["avg_confidence", "desc"]
+  ],
+  "limit": 50
+}'
+```
+
+---
+
+## Example 20: Study Design Quality Filter (PR #3 Feature)
+
+**Query studies by their formal study design classification:**
+
+```bash
+curl -X POST $API_BASE/api/v1/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+  "find": "nodes",
+  "node_pattern": {
+    "node_type": "study_design",
+    "var": "design"
+  },
+  "filters": [
+    {
+      "field": "design.evidence_level",
+      "operator": "lte",
+      "value": 2
+    }
+  ],
+  "return_fields": [
+    "design.name",
+    "design.obi_id",
+    "design.design_type",
+    "design.evidence_level",
+    "design.description"
+  ],
+  "order_by": [["design.evidence_level", "asc"]]
+}'
+```
+
+---
+
+## Example 21: Statistical Method Classification (PR #3 Feature)
+
+**Find papers using specific statistical methods:**
+
+```bash
+curl -X POST $API_BASE/api/v1/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+  "find": "nodes",
+  "node_pattern": {
+    "node_type": "statistical_method",
+    "var": "method"
+  },
+  "filters": [
+    {
+      "field": "method.method_type",
+      "operator": "eq",
+      "value": "hypothesis_test"
+    }
+  ],
+  "return_fields": [
+    "method.name",
+    "method.stato_id",
+    "method.method_type",
+    "method.description",
+    "method.assumptions"
+  ],
+  "limit": 20
+}'
+```
+
+---
+
+## Example 22: Evidence Refuting Hypotheses (PR #3 Feature)
+
+**Find papers that refute a specific hypothesis:**
+
+```bash
+curl -X POST $API_BASE/api/v1/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+  "find": "paths",
+  "path_pattern": {
+    "start": {
+      "node_type": "paper",
+      "var": "paper"
+    },
+    "edges": [
+      [
+        {
+          "relation_type": "refutes",
+          "var": "refutation"
+        },
+        {
+          "node_type": "hypothesis",
+          "var": "hypothesis"
+        }
+      ]
+    ],
+    "max_hops": 1
+  },
+  "filters": [
+    {
+      "field": "hypothesis.name",
+      "operator": "contains",
+      "value": "Amyloid"
+    }
+  ],
+  "return_fields": [
+    "paper.pmc_id",
+    "paper.title",
+    "paper.publication_date",
+    "paper.study_type",
+    "hypothesis.name",
+    "hypothesis.status",
+    "refutation.refutation_strength",
+    "refutation.alternative_explanation"
+  ],
+  "order_by": [
+    ["paper.publication_date", "desc"],
+    ["refutation.refutation_strength", "desc"]
+  ]
+}'
 ```
 
 ---
