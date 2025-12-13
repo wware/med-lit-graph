@@ -34,6 +34,9 @@ from fastapi import APIRouter, FastAPI, HTTPException, Query  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
+# Import query executor at module level for better performance
+from query_executor import execute_query  # noqa: E402
+
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -146,6 +149,21 @@ load_synthetic_data()
 # ============================================================================
 
 
+# ============================================================================
+# Helper Functions
+# ============================================================================
+
+
+def create_response_metadata(total_results: int, query_time_ms: int) -> Dict[str, Any]:
+    """Create standard metadata for query responses."""
+    return {"total_results": total_results, "query_time_ms": query_time_ms}
+
+
+# ============================================================================
+# API Endpoints
+# ============================================================================
+
+
 @app.get("/")
 async def root():
     """Health check and API info"""
@@ -168,9 +186,7 @@ async def query_endpoint(query: Dict[str, Any]):
         logger.info(f"Query received: {query}")
         logger.info(f"ENTITIES count: {len(ENTITIES)}, RELATIONSHIPS count: {len(RELATIONSHIPS)}")
 
-        from query_executor import execute_query
-
-        logger.info("query_executor imported successfully")
+        logger.info("query_executor already imported at module level")
 
         start_time = time.time()
         result = execute_query(query, ENTITIES, RELATIONSHIPS)
@@ -184,11 +200,11 @@ async def query_endpoint(query: Dict[str, Any]):
             "results": result["results"],
             "total_results": len(result["results"]),
             "execution_time_ms": execution_time_ms,
-            "metadata": {"total_results": len(result["results"]), "query_time_ms": execution_time_ms},
+            "metadata": create_response_metadata(len(result["results"]), execution_time_ms),
         }
     except Exception as e:
         logger.error(f"Query execution failed: {e}", exc_info=True)
-        return {"status": "error", "query": query, "error": str(e), "results": [], "total_results": 0, "execution_time_ms": 0, "metadata": {"total_results": 0, "query_time_ms": 0}}
+        return {"status": "error", "query": query, "error": str(e), "results": [], "total_results": 0, "execution_time_ms": 0, "metadata": create_response_metadata(0, 0)}
 
 
 @api_router.get("/entities", response_model=List[Entity])

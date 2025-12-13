@@ -144,10 +144,10 @@ def matches_edge_pattern(rel: Dict[str, Any], edge_pattern: Dict[str, Any]) -> b
     if not edge_pattern:
         return True
 
-    # Check relation type
+    # Check relation type (case-insensitive)
     relation_type = edge_pattern.get("relation_type")
     if relation_type:
-        # Case-insensitive comparison
+        # Normalize both to uppercase for comparison
         if rel["predicate"].upper() != relation_type.upper():
             return False
 
@@ -314,7 +314,7 @@ def compute_count(matches: List[Dict], field_ref: str, node_pattern: Dict[str, A
     For other fields, count matches.
     """
     # Handle evidence.paper_id - count unique papers
-    if "evidence.paper_id" in field_ref or "evidence" in field_ref and "paper" in field_ref:
+    if "evidence.paper_id" in field_ref or ("evidence" in field_ref and "paper" in field_ref):
         # Count total papers across all matches
         total_papers = 0
         for match in matches:
