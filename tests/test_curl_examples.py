@@ -18,6 +18,10 @@ import requests
 from schema.entity import EntityType
 from schema.relationship import RelationType
 
+# Regex pattern for extracting JSON from curl commands
+# Matches: -d '{...}' at the end of a curl command block
+JSON_EXTRACTION_PATTERN = r"-d\s+'({.*?})'\s*$"
+
 
 class TestCurlExamplesSchemaCompliance:
     """Test that curl examples comply with the schema."""
@@ -42,7 +46,7 @@ class TestCurlExamplesSchemaCompliance:
             if "@query.json" in block or "@" in block:
                 continue
 
-            json_match = re.search(r"-d\s+'({.*?})'\s*$", block, re.DOTALL | re.MULTILINE)
+            json_match = re.search(JSON_EXTRACTION_PATTERN, block, re.DOTALL | re.MULTILINE)
             if json_match:
                 try:
                     query = json.loads(json_match.group(1))
@@ -307,7 +311,7 @@ class TestCurlExamplesExecution:
             if "function mgraph" in block or "TOKEN=" in block or "export" in block or "@query.json" in block:
                 continue
 
-            json_match = re.search(r"-d\s+'({.*?})'\s*$", block, re.DOTALL | re.MULTILINE)
+            json_match = re.search(JSON_EXTRACTION_PATTERN, block, re.DOTALL | re.MULTILINE)
             if json_match:
                 try:
                     query = json.loads(json_match.group(1))
@@ -320,8 +324,10 @@ class TestCurlExamplesExecution:
     def test_server_is_reachable(self, server_url):
         """Verify the server is reachable."""
         try:
+            # Try to connect to the base URL or a health endpoint
             response = requests.get(server_url, timeout=5)
-            assert response.status_code in [200, 404], f"Server returned unexpected status: {response.status_code}"
+            # Accept any HTTP response as proof the server is reachable
+            assert response.status_code < 500, f"Server returned error status: {response.status_code}"
         except requests.exceptions.RequestException as e:
             pytest.skip(f"Server not reachable: {e}")
 
@@ -339,7 +345,7 @@ class TestCurlExamplesExecution:
             endpoint = f"{server_url}/api/v1/query"
 
             try:
-                response = requests.post(endpoint, json=query, timeout=30, headers={"Content-Type": "application/json"})
+                response = requests.post(endpoint, json=query, timeout=30)
 
                 # Accept either success or validation errors (since we don't have real data)
                 assert response.status_code in [200, 400, 422], f"Example {example_idx} returned unexpected status {response.status_code}: {response.text}"
