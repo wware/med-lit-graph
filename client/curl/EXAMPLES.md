@@ -1502,11 +1502,11 @@ curl -X POST $MEDGRAPH_SERVER/api/v1/query \
     },
     "edges": [
       [
-        {"relation_type": "ACTIVATES", "var": "activation"},
+        {"relation_type": "activates", "var": "activation"},
         {"node_type": "protein", "var": "protein"}
       ],
       [
-        {"relation_type": "DOWNREGULATES", "var": "downreg"},
+        {"relation_type": "downregulates", "var": "downreg"},
         {"node_type": "biomarker", "var": "marker"}
       ]
     ],
@@ -1625,7 +1625,7 @@ curl -X POST $MEDGRAPH_SERVER/api/v1/query \
     },
     "edges": [
       [
-        {"relation_type": "PREVENTS", "var": "prevention"},
+        {"relation_type": "prevents", "var": "prevention"},
         {"node_type": "disease", "var": "disease"}
       ]
     ],
