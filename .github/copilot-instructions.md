@@ -247,7 +247,7 @@ disease = Disease(
 ### Creating Relationships with Evidence
 
 ```python
-from schema.relationship import Treats
+from schema.relationship import Treats, RelationType
 from schema.entity import Evidence
 
 treats = Treats(
