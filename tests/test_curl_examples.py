@@ -185,7 +185,7 @@ class TestCurlExamplesSchemaCompliance:
                     node_type = path["start"].get("node_type")
                     if node_type:
                         covered_types.add(node_type)
-                
+
                 # Check edges in path
                 if "edges" in path:
                     for edge_pair in path["edges"]:
