@@ -100,7 +100,7 @@ curl -X POST $MEDGRAPH_SERVER/api/v1/query \
 **Find genes linked to Alzheimer's disease:**
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -147,7 +147,7 @@ curl -X POST $API_BASE/api/v1/query \
 **How does metformin work to lower blood sugar?**
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -209,7 +209,7 @@ curl -X POST $API_BASE/api/v1/query \
 **Find FDA-approved drugs that target Alzheimer's-associated proteins but are used for other conditions:**
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -303,7 +303,7 @@ curl -X POST $API_BASE/api/v1/query \
 **Compare statins vs PCSK9 inhibitors for treating high cholesterol:**
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -355,7 +355,7 @@ curl -X POST $API_BASE/api/v1/query \
 **Are there conflicting studies about aspirin preventing heart attacks?**
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -392,7 +392,7 @@ curl -X POST $API_BASE/api/v1/query \
 **Get detailed evidence:**
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -429,7 +429,7 @@ curl -X POST $API_BASE/api/v1/query \
 **What diseases present with fatigue, joint pain, and butterfly rash?**
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -477,7 +477,7 @@ curl -X POST $API_BASE/api/v1/query \
 **What tests diagnose systemic lupus erythematosus?**
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -534,7 +534,7 @@ curl -X POST $API_BASE/api/v1/query \
 **What new treatments for multiple sclerosis were discovered in the last 2 years?**
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -583,7 +583,7 @@ curl -X POST $API_BASE/api/v1/query \
 **Effectiveness of ACE inhibitors for hypertension in elderly patients:**
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -637,7 +637,7 @@ curl -X POST $API_BASE/api/v1/query \
 **Interactions between warfarin and NSAIDs:**
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -689,7 +689,7 @@ curl -X POST $API_BASE/api/v1/query \
 **Retrieve details about a specific paper:**
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -719,7 +719,7 @@ curl -X POST $API_BASE/api/v1/query \
 
 ```bash
 # Page 1 (results 0-19)
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -730,7 +730,7 @@ curl -X POST $API_BASE/api/v1/query \
 }'
 
 # Page 2 (results 20-39)
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -746,7 +746,7 @@ curl -X POST $API_BASE/api/v1/query \
 ## Batch Queries (Multiple Queries in One Request)
 
 ```bash
-curl -X POST $API_BASE/api/v1/batch \
+curl -X POST $MEDGRAPH_SERVER/api/v1/batch \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -781,7 +781,7 @@ curl -X POST $API_BASE/api/v1/batch \
 
 ```bash
 # Query with invalid field
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -1359,7 +1359,7 @@ cat > query.json << 'EOF'
 EOF
 
 # Execute
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d @query.json
@@ -1368,7 +1368,7 @@ curl -X POST $API_BASE/api/v1/query \
 ### Pretty-print results with jq
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d @query.json | jq '.results[] | {name: .["drug.name"], papers: .paper_count}'
@@ -1378,7 +1378,7 @@ curl -X POST $API_BASE/api/v1/query \
 
 ```bash
 # Extract just drug names
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d @query.json | jq -r '.results[].["drug.name"]'
@@ -1387,7 +1387,7 @@ curl -X POST $API_BASE/api/v1/query \
 ### Export to CSV
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d @query.json | \
@@ -1401,7 +1401,7 @@ curl -X POST $API_BASE/api/v1/query \
 ### Using API key in header (recommended)
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Authorization: Bearer $API_KEY" \
   -d @query.json
 ```
@@ -1409,7 +1409,7 @@ curl -X POST $API_BASE/api/v1/query \
 ### Using Basic Auth
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -u username:password \
   -d @query.json
 ```
@@ -1418,14 +1418,343 @@ curl -X POST $API_BASE/api/v1/query \
 
 ```bash
 # Get token
-TOKEN=$(curl -X POST $API_BASE/oauth/token \
+TOKEN=$(curl -X POST $MEDGRAPH_SERVER/oauth/token \
   -d "grant_type=client_credentials" \
   -d "client_id=$CLIENT_ID" \
   -d "client_secret=$CLIENT_SECRET" \
   | jq -r '.access_token')
 
 # Use token
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Authorization: Bearer $TOKEN" \
   -d @query.json
+```
+
+## Example 23: Find Drugs that Treat Breast Cancer
+
+**Which drugs treat breast cancer and what's the evidence?**
+
+```bash
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+  "find": "relationships",
+  "filters": [
+    {
+      "field": "object.name",
+      "operator": "eq",
+      "value": "Breast Cancer"
+    },
+    {
+      "field": "predicate",
+      "operator": "eq",
+      "value": "TREATS"
+    }
+  ],
+  "return_fields": [
+    "subject.name",
+    "subject.type",
+    "predicate",
+    "confidence",
+    "evidence_count",
+    "papers"
+  ],
+  "order_by": [["confidence", "desc"]]
+}'
+```
+
+**Example response:**
+
+```json
+{
+  "status": "success",
+  "results": [
+    {
+      "subject.name": "Olaparib",
+      "subject.type": "drug",
+      "predicate": "TREATS",
+      "confidence": 0.92,
+      "evidence_count": 1,
+      "papers": ["PMC123456"]
+    }
+  ]
+}
+```
+
+---
+
+## Example 24: Trace Metformin's Mechanism of Action
+
+**How does metformin lower blood sugar?**
+
+```bash
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+  "find": "paths",
+  "path_pattern": {
+    "start": {
+      "node_type": "drug",
+      "filters": [{"field": "name", "operator": "eq", "value": "Metformin"}],
+      "var": "drug"
+    },
+    "edges": [
+      [
+        {"relation_type": "activates", "var": "activation"},
+        {"node_type": "protein", "var": "protein"}
+      ],
+      [
+        {"relation_type": "downregulates", "var": "downreg"},
+        {"node_type": "biomarker", "var": "marker"}
+      ]
+    ],
+    "max_hops": 2
+  },
+  "return_fields": [
+    "drug.name",
+    "protein.name",
+    "marker.name",
+    "activation.confidence",
+    "downreg.confidence"
+  ]
+}'
+```
+
+**Example response:**
+
+```json
+{
+  "status": "success",
+  "results": [
+    {
+      "drug.name": "Metformin",
+      "protein.name": "AMPK",
+      "marker.name": "Glycated Hemoglobin",
+      "activation.confidence": 0.90,
+      "downreg.confidence": 0.88,
+      "path": [
+        "Metformin -> ACTIVATES -> AMPK -> DOWNREGULATES -> HbA1c"
+      ]
+    }
+  ]
+}
+```
+
+---
+
+## Example 25: Find Papers Supporting a Relationship
+
+**Get the actual papers that show metformin treats diabetes:**
+
+```bash
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+  "find": "papers",
+  "filters": [
+    {
+      "field": "relationships.subject.name",
+      "operator": "eq",
+      "value": "Metformin"
+    },
+    {
+      "field": "relationships.object.name",
+      "operator": "eq",
+      "value": "Type 2 Diabetes"
+    },
+    {
+      "field": "relationships.predicate",
+      "operator": "eq",
+      "value": "TREATS"
+    }
+  ],
+  "return_fields": [
+    "paper_id",
+    "title",
+    "authors",
+    "publication_date",
+    "journal"
+  ]
+}'
+```
+
+**Example response:**
+
+```json
+{
+  "status": "success",
+  "results": [
+    {
+      "paper_id": "PMC234567",
+      "title": "Metformin Activation of AMPK and Effects on Glycemic Control",
+      "authors": ["Zhou G", "Myers R", "Li Y", "Chen Y", "Shen X"],
+      "publication_date": "2018-03-15",
+      "journal": "Journal of Clinical Investigation"
+    },
+    {
+      "paper_id": "PMC345678",
+      "title": "Long-term Metformin Use in Type 2 Diabetes: A Cohort Study",
+      "authors": ["Turner RC", "Holman RR", "Cull CA", "Stratton IM"],
+      "publication_date": "2019-06-22",
+      "journal": "Diabetes Care"
+    }
+  ]
+}
+```
+
+---
+
+## Example 26: Multi-hop Query - Aspirin Prevention Path
+
+**Find what aspirin prevents and the evidence quality:**
+
+```bash
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+  "find": "paths",
+  "path_pattern": {
+    "start": {
+      "node_type": "drug",
+      "filters": [{"field": "name", "operator": "eq", "value": "Aspirin"}],
+      "var": "drug"
+    },
+    "edges": [
+      [
+        {"relation_type": "prevents", "var": "prevention"},
+        {"node_type": "disease", "var": "disease"}
+      ]
+    ],
+    "max_hops": 1
+  },
+  "return_fields": [
+    "drug.name",
+    "disease.name",
+    "prevention.confidence",
+    "prevention.evidence_count",
+    "prevention.metadata.risk_reduction",
+    "prevention.metadata.study_type"
+  ]
+}'
+```
+
+**Example response:**
+
+```json
+{
+  "status": "success",
+  "results": [
+    {
+      "drug.name": "Aspirin",
+      "disease.name": "Myocardial Infarction",
+      "prevention.confidence": 0.82,
+      "prevention.evidence_count": 2,
+      "prevention.metadata": {
+        "risk_reduction": 0.25,
+        "study_type": "meta_analysis"
+      }
+    }
+  ]
+}
+```
+
+---
+
+## Example 27: Entity Search by Type
+
+**List all drugs in the knowledge graph:**
+
+```bash
+curl -X GET "$MEDGRAPH_SERVER/api/v1/entities?entity_type=drug&limit=10" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+**Example response:**
+
+```json
+{
+  "entities": [
+    {
+      "id": "RxNorm:1187832",
+      "type": "drug",
+      "name": "Olaparib",
+      "canonical_id": "RxNorm:1187832",
+      "mentions": 342
+    },
+    {
+      "id": "RxNorm:860975",
+      "type": "drug",
+      "name": "Metformin",
+      "canonical_id": "RxNorm:860975",
+      "mentions": 2847
+    },
+    {
+      "id": "RxNorm:1191",
+      "type": "drug",
+      "name": "Aspirin",
+      "canonical_id": "RxNorm:1191",
+      "mentions": 4123
+    }
+  ],
+  "total": 3
+}
+```
+
+---
+
+## Example 28: Get Knowledge Graph Statistics
+
+**What's in the graph?**
+
+```bash
+curl -X GET "$MEDGRAPH_SERVER/api/v1/stats" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+**Example response:**
+
+```json
+{
+  "total_entities": 8,
+  "total_relationships": 5,
+  "total_papers": 4,
+  "entity_types": {
+    "disease": 3,
+    "drug": 3,
+    "protein": 1,
+    "biomarker": 1
+  },
+  "relationship_types": {
+    "TREATS": 2,
+    "ACTIVATES": 1,
+    "DOWNREGULATES": 1,
+    "PREVENTS": 1
+  },
+  "last_updated": "2025-12-08T23:30:00"
+}
+```
+
+---
+
+## Testing the Mini Server
+
+To test these examples against the synthetic data server:
+
+```bash
+# Start the mini server
+cd tests/mini_server
+python server.py
+
+# In another terminal, run the curl commands
+export MEDGRAPH_SERVER="http://localhost:8000"
+export API_KEY="test-key"  # Not validated in dev server
+
+# Try a simple query
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
+  -H "Content-Type: application/json" \
+  -d '{"find": "entities", "limit": 5}'
 ```
