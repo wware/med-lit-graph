@@ -272,6 +272,10 @@ treats = Treats(
 ### Using the Query Client
 
 ```python
+# When installed as a package, use:
+# from medical_graph_client import MedicalGraphClient, QueryBuilder
+# 
+# During development, use:
 from client.python.client import MedicalGraphClient, QueryBuilder
 import os
 
