@@ -18,7 +18,7 @@ This report documents the validation of curl examples in `client/curl/EXAMPLES.m
 Three invalid relationship types were found and corrected:
 
 1. **Example 7 (Differential Diagnosis):**
-   - **Invalid:** `symptom_of` 
+   - **Invalid:** `symptom_of`
    - **Fixed:** Changed to `causes` with `direction: "incoming"`
    - **Reasoning:** The schema uses `causes` for Disease → Symptom relationships. To query from Symptom → Disease, we use the incoming direction.
 

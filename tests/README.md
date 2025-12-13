@@ -101,7 +101,7 @@ This directory contains the test suite for the medical literature knowledge grap
 uv run pytest tests/
 ```
 
-For verbose output: 
+For verbose output:
 ```bash
 uv run pytest tests/ -v
 ```

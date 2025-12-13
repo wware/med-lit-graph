@@ -186,7 +186,7 @@ Each JSON file is:
 def regenerate_graph(since: datetime):
     """Rebuild graph from JSON files modified after 'since'"""
     papers = s3.list_objects(prefix="papers/", modified_after=since)
-    
+
     for paper_json in papers:
         if paper_json['status'] == 'retracted':
             neptune.delete_paper(paper_json['paper_id'])
@@ -604,7 +604,7 @@ LLMs can now query medical knowledge natively.
 ```python
 class Treats(MedicalRelationship):
     response_rate: Optional[float] = Field(None, ge=0.0, le=1.0)
-    
+
     @field_validator('evidence')
     @classmethod
     def validate_evidence_not_empty(cls, v):

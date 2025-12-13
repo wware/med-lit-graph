@@ -94,9 +94,9 @@ client = MedicalGraphClient(base_url="...", api_key="your-key")
 
 ```typescript
 // TypeScript
-const client = new MedicalGraphClient({ 
-  baseUrl: "...", 
-  apiKey: "your-key" 
+const client = new MedicalGraphClient({
+  baseUrl: "...",
+  apiKey: "your-key"
 });
 ```
 
