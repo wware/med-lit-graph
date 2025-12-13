@@ -1468,7 +1468,7 @@ curl -X POST $MEDGRAPH_SERVER/api/v1/query \
 }'
 ```
 
-**Example response:**
+**Expected response:**
 
 ```json
 {
@@ -1528,7 +1528,7 @@ curl -X POST $MEDGRAPH_SERVER/api/v1/query \
 }'
 ```
 
-**Example response:**
+**Expected response:**
 
 ```json
 {
@@ -1589,7 +1589,7 @@ curl -X POST $MEDGRAPH_SERVER/api/v1/query \
 }'
 ```
 
-**Example response:**
+**Expected response:**
 
 ```json
 {
@@ -1652,7 +1652,7 @@ curl -X POST $MEDGRAPH_SERVER/api/v1/query \
 }'
 ```
 
-**Example response:**
+**Expected response:**
 
 ```json
 {
