@@ -53,12 +53,7 @@ def response_contains_expected_data(actual_response: Any, expected_response: Any
             return False
         # For lists, check that each expected item appears somewhere in the actual list
         for expected_item in expected_response:
-            found = False
-            for actual_item in actual_response:
-                if response_contains_expected_data(actual_item, expected_item):
-                    found = True
-                    break
-            if not found:
+            if not any(response_contains_expected_data(actual_item, expected_item) for actual_item in actual_response):
                 return False
         return True
 
@@ -111,8 +106,10 @@ def extract_queries_and_responses(examples_file: str) -> List[Tuple[int, Dict[st
 
             # Look for expected response after this curl block
             # Pattern: **Expected response:** or **Example response:**\n```json\n{...}\n```
-            # Find position of current curl block in the section
-            block_pos = section.find(block[:50])
+            # Find the position of this curl block in the section to search only after it
+            # We use a unique portion of the query JSON to locate the block reliably
+            query_json_snippet = json_match.group(1)[:100]  # Use query JSON as anchor
+            block_pos = section.find(query_json_snippet)
             if block_pos == -1:
                 block_pos = 0
 
