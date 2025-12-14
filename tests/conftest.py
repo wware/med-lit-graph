@@ -384,6 +384,10 @@ def mocked_medical_graph_client(monkeypatch, fake_session) -> MedicalGraphClient
 
 logger = logging.getLogger(__name__)
 
+# Constants for mini server management
+MINI_SERVER_STARTUP_TIMEOUT = 10  # seconds
+MINI_SERVER_SHUTDOWN_TIMEOUT = 5  # seconds
+
 
 def _run_mini_server(port: int):
     """
@@ -414,7 +418,7 @@ def _run_mini_server(port: int):
     server.run()
 
 
-def _wait_for_server(url: str, timeout: int = 10) -> bool:
+def _wait_for_server(url: str, timeout: int = MINI_SERVER_STARTUP_TIMEOUT) -> bool:
     """
     Wait for the server to be ready by polling the health endpoint.
 
@@ -431,7 +435,8 @@ def _wait_for_server(url: str, timeout: int = 10) -> bool:
     while time.time() - start_time < timeout:
         try:
             response = requests.get(url, timeout=1)
-            if response.status_code < 500:
+            # Check for success status codes (2xx or 3xx)
+            if 200 <= response.status_code < 400:
                 logger.info(f"Mini server is ready at {url}")
                 return True
         except requests.exceptions.RequestException:
@@ -466,10 +471,10 @@ def mini_server() -> Generator[str, None, None]:
 
     try:
         # Wait for server to be ready
-        if not _wait_for_server(base_url, timeout=10):
+        if not _wait_for_server(base_url, timeout=MINI_SERVER_STARTUP_TIMEOUT):
             process.terminate()
             process.join(timeout=2)
-            pytest.fail(f"Mini server failed to start within 10 seconds on {base_url}")
+            pytest.fail(f"Mini server failed to start within {MINI_SERVER_STARTUP_TIMEOUT} seconds on {base_url}")
 
         logger.info(f"Mini server started successfully at {base_url}")
         yield base_url
@@ -478,7 +483,7 @@ def mini_server() -> Generator[str, None, None]:
         # Cleanup: terminate the server process
         logger.info("Shutting down mini server")
         process.terminate()
-        process.join(timeout=5)
+        process.join(timeout=MINI_SERVER_SHUTDOWN_TIMEOUT)
 
         # Force kill if still running
         if process.is_alive():
