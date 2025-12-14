@@ -27,6 +27,9 @@ Phase 3 features are documented in QUERY_EXECUTOR_ROADMAP.md
 import re
 from typing import Any, Dict, List
 
+# Configuration constants
+MAX_REGEX_PATTERN_LENGTH = 200  # Maximum length for regex patterns to prevent ReDoS
+
 
 def execute_query(query: Dict[str, Any], entities: Dict[str, Dict], relationships: List[Dict]) -> Dict[str, Any]:
     """
@@ -240,7 +243,7 @@ def matches_filters(source: Dict, edge: Dict, target: Dict, filters: List[Dict])
                 data = source
 
             # Handle node_type as alias for type
-            if field_name == "node_type" and data in [source, target]:
+            if field_name == "node_type" and (data is source or data is target):
                 field_name = "type"
 
             actual_value = data.get(field_name)
@@ -307,7 +310,7 @@ def apply_operator(actual_value: Any, operator: str, expected_value: Any) -> boo
         if not isinstance(actual_value, str) or not isinstance(expected_value, str):
             return False
         # Basic protection: limit pattern length
-        if len(expected_value) > 200:
+        if len(expected_value) > MAX_REGEX_PATTERN_LENGTH:
             return False
         try:
             return bool(re.search(expected_value, actual_value, re.IGNORECASE))
@@ -749,8 +752,8 @@ def traverse_paths(
         return
 
     # Get the edge specification for this hop
-    # Validate edge_spec structure
-    if not isinstance(edge_specs[hop_index], (list, tuple)) or len(edge_specs[hop_index]) < 2:
+    # Validate edge_spec structure - must be exactly 2 elements
+    if not isinstance(edge_specs[hop_index], (list, tuple)) or len(edge_specs[hop_index]) != 2:
         # Invalid edge spec, skip
         return
 
@@ -847,8 +850,8 @@ def build_path_result(path: Dict, start_spec: Dict, edge_specs: List[List]) -> D
 
     # Add intermediate nodes and edges
     for i, edge_pair in enumerate(edge_specs):
-        # Validate structure
-        if not isinstance(edge_pair, (list, tuple)) or len(edge_pair) < 2:
+        # Validate structure - must be exactly 2 elements
+        if not isinstance(edge_pair, (list, tuple)) or len(edge_pair) != 2:
             continue
 
         edge_spec, target_spec = edge_pair
