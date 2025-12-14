@@ -54,6 +54,11 @@ This file tracks implementation status and next steps for the medical knowledge 
 ### Field Projections
 - [x] `return_fields` - Only return specified fields
 - [x] Nested field access (e.g., `gene.external_ids.hgnc`)
+- [ ] **INCOMPLETE**: Path query field projection not fully implemented
+  - Currently only returns fields from the start node (e.g., `hypothesis.name`)
+  - Missing: fields from target nodes (e.g., `paper.pmc_id`, `paper.title`)
+  - Missing: fields from relationship metadata (e.g., `test_relationship.test_outcome`, `test_relationship.study_design_id`)
+  - Affects: Example 13 and other path queries with `return_fields`
 
 ## 💡 Phase 3: Advanced Features (Future)
 

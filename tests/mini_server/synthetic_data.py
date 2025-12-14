@@ -124,6 +124,32 @@ def generate_entities() -> Dict[str, Dict]:
         "description": "Death of heart muscle due to interrupted blood supply",
     }
 
+    # Hypothesis: Amyloid Cascade Hypothesis (for Example 13)
+    entities["HYPOTHESIS:amyloid_cascade_alzheimers"] = {
+        "id": "HYPOTHESIS:amyloid_cascade_alzheimers",
+        "type": "hypothesis",
+        "name": "Amyloid Cascade Hypothesis",
+        "canonical_id": "HYPOTHESIS:amyloid_cascade_alzheimers",
+        "mentions": 1234,
+        "status": "controversial",
+        "proposed_date": "1992-01-01",
+        "description": "Hypothesis that amyloid beta accumulation is the primary driver of Alzheimer's disease pathology",
+        "iao_id": "IAO:0000018",
+        "sepio_id": "SEPIO:0000001",
+    }
+
+    # Paper: PMC9876 (for Example 13)
+    entities["PMC9876"] = {
+        "id": "PMC9876",
+        "type": "paper",
+        "name": "Aducanumab fails to meet primary endpoints",
+        "canonical_id": "PMC9876",
+        "pmc_id": "PMC9876",
+        "title": "Aducanumab fails to meet primary endpoints",
+        "publication_date": "2019-03-21",
+        "mentions": 1,
+    }
+
     return entities
 
 
@@ -231,6 +257,20 @@ def generate_relationships() -> List[Dict]:
         }
     )
 
+    # Amyloid Cascade Hypothesis TESTED_BY PMC9876 (for Example 13)
+    relationships.append(
+        {
+            "id": "rel_006",
+            "subject_id": "HYPOTHESIS:amyloid_cascade_alzheimers",
+            "predicate": "TESTED_BY",
+            "object_id": "PMC9876",
+            "confidence": 0.95,
+            "evidence_count": 1,
+            "papers": ["PMC9876"],
+            "metadata": {"test_outcome": "refuted", "study_design_id": "OBI:0000008", "methodology": "randomized controlled trial"},
+        }
+    )
+
     return relationships
 
 
@@ -279,6 +319,18 @@ def generate_papers() -> Dict[str, Dict]:
         "publication_date": "2020-01-10",
         "journal": "Circulation",
         "entity_count": 2,
+        "relationship_count": 1,
+    }
+
+    papers["PMC9876"] = {
+        "paper_id": "PMC9876",
+        "pmc_id": "PMC9876",
+        "title": "Aducanumab fails to meet primary endpoints",
+        "authors": ["Biogen Research Team"],
+        "abstract": "Phase 3 trial of aducanumab in early Alzheimer's disease failed to meet primary endpoints, calling into question the amyloid cascade hypothesis.",
+        "publication_date": "2019-03-21",
+        "journal": "Nature Medicine",
+        "entity_count": 1,
         "relationship_count": 1,
     }
 

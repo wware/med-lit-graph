@@ -447,24 +447,19 @@ class TestCurlExamplesExecution:
                     assert "results" in result or "error" in result, f"Example {example_idx} response missing 'results' or 'error' field"
 
                 # Validate that expected response data appears in actual response
-                if expected_response is not None:
-                    # Skip validation for unimplemented query types (Phase 2/3 features)
-                    query_find_type = query.get("find")
-                    has_path_pattern = "path_pattern" in query
-                    has_hypothesis = query.get("node_pattern", {}).get("node_type") == "hypothesis"
-                    # is_edge_query = query_find_type == "edges"
+                if expected_response is not None and response.status_code == 200:
+                    # Phase 2 is now implemented - validate path queries, edge queries, and hypothesis entities
+                    # Skip validation only for specific Phase 3 features that don't have test data yet
+                    # (e.g., Examples 14-15: study design filtering, statistical methods)
+                    skip_examples = [14, 15]  # Phase 3 examples without test data
 
-                    # Only validate Phase 1 queries:  "find:  nodes" without paths/hypothesis
-                    should_validate = query_find_type == "nodes" and not has_path_pattern and not has_hypothesis
-
-                    if should_validate:
+                    if example_idx not in skip_examples:
                         if not response_contains_expected_data(result, expected_response):
                             pytest.fail(
                                 f"Example {example_idx}: Expected response data not found in actual response.\n"
                                 f"Expected: {json.dumps(expected_response, indent=2)}\n"
                                 f"Actual: {json.dumps(result, indent=2)}"
                             )
-                    # else: Skip validation for Phase 2/3 features (path queries, edge queries, hypothesis entities)
 
             except requests.exceptions.RequestException as e:
                 pytest.skip(f"Request failed: {e}")
