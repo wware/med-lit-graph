@@ -27,33 +27,33 @@ This file tracks implementation status and next steps for the medical knowledge 
 ## 🔜 Phase 2: Extended Query Features (Next Priority)
 
 ### Additional Operators
-- [ ] `in` - Field value in a list
-- [ ] `contains` - String contains substring (case-insensitive)
-- [ ] `regex` - Regular expression matching
-- [ ] `gt/gte/lt/lte/ne` - Numeric and string comparisons
+- [x] `in` - Field value in a list
+- [x] `contains` - String contains substring (case-insensitive)
+- [x] `regex` - Regular expression matching
+- [x] `gt/gte/lt/lte/ne` - Numeric and string comparisons
 
 ### Multi-hop Path Queries
-- [ ] Parse `path_pattern` with start node and edges array
-- [ ] Traverse relationships to build paths
-- [ ] Support `max_hops` parameter
-- [ ] Support `avoid_cycles`
-- [ ] Return path structures with nodes and edges
-- [ ] **Enables**:  Examples 3, 4, 11, 13, 15, 24, 26
+- [x] Parse `path_pattern` with start node and edges array
+- [x] Traverse relationships to build paths
+- [x] Support `max_hops` parameter
+- [x] Support `avoid_cycles`
+- [x] Return path structures with nodes and edges
+- [x] **Enables**:  Examples 3, 4, 11, 13, 15, 24, 26
 
 ### Edge Queries
-- [ ] `find:  "edges"` - Return relationships instead of nodes
-- [ ] Edge-specific return fields
-- [ ] **Enables**: Example 23
+- [x] `find:  "edges"` - Return relationships instead of nodes
+- [x] Edge-specific return fields
+- [x] **Enables**: Example 23
 
 ### More Aggregations
-- [ ] `sum` - Sum numeric values
-- [ ] `min/max` - Minimum/maximum values
-- [ ] Multiple group_by fields
-- [ ] **Enables**: Example 5, 25
+- [x] `sum` - Sum numeric values
+- [x] `min/max` - Minimum/maximum values
+- [x] Multiple group_by fields
+- [x] **Enables**: Example 5, 25
 
 ### Field Projections
-- [ ] `return_fields` - Only return specified fields
-- [ ] Nested field access (e.g., `gene.external_ids.hgnc`)
+- [x] `return_fields` - Only return specified fields
+- [x] Nested field access (e.g., `gene.external_ids.hgnc`)
 
 ## 💡 Phase 3: Advanced Features (Future)
 
@@ -88,23 +88,23 @@ This file tracks implementation status and next steps for the medical knowledge 
 |---------|-----------------|--------|
 | 1 | Basic nodes + aggregation | ✅ Implemented |
 | 2 | Basic nodes + filtering | ✅ Implemented (same as 1) |
-| 3 | Multi-hop paths | ⏳ Phase 2 |
-| 4 | Multi-hop paths | ⏳ Phase 2 |
-| 5 | Aggregations (count complex) | ⏳ Phase 2 |
+| 3 | Multi-hop paths | ✅ Phase 2 Implemented |
+| 4 | Multi-hop paths | ✅ Phase 2 Implemented |
+| 5 | Aggregations (count complex) | ✅ Phase 2 Implemented |
 | 6 | Aggregations by relation_type | ✅ Implemented |
-| 7 | Multi-hop paths | ⏳ Phase 2 |
+| 7 | Multi-hop paths | ✅ Phase 2 Implemented |
 | 8 | Basic nodes | ✅ Implemented |
-| 9 | Edge filtering by date | ⏳ Phase 2 |
-| 10 | Edge filtering | ⏳ Phase 2 |
-| 11 | Multi-hop paths | ⏳ Phase 2 |
+| 9 | Edge filtering by date | ⏳ Phase 3 |
+| 10 | Edge filtering | ⏳ Phase 3 |
+| 11 | Multi-hop paths | ✅ Phase 2 Implemented |
 | 12 | Basic nodes | ✅ Implemented |
 | 13 | Hypothesis entities + paths | ⏳ Phase 3 |
 | 14 | Study design filtering | ⏳ Phase 3 |
 | 15 | Statistical methods | ⏳ Phase 3 |
-| 23 | Edge queries | ⏳ Phase 2 |
-| 24 | Multi-hop paths | ⏳ Phase 2 |
-| 25 | Paper filtering | ⏳ Phase 2 |
-| 26 | Multi-hop paths | ⏳ Phase 2 |
+| 23 | Edge queries | ✅ Phase 2 Implemented |
+| 24 | Multi-hop paths | ✅ Phase 2 Implemented |
+| 25 | Paper filtering | ✅ Phase 2 Implemented |
+| 26 | Multi-hop paths | ✅ Phase 2 Implemented |
 
 ## 🧪 Testing Notes
 
