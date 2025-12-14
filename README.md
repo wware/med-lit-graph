@@ -136,18 +136,18 @@ User Interfaces
          │
     Query API (FastAPI)
          │
-    ┌────┴────┬─────────┐
-OpenSearch  Neptune     S3
-(Vector)    (Graph)   (JSON Source)
+    ┌────┴────┬─────────────────┐
+Vector Search   Graph Database   Object Storage
+(Semantic)      (Relationships)  (Source of Truth)
 ```
 
 **Data Flow**:
 ```
 PubMed/PMC → Ingestion Pipeline → Per-Paper JSON (Source of Truth)
                                          │
-                         ┌───────────────┴───────────────┐
-                   OpenSearch                        Neptune
-                  (Semantic Search)              (Graph Queries)
+                         ┌───────────────┴────────────────────┐
+                   Vector Search                        Graph Database
+                  (Semantic Search)                    (Graph Queries)
 ```
 
 <!-- TODO file doesn't exist: [Full architecture docs →](docs/architecture.md) -->
@@ -483,72 +483,15 @@ docker-compose up -d
 ```
 
 Services:
-- OpenSearch: http://localhost:9200
+- Vector Search: http://localhost:9200
 - API: http://localhost:8000
 - Dashboards: http://localhost:5601
 
-### AWS Budget Deployment (~$50/month)
-```bash
-cd infrastructure/cdk
-cdk bootstrap
-cdk deploy MedicalKgBudgetStack
-```
+### Cloud Deployment
 
-Components:
-- Single OpenSearch t3.small instance
-- S3 for paper storage
-- Lambda for ingestion
-- VPC endpoints (no NAT)
-
-### AWS Production (~$1000-1500/month)
-```bash
-cdk deploy MedicalKgProductionStack
-```
-
-Components:
-- Multi-AZ OpenSearch cluster
-- Neptune graph database
-- ECS Fargate services
-- Application Load Balancer
-- Auto-scaling + monitoring
+See the `infrastructure/` directory for deployment options and configurations.
 
 <!-- TODO file doesn't exist: [Deployment guide →](docs/deployment.md) -->
-
----
-
-## Roadmap
-
-**Phase 1 (Current)**: Core Infrastructure
-- [x] Schema with mandatory provenance
-- [x] JSON query language
-- [x] Python + TypeScript clients
-- [ ] AWS deployment scripts
-
-**Phase 2 (Q1 2026)**: Data & Quality
-- [ ] Ingest 10,000 papers (POC)
-- [ ] Entity resolution & deduplication
-- [ ] Contradiction detection
-- [ ] Quality metrics dashboard
-
-**Phase 3 (Q2 2026)**: Query Capabilities
-- [ ] Multi-hop path queries
-- [ ] Temporal queries
-- [ ] Aggregation & analytics
-- [ ] RDF export
-
-**Phase 4 (Q3 2026)**: User Interfaces
-- [ ] Web query interface
-- [ ] Visualization dashboard
-- [ ] MCP server
-- [ ] Example notebooks
-
-**Phase 5 (Q4 2026)**: Scale
-- [ ] 100,000+ papers
-- [ ] Query optimization
-- [ ] Real-time updates
-- [ ] Multi-region
-
-<!-- TODO file doesn't exist: [Detailed roadmap →](docs/roadmap.md) -->
 
 ---
 
