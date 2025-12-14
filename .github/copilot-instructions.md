@@ -493,4 +493,4 @@ def find_treatments(disease: str, min_confidence: float = 0.7) -> list[dict]:
 
 - Check existing code in `schema/` for patterns
 - Look at tests for usage examples
-- Review README.md and DESIGN_DECISIONS.md for context
+- Review README.md and docs/DESIGN_DECISIONS.md for context

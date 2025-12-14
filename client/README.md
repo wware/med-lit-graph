@@ -174,7 +174,7 @@ When adding new client libraries:
 ## Related Documentation
 
 - **[QUERY_LANGUAGE.md](./QUERY_LANGUAGE.md)** - Complete query language specification
-- **[../DESIGN_DECISIONS.md](../DESIGN_DECISIONS.md)** - Why we chose JSON over Cypher/Gremlin
+- **[../docs/DESIGN_DECISIONS.md](../docs/DESIGN_DECISIONS.md)** - Why we chose JSON over Cypher/Gremlin
 - **[../tests/README.md](../tests/README.md)** - Test coverage
 
 ## Support

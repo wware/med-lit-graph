@@ -264,7 +264,7 @@ Pure vector search misses multi-hop connections. Pure graph misses semantic simi
 - Graph: BRCA1 → increases_risk → breast cancer → treated_by → olaparib
 - Result: Drugs with evidence for BRCA-mutated subtype specifically
 
-[Complete design decisions →](./DESIGN_DECISIONS.md)
+[Complete design decisions →](./docs/DESIGN_DECISIONS.md)
 
 ---
 

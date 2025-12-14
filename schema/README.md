@@ -289,7 +289,7 @@ evidence=[
 
 ## Related Documentation
 
-- **[DESIGN_DECISIONS.md](../DESIGN_DECISIONS.md)** - Full rationale for architectural choices
+- **[DESIGN_DECISIONS.md](../docs/DESIGN_DECISIONS.md)** - Full rationale for architectural choices
 - **[tests/README.md](../tests/README.md)** - Test coverage and validation
 
 ## Validation Philosophy
