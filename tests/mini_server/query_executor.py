@@ -193,7 +193,7 @@ def matches_edge_pattern(rel: Dict[str, Any], edge_pattern: Dict[str, Any]) -> b
     # Check min_confidence
     min_confidence = edge_pattern.get("min_confidence")
     if min_confidence is not None:
-        if rel["confidence"] < min_confidence:
+        if rel.get("confidence", 0.0) < min_confidence:
             return False
 
     return True
@@ -314,7 +314,7 @@ def apply_operator(actual_value: Any, operator: str, expected_value: Any) -> boo
             return False
         try:
             return bool(re.search(expected_value, actual_value, re.IGNORECASE))
-        except (re.error, TimeoutError):
+        except re.error:
             return False
 
     elif operator == "gt":
@@ -715,6 +715,19 @@ def execute_path_query(query: Dict[str, Any], entities: Dict[str, Dict], relatio
     return {"results": results}
 
 
+def is_valid_edge_spec(edge_spec_item: Any) -> bool:
+    """
+    Validate that an edge_spec item has exactly 2 elements.
+
+    Args:
+        edge_spec_item: Item from edge_specs list to validate
+
+    Returns:
+        True if valid (list/tuple with exactly 2 elements), False otherwise
+    """
+    return isinstance(edge_spec_item, (list, tuple)) and len(edge_spec_item) == 2
+
+
 def traverse_paths(
     current_node: Dict,
     current_path_nodes: List[Dict],
@@ -753,7 +766,7 @@ def traverse_paths(
 
     # Get the edge specification for this hop
     # Validate edge_spec structure - must be exactly 2 elements
-    if not isinstance(edge_specs[hop_index], (list, tuple)) or len(edge_specs[hop_index]) != 2:
+    if not is_valid_edge_spec(edge_specs[hop_index]):
         # Invalid edge spec, skip
         return
 
@@ -851,7 +864,7 @@ def build_path_result(path: Dict, start_spec: Dict, edge_specs: List[List]) -> D
     # Add intermediate nodes and edges
     for i, edge_pair in enumerate(edge_specs):
         # Validate structure - must be exactly 2 elements
-        if not isinstance(edge_pair, (list, tuple)) or len(edge_pair) != 2:
+        if not is_valid_edge_spec(edge_pair):
             continue
 
         edge_spec, target_spec = edge_pair
