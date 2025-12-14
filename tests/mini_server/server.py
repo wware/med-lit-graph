@@ -26,12 +26,15 @@ if str(SCRIPT_DIR) not in sys.path:
 # Imports after sys.path modification to allow local module imports
 from datetime import datetime  # noqa: E402
 from typing import Any, Dict, List, Optional  # noqa: E402
+import json  # noqa: E402
 import logging  # noqa: E402
 import time  # noqa: E402
 import uvicorn  # noqa: E402
 
 from fastapi import APIRouter, FastAPI, HTTPException, Query  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
+from fastapi.staticfiles import StaticFiles  # noqa: E402
+from fastapi.responses import FileResponse  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
 # Import query executor at module level for better performance
@@ -145,6 +148,15 @@ load_synthetic_data()
 
 
 # ============================================================================
+# Static Files Setup
+# ============================================================================
+
+# Mount static files directory
+static_path = SCRIPT_DIR / "static"
+app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
+
+
+# ============================================================================
 # API Endpoints
 # ============================================================================
 
@@ -160,19 +172,14 @@ def create_response_metadata(total_results: int, query_time_ms: int) -> Dict[str
 
 
 # ============================================================================
-# API Endpoints
+# Root and Static File Endpoints
 # ============================================================================
 
 
 @app.get("/")
 async def root():
-    """Health check and API info"""
-    return {
-        "status": "ok",
-        "message": "Medical Literature Graph API - Development Server",
-        "version": "0.1.0",
-        "endpoints": {"entities": "/entities", "relationships": "/relationships", "papers": "/papers", "graph": "/graph/traverse", "search": "/search"},
-    }
+    """Serve the demo UI homepage"""
+    return FileResponse(str(static_path / "index.html"))
 
 
 @api_router.post("/query")
@@ -280,6 +287,20 @@ async def get_stats():
     }
 
 
+@api_router.get("/examples")
+async def get_examples():
+    """Get parsed examples from EXAMPLES.md"""
+    examples_file = static_path / "examples.json"
+    
+    if not examples_file.exists():
+        raise HTTPException(status_code=404, detail="Examples file not found")
+    
+    with open(examples_file, 'r', encoding='utf-8') as f:
+        examples = json.load(f)
+    
+    return {"examples": examples, "total": len(examples)}
+
+
 # IMPORTANT: Include the router!
 app.include_router(api_router)
 
@@ -291,8 +312,14 @@ if __name__ == "__main__":
     print("Loading synthetic data...")
     load_synthetic_data()
 
-    print("Starting Medical Literature Graph API server...")
-    print("API Documentation: http://localhost:8000/docs")
-    print("Interactive API: http://localhost:8000/redoc")
+    print("\n" + "=" * 60)
+    print("🧬 Medical Literature Graph API - Development Server")
+    print("=" * 60)
+    print(f"Demo UI:          http://localhost:8000/")
+    print(f"API Docs:         http://localhost:8000/docs")
+    print(f"Interactive API:  http://localhost:8000/redoc")
+    print(f"Query Endpoint:   http://localhost:8000/api/v1/query")
+    print(f"Examples:         http://localhost:8000/api/v1/examples")
+    print("=" * 60 + "\n")
 
     uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True)
