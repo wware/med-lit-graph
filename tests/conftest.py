@@ -399,8 +399,8 @@ def _run_mini_server(port: int):
     if str(mini_server_dir) not in sys.path:
         sys.path.insert(0, str(mini_server_dir))
 
-    # Import the FastAPI app
-    from tests.mini_server.server import app
+    # Import the FastAPI app - use relative import since mini_server is in sys.path
+    from server import app
 
     # Run uvicorn server
     config = uvicorn.Config(
