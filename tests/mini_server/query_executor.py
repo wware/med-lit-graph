@@ -225,12 +225,12 @@ def matches_filters(source: Dict, edge: Dict, target: Dict, filters: List[Dict])
             field_name = parts[1]
 
             # Map context to data
-            if context == "target":
+            if context == "target" or context == "object":
                 data = target
                 # Handle node_type as alias for type
                 if field_name == "node_type":
                     field_name = "type"
-            elif context == "source":
+            elif context == "source" or context == "subject":
                 data = source
                 if field_name == "node_type":
                     field_name = "type"

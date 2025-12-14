@@ -50,44 +50,45 @@ Example 1 from `client/curl/EXAMPLES.md` is fully supported:
 
 ## Phase 2: Extended Operators and Aggregations (Future)
 
-**Status**: 🔜 Planned
+**Status**: ✅ Implemented
 
 ### Additional Operators:
 Expand the filtering capabilities beyond simple equality:
 
-- **in** - Field value in a list
+- **in** - Field value in a list ✅
   ```json
   {"field": "source.name", "operator": "in", "value": ["aspirin", "ibuprofen"]}
   ```
 
-- **contains** - String contains substring (case-insensitive)
+- **contains** - String contains substring (case-insensitive) ✅
   ```json
   {"field": "disease.name", "operator": "contains", "value": "cancer"}
   ```
 
-- **regex** - Regular expression matching
+- **regex** - Regular expression matching ✅
   ```json
   {"field": "drug.name", "operator": "regex", "value": ".*mab$"}
   ```
 
-- **gt/gte/lt/lte/ne** - Numeric and string comparisons
+- **gt/gte/lt/lte/ne** - Numeric and string comparisons ✅
   ```json
   {"field": "edge.confidence", "operator": "gte", "value": 0.8}
   ```
 
 ### More Aggregations:
-- **sum** - Sum numeric values
-- **min/max** - Minimum/maximum values
-- Multiple group_by fields simultaneously
-- Aggregation on nested fields (e.g., `treatment.evidence.paper_id`)
+- **sum** - Sum numeric values ✅
+- **min/max** - Minimum/maximum values ✅
+- Multiple group_by fields simultaneously ✅
+- Aggregation on nested fields (e.g., `treatment.evidence.paper_id`) ✅
 
 ### Multi-hop Paths (Basic):
-Support for simple path queries:
+Support for simple path queries: ✅
 
-- Parse `path_pattern` with start node and edges array
-- Traverse relationships to build paths
-- Support `max_hops` parameter
-- Return path structures with nodes and edges
+- Parse `path_pattern` with start node and edges array ✅
+- Traverse relationships to build paths ✅
+- Support `max_hops` parameter ✅
+- Support `avoid_cycles` parameter ✅
+- Return path structures with nodes and edges ✅
 
 Example:
 ```json
@@ -105,8 +106,8 @@ Example:
 ```
 
 ### Field Projections:
-- `return_fields` - Only return specified fields from results
-- Nested field access (e.g., `gene.external_ids.hgnc`)
+- `return_fields` - Only return specified fields from results ✅
+- Nested field access (e.g., `gene.external_ids.hgnc`) ✅
 
 ---
 
