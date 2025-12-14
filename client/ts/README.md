@@ -406,8 +406,10 @@ export async function POST(request: NextRequest) {
 
 ## Environment Configuration
 
+Example configuration (replace with your actual API endpoint):
+
 ```bash
-# .env
+# .env (example)
 MEDGRAPH_API_URL=https://api.medgraph.example.com
 MEDGRAPH_API_KEY=your_api_key_here
 MEDGRAPH_TIMEOUT=30000
