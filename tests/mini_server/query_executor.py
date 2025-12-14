@@ -224,23 +224,24 @@ def matches_filters(source: Dict, edge: Dict, target: Dict, filters: List[Dict])
             context = parts[0]
             field_name = parts[1]
 
-            # Map context to data
-            if context == "target" or context == "object":
-                data = target
-                # Handle node_type as alias for type
-                if field_name == "node_type":
-                    field_name = "type"
-            elif context == "source" or context == "subject":
-                data = source
-                if field_name == "node_type":
-                    field_name = "type"
-            elif context == "edge":
-                data = edge
-            else:
+            # Map context to data with alias support
+            # Using a mapping approach for maintainability
+            context_mapping = {
+                "target": target,
+                "object": target,  # Alias for target
+                "source": source,
+                "subject": source,  # Alias for source
+                "edge": edge,
+            }
+
+            data = context_mapping.get(context)
+            if data is None:
                 # Assume it's the variable name from node_pattern
                 data = source
-                if field_name == "node_type":
-                    field_name = "type"
+
+            # Handle node_type as alias for type
+            if field_name == "node_type" and data in [source, target]:
+                field_name = "type"
 
             actual_value = data.get(field_name)
         else:
@@ -301,11 +302,16 @@ def apply_operator(actual_value: Any, operator: str, expected_value: Any) -> boo
 
     elif operator == "regex":
         # Regular expression matching
+        # Note: For production use, consider adding pattern complexity validation
+        # or timeouts to prevent ReDoS attacks
         if not isinstance(actual_value, str) or not isinstance(expected_value, str):
+            return False
+        # Basic protection: limit pattern length
+        if len(expected_value) > 200:
             return False
         try:
             return bool(re.search(expected_value, actual_value, re.IGNORECASE))
-        except re.error:
+        except (re.error, TimeoutError):
             return False
 
     elif operator == "gt":
@@ -743,6 +749,11 @@ def traverse_paths(
         return
 
     # Get the edge specification for this hop
+    # Validate edge_spec structure
+    if not isinstance(edge_specs[hop_index], (list, tuple)) or len(edge_specs[hop_index]) < 2:
+        # Invalid edge spec, skip
+        return
+
     edge_spec, target_spec = edge_specs[hop_index]
 
     # Find matching edges from current node
@@ -835,7 +846,13 @@ def build_path_result(path: Dict, start_spec: Dict, edge_specs: List[List]) -> D
         result[f"{start_var}.id"] = nodes[0]["id"]
 
     # Add intermediate nodes and edges
-    for i, (edge_spec, target_spec) in enumerate(edge_specs):
+    for i, edge_pair in enumerate(edge_specs):
+        # Validate structure
+        if not isinstance(edge_pair, (list, tuple)) or len(edge_pair) < 2:
+            continue
+
+        edge_spec, target_spec = edge_pair
+
         if i < len(edges):
             edge = edges[i]
             edge_var = edge_spec.get("var", f"edge{i}")
