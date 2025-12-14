@@ -439,7 +439,7 @@ class TestCurlExamplesExecution:
                     query_find_type = query.get("find")
                     has_path_pattern = "path_pattern" in query
                     has_hypothesis = query.get("node_pattern", {}).get("node_type") == "hypothesis"
-                    is_edge_query = query_find_type == "edges"
+                    # is_edge_query = query_find_type == "edges"
 
                     # Only validate Phase 1 queries:  "find:  nodes" without paths/hypothesis
                     should_validate = (
