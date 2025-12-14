@@ -305,3 +305,10 @@ footer a:hover {
 .btn-spinner {
     animation: spin 1s linear infinite;
 }
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    .btn-spinner {
+        animation: none;
+    }
+}

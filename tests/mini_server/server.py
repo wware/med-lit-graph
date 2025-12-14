@@ -26,6 +26,7 @@ if str(SCRIPT_DIR) not in sys.path:
 # Imports after sys.path modification to allow local module imports
 from datetime import datetime  # noqa: E402
 from typing import Any, Dict, List, Optional  # noqa: E402
+import json  # noqa: E402
 import logging  # noqa: E402
 import time  # noqa: E402
 import uvicorn  # noqa: E402
@@ -289,7 +290,6 @@ async def get_stats():
 @api_router.get("/examples")
 async def get_examples():
     """Get parsed examples from EXAMPLES.md"""
-    import json
     examples_file = static_path / "examples.json"
     
     if not examples_file.exists():

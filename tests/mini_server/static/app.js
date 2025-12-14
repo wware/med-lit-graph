@@ -194,8 +194,8 @@ function handleFormat() {
 function showResponse(data, responseTime) {
     hideError();
     
-    responseStatus.textContent = data.status === 'success' ? '✓ Success' : '⚠ Warning';
-    responseStatus.className = data.status === 'success' ? 'status-badge success' : 'status-badge warning';
+    responseStatus.textContent = data.status === 'success' ? '✓ Success' : data.status === 'error' ? '✗ Error' : '⚠ Warning';
+    responseStatus.className = data.status === 'success' ? 'status-badge success' : data.status === 'error' ? 'status-badge error' : 'status-badge warning';
     responseTime.textContent = `Response time: ${responseTime}ms`;
     
     // Format and display the response

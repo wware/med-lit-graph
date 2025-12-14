@@ -45,8 +45,7 @@ def parse_examples_md(examples_md_path: Path) -> List[Dict[str, Any]]:
         title = title_raw.split('\n')[0].strip()
         
         # Extract curl commands with JSON payloads
-        # Look for curl commands with -d followed by a JSON block
-        curl_pattern = r"curl.*?-d\s+'(.*?)'"
+        # Look for JSON in single quotes first
         json_pattern = r'-d\s+\'({.*?})\''
         
         # Try to find JSON in single quotes first
