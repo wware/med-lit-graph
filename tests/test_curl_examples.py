@@ -11,6 +11,7 @@ This test validates that:
 """
 
 import json
+import logging
 import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -20,6 +21,8 @@ import requests
 
 from schema.entity import EntityType
 from schema.relationship import RelationType
+
+logger = logging.getLogger(__name__)
 
 # Regex pattern for extracting JSON from curl commands
 # Matches: -d '{...}' at the end of a curl command block
@@ -375,21 +378,31 @@ class TestCurlExamplesExecution:
     """
     Integration tests that execute curl examples against a server.
 
-    These tests are marked as 'integration' and require:
-    - MEDGRAPH_SERVER environment variable set
-    - Server running and accessible
-    - Skip if server is not available
+    These tests are marked as 'integration' and automatically start a mini server
+    for testing. The MEDGRAPH_SERVER environment variable can be set to override
+    the auto-started server and test against a real deployment instead.
     """
 
     @pytest.fixture(scope="class")
-    def server_url(self):
-        """Get server URL from environment."""
+    def server_url(self, mini_server):
+        """
+        Get server URL from environment or use auto-started mini server.
+        
+        If MEDGRAPH_SERVER environment variable is set, use that URL.
+        Otherwise, use the auto-started mini server from the fixture.
+        This allows tests to run without manual server setup while still
+        supporting testing against real deployments.
+        """
         import os
 
         url = os.getenv("MEDGRAPH_SERVER")
-        if not url:
-            pytest.skip("MEDGRAPH_SERVER environment variable not set")
-        return url
+        if url:
+            logger.info(f"Using MEDGRAPH_SERVER from environment: {url}")
+            return url
+        
+        # Use auto-started mini server
+        logger.info(f"Using auto-started mini server: {mini_server}")
+        return mini_server
 
     @pytest.fixture(scope="class")
     def curl_queries(self):
