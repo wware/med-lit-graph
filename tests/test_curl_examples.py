@@ -387,7 +387,7 @@ class TestCurlExamplesExecution:
     def server_url(self, mini_server):
         """
         Get server URL from environment or use auto-started mini server.
-        
+
         If MEDGRAPH_SERVER environment variable is set, use that URL.
         Otherwise, use the auto-started mini server from the fixture.
         This allows tests to run without manual server setup while still
@@ -399,7 +399,7 @@ class TestCurlExamplesExecution:
         if url:
             logger.info(f"Using MEDGRAPH_SERVER from environment: {url}")
             return url
-        
+
         # Use auto-started mini server
         logger.info(f"Using auto-started mini server: {mini_server}")
         return mini_server
@@ -455,11 +455,7 @@ class TestCurlExamplesExecution:
                     # is_edge_query = query_find_type == "edges"
 
                     # Only validate Phase 1 queries:  "find:  nodes" without paths/hypothesis
-                    should_validate = (
-                        query_find_type == "nodes"
-                        and not has_path_pattern
-                        and not has_hypothesis
-                    )
+                    should_validate = query_find_type == "nodes" and not has_path_pattern and not has_hypothesis
 
                     if should_validate:
                         if not response_contains_expected_data(result, expected_response):

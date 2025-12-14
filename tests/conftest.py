@@ -388,21 +388,20 @@ logger = logging.getLogger(__name__)
 def _run_mini_server(port: int):
     """
     Run the mini server in a separate process.
-    
+
     This function is called in a subprocess to start the uvicorn server.
     """
     import uvicorn
-    from pathlib import Path
     import sys
-    
+
     # Add mini_server directory to path to allow imports
     mini_server_dir = Path(__file__).parent / "mini_server"
     if str(mini_server_dir) not in sys.path:
         sys.path.insert(0, str(mini_server_dir))
-    
+
     # Import the FastAPI app
     from tests.mini_server.server import app
-    
+
     # Run uvicorn server
     config = uvicorn.Config(
         app=app,
@@ -418,16 +417,16 @@ def _run_mini_server(port: int):
 def _wait_for_server(url: str, timeout: int = 10) -> bool:
     """
     Wait for the server to be ready by polling the health endpoint.
-    
+
     Args:
         url: Base URL of the server
         timeout: Maximum time to wait in seconds
-        
+
     Returns:
         True if server is ready, False if timeout
     """
     import requests
-    
+
     start_time = time.time()
     while time.time() - start_time < timeout:
         try:
@@ -438,7 +437,7 @@ def _wait_for_server(url: str, timeout: int = 10) -> bool:
         except requests.exceptions.RequestException:
             pass
         time.sleep(0.1)
-    
+
     return False
 
 
@@ -446,41 +445,41 @@ def _wait_for_server(url: str, timeout: int = 10) -> bool:
 def mini_server() -> Generator[str, None, None]:
     """
     Start mini server for integration tests, tear down afterwards.
-    
+
     This fixture starts the FastAPI mini server in a separate process,
     waits for it to be ready, yields the server URL, and then cleans up.
-    
+
     The server runs on a free port and is automatically stopped after tests complete.
-    
+
     Returns:
         Server URL (e.g., "http://127.0.0.1:8000")
     """
     # Find a free port
     port = _find_free_port()
     base_url = f"http://127.0.0.1:{port}"
-    
+
     logger.info(f"Starting mini server on port {port}")
-    
+
     # Start server in separate process
     process = multiprocessing.Process(target=_run_mini_server, args=(port,), daemon=True)
     process.start()
-    
+
     try:
         # Wait for server to be ready
         if not _wait_for_server(base_url, timeout=10):
             process.terminate()
             process.join(timeout=2)
             pytest.fail(f"Mini server failed to start within 10 seconds on {base_url}")
-        
+
         logger.info(f"Mini server started successfully at {base_url}")
         yield base_url
-        
+
     finally:
         # Cleanup: terminate the server process
         logger.info("Shutting down mini server")
         process.terminate()
         process.join(timeout=5)
-        
+
         # Force kill if still running
         if process.is_alive():
             logger.warning("Mini server did not terminate gracefully, killing")
