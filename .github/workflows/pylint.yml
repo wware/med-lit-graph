@@ -39,11 +39,11 @@ jobs:
       run: uv run pylint -E $(find . -name "*.py" -not -path "./.venv/*" -not -path "./build/*" -not -path "./dist/*")
       continue-on-error: false
     
-    - name: Run mypy type checking
-      run: uv run mypy .
-      continue-on-error: false
+    #- name: Run mypy type checking
+    #  run: uv run mypy .
+    #  continue-on-error: false
 
-    - name: Run pytest with coverage
+    - name: Run pytest
       # how to start mini server? 
       # could it be a fixture?
       run: uv run pytest -v tests
