@@ -64,6 +64,12 @@ class RelationType(str, Enum):
     STUDIED_IN = "studied_in"
     PART_OF = "part_of"
 
+    # Hypothesis and evidence relationships
+    PREDICTS = "predicts"
+    REFUTES = "refutes"
+    TESTED_BY = "tested_by"
+    GENERATES = "generates"
+
 
 # ============================================================================
 # Base Relationship Classes
@@ -507,6 +513,126 @@ class PartOf(ResearchRelationship):
 
 
 # ============================================================================
+# Hypothesis and Evidence Relationships
+# ============================================================================
+
+
+class Predicts(BaseMedicalRelationship):
+    """
+    Represents a hypothesis predicting an observable outcome.
+
+    Direction: Hypothesis -> Entity (Disease, Outcome, etc.)
+
+    Attributes:
+        prediction_type: Nature of prediction (positive, negative, conditional)
+        conditions: Conditions under which prediction holds
+        testable: Whether the prediction is empirically testable
+
+    Example:
+        >>> predicts = Predicts(
+        ...     subject_id="HYPOTHESIS:amyloid_cascade",
+        ...     predicate=RelationType.PREDICTS,
+        ...     object_id="C0002395",  # Alzheimer's disease
+        ...     prediction_type="positive",
+        ...     testable=True,
+        ...     source_papers=["PMC123456"]
+        ... )
+    """
+
+    predicate: Literal[RelationType.PREDICTS] = RelationType.PREDICTS
+    prediction_type: Literal["positive", "negative", "conditional"] | None = None
+    conditions: str | None = None  # Conditions under which prediction holds
+    testable: bool = True  # Whether empirically testable
+
+
+class Refutes(BaseMedicalRelationship):
+    """
+    Represents evidence that refutes a hypothesis.
+
+    Direction: Evidence/Paper -> Hypothesis
+
+    Attributes:
+        refutation_strength: Strength of refutation (strong, moderate, weak)
+        alternative_explanation: Alternative explanation for observations
+        limitations: Limitations of the refuting evidence
+
+    Example:
+        >>> refutes = Refutes(
+        ...     subject_id="PMC999888",
+        ...     predicate=RelationType.REFUTES,
+        ...     object_id="HYPOTHESIS:amyloid_cascade",
+        ...     refutation_strength="moderate",
+        ...     source_papers=["PMC999888"],
+        ...     confidence=0.75
+        ... )
+    """
+
+    predicate: Literal[RelationType.REFUTES] = RelationType.REFUTES
+    refutation_strength: Literal["strong", "moderate", "weak"] | None = None
+    alternative_explanation: str | None = None
+    limitations: str | None = None
+
+
+class TestedBy(BaseMedicalRelationship):
+    """
+    Represents a hypothesis being tested by a study or clinical trial.
+
+    Direction: Hypothesis -> Paper/ClinicalTrial
+
+    Attributes:
+        test_outcome: Result of the test (supported, refuted, inconclusive)
+        methodology: Study methodology used
+        study_design_id: OBI study design ID
+
+    Example:
+        >>> tested = TestedBy(
+        ...     subject_id="HYPOTHESIS:parp_inhibitor_synthetic_lethality",
+        ...     predicate=RelationType.TESTED_BY,
+        ...     object_id="PMC999888",
+        ...     test_outcome="supported",
+        ...     methodology="randomized controlled trial",
+        ...     study_design_id="OBI:0000008",
+        ...     source_papers=["PMC999888"],
+        ...     confidence=0.90
+        ... )
+    """
+
+    predicate: Literal[RelationType.TESTED_BY] = RelationType.TESTED_BY
+    test_outcome: Literal["supported", "refuted", "inconclusive"] | None = None
+    methodology: str | None = None
+    study_design_id: str | None = None  # OBI study design ID
+
+
+class Generates(BaseMedicalRelationship):
+    """
+    Represents a study generating evidence for analysis.
+
+    Direction: ClinicalTrial/Paper -> Evidence
+
+    Attributes:
+        evidence_type: Type of evidence generated (experimental, observational, etc.)
+        eco_type: ECO evidence type ID
+        quality_score: Quality assessment score
+
+    Example:
+        >>> generates = Generates(
+        ...     subject_id="PMC999888",
+        ...     predicate=RelationType.GENERATES,
+        ...     object_id="EVIDENCE_LINE:olaparib_brca_001",
+        ...     evidence_type="experimental",
+        ...     eco_type="ECO:0007673",
+        ...     quality_score=0.92,
+        ...     source_papers=["PMC999888"]
+        ... )
+    """
+
+    predicate: Literal[RelationType.GENERATES] = RelationType.GENERATES
+    evidence_type: str | None = None
+    eco_type: str | None = None  # ECO evidence type ID
+    quality_score: float | None = Field(None, ge=0.0, le=1.0)
+
+
+# ============================================================================
 # Convenience Factory Function
 # ============================================================================
 
@@ -550,6 +676,10 @@ def create_relationship(predicate: RelationType, subject_id: str, object_id: str
         RelationType.STUDIED_IN: StudiedIn,
         RelationType.AUTHORED_BY: AuthoredBy,
         RelationType.PART_OF: PartOf,
+        RelationType.PREDICTS: Predicts,
+        RelationType.REFUTES: Refutes,
+        RelationType.TESTED_BY: TestedBy,
+        RelationType.GENERATES: Generates,
     }
 
     cls = relationship_classes.get(predicate, BaseMedicalRelationship)

@@ -146,18 +146,18 @@ Each JSON file is:
 - ✅ Easy rollback (delete file, regenerate graph)
 - ✅ Version history (track algorithm improvements)
 - ✅ Audit trail (know when/how data extracted)
-- ✅ Backup is simple (S3 versioned bucket)
+- ✅ Backup is simple (versioned object storage)
 - ✅ Parallel processing (each JSON independent)
 
 **Cons:**
-- ⚠️ Storage cost (~1-5MB per paper × millions of papers)
-- ⚠️ Graph regeneration takes time (hours for millions of papers)
+- ⚠️ Storage cost (~1-5MB per paper)
+- ⚠️ Graph regeneration takes time
 - ⚠️ Duplication (data in both JSON and graph DB)
 
-**Cost analysis:**
-- 1 million papers × 2MB average = 2TB
-- S3 Intelligent-Tiering: ~$20-40/month
-- **Much cheaper than lost data or corruption**
+**Storage considerations:**
+- Per-paper JSON files scale linearly with corpus size
+- Object storage with versioning provides cost-effective archival
+- Trade-off: storage cost vs. reproducibility and data integrity
 
 ### Alternative Approaches Considered
 
@@ -185,13 +185,13 @@ Each JSON file is:
 ```python
 def regenerate_graph(since: datetime):
     """Rebuild graph from JSON files modified after 'since'"""
-    papers = s3.list_objects(prefix="papers/", modified_after=since)
-    
+    papers = storage.list_objects(prefix="papers/", modified_after=since)
+
     for paper_json in papers:
         if paper_json['status'] == 'retracted':
-            neptune.delete_paper(paper_json['paper_id'])
+            graph_db.delete_paper(paper_json['paper_id'])
         else:
-            neptune.upsert_paper(paper_json)
+            graph_db.upsert_paper(paper_json)
 ```
 
 **Versioning strategy:**
@@ -381,7 +381,7 @@ evidence = [
 ## 5. Hybrid Graph RAG Architecture
 
 ### Decision
-**Combine vector search (OpenSearch) + graph traversal (Neptune), not just one or the other.**
+**Combine vector search + graph traversal, not just one or the other.**
 
 ### Rationale
 
@@ -421,14 +421,10 @@ Step 3: Hybrid Ranking
 - ⚠️ Complex query planning
 - ⚠️ Higher infrastructure cost
 
-**Cost comparison:**
-- OpenSearch: $30-50/month (t3.small)
-- Neptune: $200-300/month (db.r5.large)
-- **Total: ~$300/month for budget deployment**
-- **vs Pure graph: ~$200/month**
-- **vs Pure vector: ~$50/month**
-
-Worth the extra $100-150/month for significantly better results.
+**Infrastructure considerations:**
+- Dual database approach requires more resources than single-database solutions
+- Trade-off: comprehensive results vs. infrastructure complexity
+- Both vector and graph capabilities are essential for medical knowledge queries
 
 ### Alternative Approaches Considered
 
@@ -442,11 +438,11 @@ Worth the extra $100-150/month for significantly better results.
 - Misses semantic similarity
 - Hard to search free text
 
-**3. Hybrid with single database (Neo4j vectors)**
+**3. Hybrid with single database**
 **Considered but:**
-- Neo4j vector search less mature than OpenSearch
-- OpenSearch is proven at scale
-- Separation of concerns
+- Separation of concerns provides flexibility
+- Each database optimized for its purpose
+- Easier to scale independently
 
 ---
 
@@ -489,15 +485,15 @@ See [Decision #2](#2-immutable-source-of-truth-json-files) for full details.
 
 ### Trade-offs
 
-**Neptune:**
-- Pros: Managed, reliable, AWS-native
-- Cons: Vendor lock-in, expensive ($200-300/month minimum)
+**Managed Graph Database (e.g., Neptune):**
+- Pros: Managed, reliable, cloud-native
+- Cons: Vendor lock-in, higher cost
 
-**Neo4j:**
+**Self-Hosted Graph Database (e.g., Neo4j):**
 - Pros: Mature, great tools, self-host option
 - Cons: Ops burden, licensing costs
 
-**Decision**: Neptune for cloud deployments, Neo4j compatibility for self-hosted.
+**Decision**: Use managed services for cloud deployments, maintain compatibility with self-hosted options.
 
 ---
 
@@ -604,7 +600,7 @@ LLMs can now query medical knowledge natively.
 ```python
 class Treats(MedicalRelationship):
     response_rate: Optional[float] = Field(None, ge=0.0, le=1.0)
-    
+
     @field_validator('evidence')
     @classmethod
     def validate_evidence_not_empty(cls, v):
@@ -662,14 +658,3 @@ For each major architectural decision, we follow this process:
 6. **Document the decision** for future reference
 
 **Principle**: Choose simplicity and correctness over performance. Medical applications require trustworthiness above all else.
-
----
-
-## Feedback
-
-These decisions are not set in stone. If you have suggestions or concerns, please:
-- Open a discussion on GitHub
-- Email us at architecture@medgraph.com
-- Join our Discord community
-
-We welcome constructive feedback and are open to revisiting decisions based on new information.

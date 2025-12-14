@@ -301,7 +301,7 @@ Perfect! I've created both a comprehensive **Python client library** and **detai
 - Clean Pydantic models for type safety
 - Fluent `QueryBuilder` API for constructing queries
 - `MedicalGraphClient` with high-level convenience methods:
-  - `find_treatments(disease)` 
+  - `find_treatments(disease)`
   - `find_disease_genes(disease)`
   - `find_diagnostic_tests(disease)`
   - `find_drug_mechanisms(drug)`
@@ -315,8 +315,9 @@ Perfect! I've created both a comprehensive **Python client library** and **detai
 ```python
 from medical_graph_client import MedicalGraphClient, QueryBuilder
 
+import os
 # Simple high-level API
-client = MedicalGraphClient("https://api.medgraph.com", api_key="xxx")
+client = MedicalGraphClient(os.getenv("MEDGRAPH_SERVER"), api_key="xxx")
 results = client.find_treatments("diabetes", min_confidence=0.7)
 
 # Or build custom queries
@@ -324,7 +325,7 @@ query = (QueryBuilder()
     .find_nodes("gene")
     .with_edge("associated_with", min_confidence=0.6)
     .filter_target("disease", name="breast cancer")
-    .aggregate(["gene.name"], 
+    .aggregate(["gene.name"],
                paper_count=("count", "rel.evidence.paper_id"))
     .order_by("paper_count", "desc")
     .limit(20)
@@ -524,19 +525,20 @@ npm publish --access public
 
 **Python:**
 ```python
-client = MedicalGraphClient("https://api.medgraph.com")
+import os
+client = MedicalGraphClient(os.getenv("MEDGRAPH_SERVER"))
 results = client.find_treatments("diabetes")
 ```
 
 **TypeScript:**
 ```typescript
-const client = new MedicalGraphClient("https://api.medgraph.com");
+const client = new MedicalGraphClient();
 const results = await client.findTreatments("diabetes");
 ```
 
 **curl:**
 ```bash
-curl -X POST https://api.medgraph.com/api/v1/query -d '{...}'
+curl -X POST $MEDGRAPH_SERVER/api/v1/query -d '{...}'
 ```
 
 All three approaches work with the same JSON query language, making your API truly multi-language!

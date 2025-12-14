@@ -6,7 +6,7 @@ Complete set of curl examples for querying the medical knowledge graph API.
 
 ```bash
 # Set your API endpoint and key
-export API_BASE="https://api.medgraph.example.com"
+export MEDGRAPH_SERVER="${MEDGRAPH_SERVER:-https://api.medgraph.example.com}"
 export API_KEY="your-api-key-here"
 
 # Helper function for authenticated requests
@@ -14,7 +14,7 @@ function mgraph() {
     curl -X POST \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer $API_KEY" \
-        "$API_BASE/api/v1/query" \
+        "$MEDGRAPH_SERVER/api/v1/query" \
         -d "$1"
 }
 ```
@@ -26,7 +26,7 @@ function mgraph() {
 **Find drugs that treat breast cancer:**
 
 ```bash
-curl -X POST https://api.medgraph.example.com/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -87,8 +87,8 @@ curl -X POST https://api.medgraph.example.com/api/v1/query \
     }
   ],
   "metadata": {
-    "total_results": 15,
-    "query_time_ms": 45
+    "total_results": 3,
+    "query_time_ms": 0
   }
 }
 ```
@@ -100,7 +100,7 @@ curl -X POST https://api.medgraph.example.com/api/v1/query \
 **Find genes linked to Alzheimer's disease:**
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -147,7 +147,7 @@ curl -X POST $API_BASE/api/v1/query \
 **How does metformin work to lower blood sugar?**
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -209,7 +209,7 @@ curl -X POST $API_BASE/api/v1/query \
 **Find FDA-approved drugs that target Alzheimer's-associated proteins but are used for other conditions:**
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -303,7 +303,7 @@ curl -X POST $API_BASE/api/v1/query \
 **Compare statins vs PCSK9 inhibitors for treating high cholesterol:**
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -355,7 +355,7 @@ curl -X POST $API_BASE/api/v1/query \
 **Are there conflicting studies about aspirin preventing heart attacks?**
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -392,7 +392,7 @@ curl -X POST $API_BASE/api/v1/query \
 **Get detailed evidence:**
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -429,7 +429,7 @@ curl -X POST $API_BASE/api/v1/query \
 **What diseases present with fatigue, joint pain, and butterfly rash?**
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -443,8 +443,8 @@ curl -X POST $API_BASE/api/v1/query \
     "edges": [
       [
         {
-          "relation_type": "symptom_of",
-          "direction": "outgoing",
+          "relation_type": "causes",
+          "direction": "incoming",
           "var": "symptom_disease"
         },
         {
@@ -477,7 +477,7 @@ curl -X POST $API_BASE/api/v1/query \
 **What tests diagnose systemic lupus erythematosus?**
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -534,7 +534,7 @@ curl -X POST $API_BASE/api/v1/query \
 **What new treatments for multiple sclerosis were discovered in the last 2 years?**
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -583,7 +583,7 @@ curl -X POST $API_BASE/api/v1/query \
 **Effectiveness of ACE inhibitors for hypertension in elderly patients:**
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -637,7 +637,7 @@ curl -X POST $API_BASE/api/v1/query \
 **Interactions between warfarin and NSAIDs:**
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -651,7 +651,7 @@ curl -X POST $API_BASE/api/v1/query \
     "edges": [
       [
         {
-          "relation_types": ["interacts_with", "potentiates", "antagonizes"],
+          "relation_type": "interacts_with",
           "var": "interaction"
         },
         {
@@ -689,7 +689,7 @@ curl -X POST $API_BASE/api/v1/query \
 **Retrieve details about a specific paper:**
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -719,7 +719,7 @@ curl -X POST $API_BASE/api/v1/query \
 
 ```bash
 # Page 1 (results 0-19)
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -730,7 +730,7 @@ curl -X POST $API_BASE/api/v1/query \
 }'
 
 # Page 2 (results 20-39)
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -746,7 +746,7 @@ curl -X POST $API_BASE/api/v1/query \
 ## Batch Queries (Multiple Queries in One Request)
 
 ```bash
-curl -X POST $API_BASE/api/v1/batch \
+curl -X POST $MEDGRAPH_SERVER/api/v1/batch \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -781,7 +781,7 @@ curl -X POST $API_BASE/api/v1/batch \
 
 ```bash
 # Query with invalid field
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -800,6 +800,537 @@ curl -X POST $API_BASE/api/v1/query \
     }
   }
 }
+```
+
+---
+
+## Example 13: Track Hypothesis Evolution (PR #3 Feature)
+
+**Find papers testing the amyloid cascade hypothesis for Alzheimer's:**
+
+```bash
+curl -X POST $API_BASE/api/v1/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+  "find": "paths",
+  "path_pattern": {
+    "start": {
+      "node_type": "hypothesis",
+      "name": "Amyloid Cascade Hypothesis",
+      "var": "hypothesis"
+    },
+    "edges": [
+      [
+        {
+          "relation_type": "tested_by",
+          "var": "test_relationship"
+        },
+        {
+          "node_type": "paper",
+          "var": "paper"
+        }
+      ]
+    ],
+    "max_hops": 1
+  },
+  "return_fields": [
+    "hypothesis.name",
+    "hypothesis.status",
+    "hypothesis.proposed_date",
+    "paper.pmc_id",
+    "paper.title",
+    "paper.publication_date",
+    "test_relationship.test_outcome",
+    "test_relationship.study_design_id"
+  ],
+  "order_by": [["paper.publication_date", "desc"]],
+  "limit": 20
+}'
+```
+
+**Expected response:**
+```json
+{
+  "results": [
+    {
+      "hypothesis.name": "Amyloid Cascade Hypothesis",
+      "hypothesis.status": "controversial",
+      "paper.pmc_id": "PMC9876543",
+      "paper.title": "Aducanumab fails to meet primary endpoints",
+      "test_relationship.test_outcome": "refuted",
+      "test_relationship.study_design_id": "OBI:0000008"
+    }
+  ]
+}
+```
+
+**Note:** This example requires path queries and hypothesis entities (Phase 2/3).
+
+---
+
+## Example 14: Query by Study Design Quality (PR #3 Feature)
+
+**Find RCT evidence for treatments with high-quality study designs:**
+
+```bash
+curl -X POST $API_BASE/api/v1/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+  "find": "edges",
+  "edge_pattern": {
+    "relation_type": "treats",
+    "min_confidence": 0.7,
+    "var": "treatment"
+  },
+  "filters": [
+    {
+      "field": "source.node_type",
+      "operator": "eq",
+      "value": "drug"
+    },
+    {
+      "field": "target.name",
+      "operator": "eq",
+      "value": "breast cancer"
+    },
+    {
+      "field": "treatment.evidence.obi_study_design",
+      "operator": "eq",
+      "value": "OBI:0000008"
+    },
+    {
+      "field": "treatment.evidence.eco_type",
+      "operator": "eq",
+      "value": "ECO:0007673"
+    }
+  ],
+  "return_fields": [
+    "source.name",
+    "treatment.confidence",
+    "treatment.evidence.paper_id",
+    "treatment.evidence.study_type",
+    "treatment.evidence.sample_size",
+    "treatment.evidence.obi_study_design",
+    "treatment.evidence.eco_type"
+  ],
+  "aggregate": {
+    "group_by": ["source.name"],
+    "aggregations": {
+      "rct_count": ["count", "treatment.evidence.paper_id"],
+      "avg_sample_size": ["avg", "treatment.evidence.sample_size"],
+      "avg_confidence": ["avg", "treatment.confidence"]
+    }
+  },
+  "order_by": [
+    ["rct_count", "desc"],
+    ["avg_confidence", "desc"]
+  ]
+}'
+```
+
+---
+
+## Example 15: Statistical Methods Analysis (PR #3 Feature)
+
+**What statistical methods are used in studies of a specific treatment?**
+
+```bash
+curl -X POST $API_BASE/api/v1/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+  "find": "paths",
+  "path_pattern": {
+    "start": {
+      "node_type": "drug",
+      "name": "pembrolizumab",
+      "var": "drug"
+    },
+    "edges": [
+      [
+        {
+          "relation_type": "treats",
+          "var": "treatment"
+        },
+        {
+          "node_type": "disease",
+          "var": "disease"
+        }
+      ]
+    ],
+    "max_hops": 1
+  },
+  "return_fields": [
+    "drug.name",
+    "disease.name",
+    "treatment.evidence.paper_id",
+    "treatment.evidence.stato_methods",
+    "treatment.confidence"
+  ],
+  "filters": [
+    {
+      "field": "treatment.evidence.stato_methods",
+      "operator": "contains",
+      "value": "STATO:0000304"
+    }
+  ]
+}'
+```
+
+**Expected response:**
+```json
+{
+  "results": [
+    {
+      "drug.name": "pembrolizumab",
+      "disease.name": "melanoma",
+      "treatment.evidence.paper_id": "PMC7654321",
+      "treatment.evidence.stato_methods": ["STATO:0000304", "STATO:0000376"],
+      "treatment.confidence": 0.92
+    }
+  ]
+}
+```
+
+**Note:** This example requires path queries and statistical method filtering (Phase 2/3).
+
+---
+
+## Example 16: Evidence Line Tracking (PR #3 Feature)
+
+**Find evidence lines supporting a specific therapeutic assertion:**
+
+```bash
+curl -X POST $API_BASE/api/v1/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+  "find": "paths",
+  "path_pattern": {
+    "start": {
+      "node_type": "evidence_line",
+      "var": "evidence_line"
+    },
+    "edges": [
+      [
+        {
+          "relation_type": "supports",
+          "var": "support_rel"
+        },
+        {
+          "node_type": "hypothesis",
+          "var": "hypothesis"
+        }
+      ]
+    ],
+    "max_hops": 1
+  },
+  "filters": [
+    {
+      "field": "hypothesis.name",
+      "operator": "contains",
+      "value": "PARP inhibitor"
+    }
+  ],
+  "return_fields": [
+    "evidence_line.name",
+    "evidence_line.strength",
+    "evidence_line.sepio_type",
+    "evidence_line.eco_type",
+    "evidence_line.evidence_items",
+    "hypothesis.name",
+    "hypothesis.status"
+  ],
+  "order_by": [["evidence_line.strength", "desc"]]
+}'
+```
+
+---
+
+## Example 17: Hypothesis Predictions (PR #3 Feature)
+
+**What does a hypothesis predict and what evidence supports/refutes it?**
+
+```bash
+curl -X POST $API_BASE/api/v1/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+  "find": "paths",
+  "path_pattern": {
+    "start": {
+      "node_type": "hypothesis",
+      "entity_id": "HYPOTHESIS:parp_inhibitor_synthetic_lethality",
+      "var": "hypothesis"
+    },
+    "edges": [
+      [
+        {
+          "relation_type": "predicts",
+          "var": "prediction"
+        },
+        {
+          "node_type": "disease",
+          "var": "disease"
+        }
+      ]
+    ],
+    "max_hops": 1
+  },
+  "return_fields": [
+    "hypothesis.name",
+    "hypothesis.description",
+    "hypothesis.status",
+    "disease.name",
+    "prediction.prediction_type",
+    "prediction.testable",
+    "prediction.confidence"
+  ]
+}'
+```
+
+---
+
+## Example 18: Find Papers that Generate Evidence (PR #3 Feature)
+
+**Which papers generate evidence lines for a specific disease?**
+
+```bash
+curl -X POST $API_BASE/api/v1/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+  "find": "paths",
+  "path_pattern": {
+    "start": {
+      "node_type": "paper",
+      "var": "paper"
+    },
+    "edges": [
+      [
+        {
+          "relation_type": "generates",
+          "var": "generation"
+        },
+        {
+          "node_type": "evidence_line",
+          "var": "evidence"
+        }
+      ]
+    ],
+    "max_hops": 1
+  },
+  "filters": [
+    {
+      "field": "paper.study_type",
+      "operator": "eq",
+      "value": "rct"
+    },
+    {
+      "field": "generation.quality_score",
+      "operator": "gte",
+      "value": 0.8
+    }
+  ],
+  "return_fields": [
+    "paper.pmc_id",
+    "paper.title",
+    "paper.study_type",
+    "evidence.name",
+    "evidence.strength",
+    "generation.quality_score",
+    "generation.eco_type"
+  ],
+  "order_by": [["generation.quality_score", "desc"]],
+  "limit": 20
+}'
+```
+
+---
+
+## Example 19: Protein-Centric Query (Coverage for Protein Entity)
+
+**Find proteins targeted by FDA-approved drugs:**
+
+```bash
+curl -X POST $API_BASE/api/v1/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+  "find": "paths",
+  "path_pattern": {
+    "start": {
+      "node_type": "drug",
+      "var": "drug"
+    },
+    "edges": [
+      [
+        {
+          "relation_types": ["binds_to", "inhibits", "activates"],
+          "var": "drug_target"
+        },
+        {
+          "node_type": "protein",
+          "var": "protein"
+        }
+      ]
+    ],
+    "max_hops": 1
+  },
+  "filters": [
+    {
+      "field": "drug.properties.fda_approved",
+      "operator": "eq",
+      "value": true
+    }
+  ],
+  "return_fields": [
+    "drug.name",
+    "drug.drug_class",
+    "protein.name",
+    "protein.uniprot_id",
+    "protein.function",
+    "drug_target.relation_type",
+    "drug_target.confidence"
+  ],
+  "aggregate": {
+    "group_by": ["protein.name", "protein.uniprot_id"],
+    "aggregations": {
+      "drug_count": ["count", "drug.name"],
+      "avg_confidence": ["avg", "drug_target.confidence"]
+    }
+  },
+  "order_by": [
+    ["drug_count", "desc"],
+    ["avg_confidence", "desc"]
+  ],
+  "limit": 50
+}'
+```
+
+---
+
+## Example 20: Study Design Quality Filter (PR #3 Feature)
+
+**Query studies by their formal study design classification:**
+
+```bash
+curl -X POST $API_BASE/api/v1/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+  "find": "nodes",
+  "node_pattern": {
+    "node_type": "study_design",
+    "var": "design"
+  },
+  "filters": [
+    {
+      "field": "design.evidence_level",
+      "operator": "lte",
+      "value": 2
+    }
+  ],
+  "return_fields": [
+    "design.name",
+    "design.obi_id",
+    "design.design_type",
+    "design.evidence_level",
+    "design.description"
+  ],
+  "order_by": [["design.evidence_level", "asc"]]
+}'
+```
+
+---
+
+## Example 21: Statistical Method Classification (PR #3 Feature)
+
+**Find papers using specific statistical methods:**
+
+```bash
+curl -X POST $API_BASE/api/v1/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+  "find": "nodes",
+  "node_pattern": {
+    "node_type": "statistical_method",
+    "var": "method"
+  },
+  "filters": [
+    {
+      "field": "method.method_type",
+      "operator": "eq",
+      "value": "hypothesis_test"
+    }
+  ],
+  "return_fields": [
+    "method.name",
+    "method.stato_id",
+    "method.method_type",
+    "method.description",
+    "method.assumptions"
+  ],
+  "limit": 20
+}'
+```
+
+---
+
+## Example 22: Evidence Refuting Hypotheses (PR #3 Feature)
+
+**Find papers that refute a specific hypothesis:**
+
+```bash
+curl -X POST $API_BASE/api/v1/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+  "find": "paths",
+  "path_pattern": {
+    "start": {
+      "node_type": "paper",
+      "var": "paper"
+    },
+    "edges": [
+      [
+        {
+          "relation_type": "refutes",
+          "var": "refutation"
+        },
+        {
+          "node_type": "hypothesis",
+          "var": "hypothesis"
+        }
+      ]
+    ],
+    "max_hops": 1
+  },
+  "filters": [
+    {
+      "field": "hypothesis.name",
+      "operator": "contains",
+      "value": "Amyloid"
+    }
+  ],
+  "return_fields": [
+    "paper.pmc_id",
+    "paper.title",
+    "paper.publication_date",
+    "paper.study_type",
+    "hypothesis.name",
+    "hypothesis.status",
+    "refutation.refutation_strength",
+    "refutation.alternative_explanation"
+  ],
+  "order_by": [
+    ["paper.publication_date", "desc"],
+    ["refutation.refutation_strength", "desc"]
+  ]
+}'
 ```
 
 ---
@@ -832,7 +1363,7 @@ cat > query.json << 'EOF'
 EOF
 
 # Execute
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d @query.json
@@ -841,7 +1372,7 @@ curl -X POST $API_BASE/api/v1/query \
 ### Pretty-print results with jq
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d @query.json | jq '.results[] | {name: .["drug.name"], papers: .paper_count}'
@@ -851,7 +1382,7 @@ curl -X POST $API_BASE/api/v1/query \
 
 ```bash
 # Extract just drug names
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d @query.json | jq -r '.results[].["drug.name"]'
@@ -860,7 +1391,7 @@ curl -X POST $API_BASE/api/v1/query \
 ### Export to CSV
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d @query.json | \
@@ -874,7 +1405,7 @@ curl -X POST $API_BASE/api/v1/query \
 ### Using API key in header (recommended)
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Authorization: Bearer $API_KEY" \
   -d @query.json
 ```
@@ -882,7 +1413,7 @@ curl -X POST $API_BASE/api/v1/query \
 ### Using Basic Auth
 
 ```bash
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -u username:password \
   -d @query.json
 ```
@@ -891,14 +1422,351 @@ curl -X POST $API_BASE/api/v1/query \
 
 ```bash
 # Get token
-TOKEN=$(curl -X POST $API_BASE/oauth/token \
+TOKEN=$(curl -X POST $MEDGRAPH_SERVER/oauth/token \
   -d "grant_type=client_credentials" \
   -d "client_id=$CLIENT_ID" \
   -d "client_secret=$CLIENT_SECRET" \
   | jq -r '.access_token')
 
 # Use token
-curl -X POST $API_BASE/api/v1/query \
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Authorization: Bearer $TOKEN" \
   -d @query.json
+```
+
+## Example 23: Find Drugs that Treat Breast Cancer
+
+**Which drugs treat breast cancer and what's the evidence?**
+
+```bash
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+  "find": "relationships",
+  "filters": [
+    {
+      "field": "object.name",
+      "operator": "eq",
+      "value": "Breast Cancer"
+    },
+    {
+      "field": "predicate",
+      "operator": "eq",
+      "value": "TREATS"
+    }
+  ],
+  "return_fields": [
+    "subject.name",
+    "subject.type",
+    "predicate",
+    "confidence",
+    "evidence_count",
+    "papers"
+  ],
+  "order_by": [["confidence", "desc"]]
+}'
+```
+
+**Expected response:**
+
+```json
+{
+  "status": "success",
+  "results": [
+    {
+      "subject.name": "Olaparib",
+      "subject.type": "drug",
+      "predicate": "TREATS",
+      "confidence": 0.92,
+      "evidence_count": 1,
+      "papers": ["PMC123456"]
+    }
+  ]
+}
+```
+
+**Note:** This example requires "find: edges" queries (Phase 2).
+
+---
+
+## Example 24: Trace Metformin's Mechanism of Action
+
+**How does metformin lower blood sugar?**
+
+```bash
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+  "find": "paths",
+  "path_pattern": {
+    "start": {
+      "node_type": "drug",
+      "filters": [{"field": "name", "operator": "eq", "value": "Metformin"}],
+      "var": "drug"
+    },
+    "edges": [
+      [
+        {"relation_type": "activates", "var": "activation"},
+        {"node_type": "protein", "var": "protein"}
+      ],
+      [
+        {"relation_type": "downregulates", "var": "downreg"},
+        {"node_type": "biomarker", "var": "marker"}
+      ]
+    ],
+    "max_hops": 2
+  },
+  "return_fields": [
+    "drug.name",
+    "protein.name",
+    "marker.name",
+    "activation.confidence",
+    "downreg.confidence"
+  ]
+}'
+```
+
+**Expected response:**
+
+```json
+{
+  "status": "success",
+  "results": [
+    {
+      "drug.name": "Metformin",
+      "protein.name": "AMPK",
+      "marker.name": "Glycated Hemoglobin",
+      "activation.confidence": 0.90,
+      "downreg.confidence": 0.88,
+      "path": [
+        "Metformin -> ACTIVATES -> AMPK -> DOWNREGULATES -> HbA1c"
+      ]
+    }
+  ]
+}
+```
+
+**Note:** This example requires path queries (Phase 2).
+
+---
+
+## Example 25: Find Papers Supporting a Relationship
+
+**Get the actual papers that show metformin treats diabetes:**
+
+```bash
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+  "find": "papers",
+  "filters": [
+    {
+      "field": "relationships.subject.name",
+      "operator": "eq",
+      "value": "Metformin"
+    },
+    {
+      "field": "relationships.object.name",
+      "operator": "eq",
+      "value": "Type 2 Diabetes"
+    },
+    {
+      "field": "relationships.predicate",
+      "operator": "eq",
+      "value": "TREATS"
+    }
+  ],
+  "return_fields": [
+    "paper_id",
+    "title",
+    "authors",
+    "publication_date",
+    "journal"
+  ]
+}'
+```
+
+**Expected response:**
+
+```json
+{
+  "status": "success",
+  "results": [
+    {
+      "paper_id": "PMC234567",
+      "title": "Metformin Activation of AMPK and Effects on Glycemic Control",
+      "authors": ["Zhou G", "Myers R", "Li Y", "Chen Y", "Shen X"],
+      "publication_date": "2018-03-15",
+      "journal": "Journal of Clinical Investigation"
+    },
+    {
+      "paper_id": "PMC345678",
+      "title": "Long-term Metformin Use in Type 2 Diabetes: A Cohort Study",
+      "authors": ["Turner RC", "Holman RR", "Cull CA", "Stratton IM"],
+      "publication_date": "2019-06-22",
+      "journal": "Diabetes Care"
+    }
+  ]
+}
+```
+
+**Note:** This example requires paper/relationship filtering (Phase 2).
+
+---
+
+## Example 26: Multi-hop Query - Aspirin Prevention Path
+
+**Find what aspirin prevents and the evidence quality:**
+
+```bash
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+  "find": "paths",
+  "path_pattern": {
+    "start": {
+      "node_type": "drug",
+      "filters": [{"field": "name", "operator": "eq", "value": "Aspirin"}],
+      "var": "drug"
+    },
+    "edges": [
+      [
+        {"relation_type": "prevents", "var": "prevention"},
+        {"node_type": "disease", "var": "disease"}
+      ]
+    ],
+    "max_hops": 1
+  },
+  "return_fields": [
+    "drug.name",
+    "disease.name",
+    "prevention.confidence",
+    "prevention.evidence_count",
+    "prevention.metadata.risk_reduction",
+    "prevention.metadata.study_type"
+  ]
+}'
+```
+
+**Expected response:**
+
+```json
+{
+  "status": "success",
+  "results": [
+    {
+      "drug.name": "Aspirin",
+      "disease.name": "Myocardial Infarction",
+      "prevention.confidence": 0.82,
+      "prevention.evidence_count": 2,
+      "prevention.metadata": {
+        "risk_reduction": 0.25,
+        "study_type": "meta_analysis"
+      }
+    }
+  ]
+}
+```
+
+**Note:** This example requires path queries (Phase 2).
+
+---
+
+## Example 27: Entity Search by Type
+
+**List all drugs in the knowledge graph:**
+
+```bash
+curl -X GET "$MEDGRAPH_SERVER/api/v1/entities?entity_type=drug&limit=10" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+**Example response:**
+
+```json
+{
+  "entities": [
+    {
+      "id": "RxNorm:1187832",
+      "type": "drug",
+      "name": "Olaparib",
+      "canonical_id": "RxNorm:1187832",
+      "mentions": 342
+    },
+    {
+      "id": "RxNorm:860975",
+      "type": "drug",
+      "name": "Metformin",
+      "canonical_id": "RxNorm:860975",
+      "mentions": 2847
+    },
+    {
+      "id": "RxNorm:1191",
+      "type": "drug",
+      "name": "Aspirin",
+      "canonical_id": "RxNorm:1191",
+      "mentions": 4123
+    }
+  ],
+  "total": 3
+}
+```
+
+---
+
+## Example 28: Get Knowledge Graph Statistics
+
+**What's in the graph?**
+
+```bash
+curl -X GET "$MEDGRAPH_SERVER/api/v1/stats" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+**Example response:**
+
+```json
+{
+  "total_entities": 8,
+  "total_relationships": 5,
+  "total_papers": 4,
+  "entity_types": {
+    "disease": 3,
+    "drug": 3,
+    "protein": 1,
+    "biomarker": 1
+  },
+  "relationship_types": {
+    "TREATS": 2,
+    "ACTIVATES": 1,
+    "DOWNREGULATES": 1,
+    "PREVENTS": 1
+  },
+  "last_updated": "2025-12-08T23:30:00"
+}
+```
+
+---
+
+## Testing the Mini Server
+
+To test these examples against the synthetic data server:
+
+```bash
+# Start the mini server
+cd tests/mini_server
+python server.py
+
+# In another terminal, run the curl commands
+export MEDGRAPH_SERVER="http://localhost:8000"
+export API_KEY="test-key"  # Not validated in dev server
+
+# Try a simple query
+curl -X POST $MEDGRAPH_SERVER/api/v1/query \
+  -H "Content-Type: application/json" \
+  -d '{"find": "entities", "limit": 5}'
 ```

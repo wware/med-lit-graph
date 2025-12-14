@@ -27,6 +27,7 @@ from typing import Any, Literal, Optional
 from pydantic import BaseModel, ConfigDict
 import requests
 from enum import Enum
+import os
 
 
 class EntityType(str, Enum):
@@ -242,7 +243,7 @@ class MedicalGraphClient:
         timeout: Request timeout in seconds (default: 30)
 
     Example:
-        client = MedicalGraphClient("https://api.medgraph.example.com")
+        client = MedicalGraphClient(os.getenv("MEDGRAPH_SERVER", "https://api.medgraph.example.com"))
         results = client.find_treatments("diabetes")
     """
 
@@ -449,7 +450,7 @@ class MedicalGraphClient:
 # Example usage
 if __name__ == "__main__":
     # Initialize client
-    client = MedicalGraphClient(base_url="https://api.medgraph.example.com", api_key="your-api-key")  # Optional
+    client = MedicalGraphClient(base_url=os.getenv("MEDGRAPH_SERVER", "https://api.medgraph.example.com"), api_key="your-api-key")  # Optional
 
     # Example 1: Find treatments
     print("=== Finding treatments for diabetes ===")

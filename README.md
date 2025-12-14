@@ -8,15 +8,77 @@
 
 Transform millions of medical research papers into a queryable knowledge graph with full citation traceability. Every relationship is backed by specific evidence from peer-reviewed literature, enabling doctors and researchers to verify every claim.
 
-**🔬 Try it**: [Demo](https://demo.medgraph.example.com) | [API Docs](https://api.medgraph.example.com/docs) | [Examples](examples/)
+<!-- **🔬 Try it**: TODO - links to non-existent services: [Demo](https://demo.medgraph.example.com) | [API Docs](https://api.medgraph.example.com/docs) | [Examples](examples/) -->
 
 ---
 
 ## Why This Project Exists
 
-My partner's doctor spent weeks being a diagnostic detective—correlating obscure symptoms across dozens of medical papers to find the right diagnosis. Most doctors don't have that time or tenacity, so patients suffer with wrong diagnoses for years.
+### The Problem: Diagnostic Detectives vs. Clinical Reality
 
-**This project makes every doctor that kind of bloodhound.**
+My partner's doctor spent **weeks** being a diagnostic detective—manually correlating obscure symptoms across dozens of medical papers, following citation trails, cross-referencing contradictory studies, and synthesizing evidence from disparate sources to find the right diagnosis. It worked, but most doctors don't have that time or tenacity.
+
+**The result**: Patients with complex or rare conditions suffer with wrong diagnoses for years.
+
+### Existing Tools Fall Short
+
+**PubMed** has 35+ million citations, but search is keyword-based. You can't ask:
+- "What diseases cause fatigue, joint pain, AND butterfly rash together?"
+- "What genes increase breast cancer risk AND have FDA-approved drugs?"
+- "How does metformin → AMPK → glucose metabolism work?"
+
+**UpToDate** offers expert-curated summaries, but:
+- Human curation is slow (months to update)
+- Doesn't excel at rare/complex multi-symptom diagnostics
+- No programmatic access for multi-hop reasoning
+
+**Google Scholar** finds papers but doesn't understand relationships between entities across papers.
+
+### What This Project Does Differently
+
+**Multi-hop graph queries with full provenance**—the kind of research that takes clinicians weeks can happen in milliseconds:
+
+```python
+# Question: "Drug repurposing for Alzheimer's via protein targets"
+# PubMed: 🤷 (keyword search won't find this path)
+# This system: ✅ Graph traversal finds the connection
+
+query = {
+  "find": "paths",
+  "path_pattern": {
+    "start": {"node_type": "disease", "name": "Alzheimer disease"},
+    "edges": [
+      {"edge": {"relation_type": "associated_with"}, "node": {"node_type": "gene"}},
+      {"edge": {"relation_type": "encodes"}, "node": {"node_type": "protein"}},
+      {"edge": {"relation_type": "binds_to", "direction": "incoming"},
+       "node": {"node_type": "drug", "properties": {"fda_approved": true}}}
+    ]
+  }
+}
+# Returns: FDA-approved drugs targeting proteins linked to Alzheimer's
+# With full citation trail showing each connection
+```
+
+**Every result includes**:
+- PMC paper IDs for verification
+- Section locations (results vs. discussion)
+- Study quality (RCT vs. case report)
+- Confidence scores based on evidence strength
+- Contradictory evidence when it exists
+
+### The Value Proposition
+
+This isn't about replacing doctors—it's about giving them **superpowers for the hard cases**:
+
+- **Rare disease diagnosis**: Correlate obscure symptom patterns across thousands of papers instantly
+- **Drug repurposing**: Find FDA-approved drugs for new indications via graph traversal
+- **Evidence synthesis**: Aggregate contradictory studies with quality weighting
+- **Pharmacovigilance**: Track drug interactions across the full corpus
+- **Research acceleration**: Literature reviews that take weeks → seconds
+
+**Built on free, public data (PubMed/PMC)** with transparent, reproducible graph construction.
+
+**Target users**: Physicians and researchers who need to answer complex questions that existing tools can't handle.
 
 ---
 
@@ -26,9 +88,11 @@ My partner's doctor spent weeks being a diagnostic detective—correlating obscu
 
 **Python**:
 ```python
+import os
 from medgraph import MedicalGraphClient
 
-client = MedicalGraphClient("https://api.medgraph.com")
+# The client will use the MEDGRAPH_SERVER environment variable.
+client = MedicalGraphClient(os.getenv("MEDGRAPH_SERVER"))
 results = client.find_treatments("BRCA-mutated breast cancer")
 
 for drug in results.results:
@@ -38,7 +102,7 @@ for drug in results.results:
 
 **curl**:
 ```bash
-curl -X POST https://api.medgraph.com/api/v1/query -d '{
+curl -X POST $MEDGRAPH_SERVER/api/v1/query -d '{
   "find": "nodes",
   "node_pattern": {"node_type": "drug"},
   "edge_pattern": {"relation_type": "treats", "min_confidence": 0.7},
@@ -52,12 +116,12 @@ Every result includes PMC paper IDs, section locations, and extraction methods s
 
 ## Key Features
 
-🔍 **Provenance-First**: Every relationship traceable to specific papers, sections, and paragraphs  
-🔗 **Graph-Native**: Multi-hop queries across millions of relationships  
-📊 **Evidence-Weighted**: Automatic quality scoring (RCT > meta-analysis > case report)  
-🌐 **Vendor-Neutral**: JSON query language works with any graph database  
-🔓 **Open Source**: Schema, query language, and client libraries all public  
-🤖 **LLM-Ready**: MCP server for Claude, ChatGPT, and other AI assistants  
+🔍 **Provenance-First**: Every relationship traceable to specific papers, sections, and paragraphs
+🔗 **Graph-Native**: Multi-hop queries across millions of relationships
+📊 **Evidence-Weighted**: Automatic quality scoring (RCT > meta-analysis > case report)
+🌐 **Vendor-Neutral**: JSON query language works with any graph database
+🔓 **Open Source**: Schema, query language, and client libraries all public
+🤖 **LLM-Ready**: MCP server for Claude, ChatGPT, and other AI assistants
 
 ---
 
@@ -72,21 +136,21 @@ User Interfaces
          │
     Query API (FastAPI)
          │
-    ┌────┴────┬──────────┬────────┐
-OpenSearch  Neptune     S3
-(Vector)    (Graph)   (JSON Source)
+    ┌────┴────┬─────────────────┐
+Vector Search   Graph Database   Object Storage
+(Semantic)      (Relationships)  (Source of Truth)
 ```
 
 **Data Flow**:
 ```
 PubMed/PMC → Ingestion Pipeline → Per-Paper JSON (Source of Truth)
                                          │
-                         ┌───────────────┴───────────────┐
-                   OpenSearch                        Neptune
-                  (Semantic Search)              (Graph Queries)
+                         ┌───────────────┴────────────────────┐
+                   Vector Search                        Graph Database
+                  (Semantic Search)                    (Graph Queries)
 ```
 
-[Full architecture docs →](docs/architecture.md)
+<!-- TODO file doesn't exist: [Full architecture docs →](docs/architecture.md) -->
 
 ---
 
@@ -154,7 +218,7 @@ Different graph databases use different query languages (Cypher, Gremlin, SPARQL
     "edges": [
       {"edge": {"relation_type": "associated_with"}, "node": {"node_type": "gene"}},
       {"edge": {"relation_type": "encodes"}, "node": {"node_type": "protein"}},
-      {"edge": {"relation_type": "binds_to", "direction": "incoming"}, 
+      {"edge": {"relation_type": "binds_to", "direction": "incoming"},
        "node": {"node_type": "drug"}}
     ]
   }
@@ -200,7 +264,7 @@ Pure vector search misses multi-hop connections. Pure graph misses semantic simi
 - Graph: BRCA1 → increases_risk → breast cancer → treated_by → olaparib
 - Result: Drugs with evidence for BRCA-mutated subtype specifically
 
-[Complete design decisions →](docs/design-principles.md)
+[Complete design decisions →](./DESIGN_DECISIONS.md)
 
 ---
 
@@ -209,6 +273,7 @@ Pure vector search misses multi-hop connections. Pure graph misses semantic simi
 ### Entity Types
 - **Medical**: disease, symptom, drug, gene, protein, pathway, biomarker, test, procedure
 - **Research**: paper, author, institution, clinical_trial
+- **Scientific Method**: hypothesis, study_design, statistical_method, evidence_line
 
 ### Relationship Types
 - **Causal**: causes, prevents, increases_risk, decreases_risk
@@ -216,6 +281,7 @@ Pure vector search misses multi-hop connections. Pure graph misses semantic simi
 - **Biological**: encodes, binds_to, inhibits, activates, upregulates, downregulates
 - **Clinical**: diagnoses, indicates, precedes, associated_with
 - **Provenance**: cites, studied_in, authored_by
+- **Hypothesis & Evidence**: predicts, refutes, tested_by, generates
 
 Every medical relationship includes:
 ```python
@@ -226,7 +292,7 @@ class MedicalRelationship:
     contradicted_by: list[str] # Track conflicts
 ```
 
-[Full schema documentation →](schema/unified_schema.py)
+[Full schema documentation →](./schema/README.md)
 
 ---
 
@@ -269,7 +335,8 @@ class MedicalRelationship:
 }
 ```
 
-[Query language specification →](docs/query-language.md) | [More examples →](docs/query-examples.md)
+<!-- TODO these links need to be replaced -->
+** [Query language specification →](client/QUERY_LANGUAGE.md) | [More examples →](client/curl/EXAMPLES.md)
 
 ---
 
@@ -281,9 +348,11 @@ pip install medgraph-client
 ```
 
 ```python
+import os
 from medgraph import MedicalGraphClient, QueryBuilder
 
-client = MedicalGraphClient("https://api.medgraph.com")
+# The client will use the MEDGRAPH_SERVER environment variable.
+client = MedicalGraphClient(os.getenv("MEDGRAPH_SERVER"))
 
 # High-level convenience methods
 treatments = client.find_treatments("diabetes")
@@ -302,7 +371,7 @@ query = (QueryBuilder()
 results = client.execute(query)
 ```
 
-[Python docs →](clients/python/) | [API reference →](clients/python/api.md)
+<!-- TODO files don't exist: [Python docs →](client/python/) | [API reference →](client/python/api.md) -->
 
 ### TypeScript/JavaScript
 ```bash
@@ -312,7 +381,7 @@ npm install @medgraph/client
 ```typescript
 import { MedicalGraphClient, QueryBuilder, EntityType, RelationType } from '@medgraph/client';
 
-const client = new MedicalGraphClient('https://api.medgraph.com');
+const client = new MedicalGraphClient();
 
 const treatments = await client.findTreatments('diabetes');
 
@@ -325,7 +394,7 @@ const query = new QueryBuilder()
 const results = await client.execute(query);
 ```
 
-[TypeScript docs →](clients/typescript/) | [API reference →](clients/typescript/api.md)
+<!-- TODO files don't exist: [TypeScript docs →](client/typescript/) | [API reference →](client/typescript/api.md) -->
 
 ### MCP Server (for LLMs)
 
@@ -343,7 +412,7 @@ npm install -g @medgraph/mcp-server
       "command": "npx",
       "args": ["@medgraph/mcp-server"],
       "env": {
-        "MEDGRAPH_API_URL": "https://api.medgraph.com"
+        "MEDGRAPH_API_URL": "${MEDGRAPH_SERVER}"
       }
     }
   }
@@ -355,7 +424,7 @@ Now ask Claude:
 
 Claude will query the graph and cite specific papers.
 
-[MCP server docs →](mcp-server/)
+<!-- TODO directory name is wrong: [MCP server docs →](mcp/) -->
 
 ---
 
@@ -400,7 +469,7 @@ genes = client.find_disease_genes("breast cancer", min_confidence=0.8)
 interactions = client.find_drug_interactions("warfarin", severity=["major"])
 ```
 
-[More use cases →](docs/use-cases.md)
+<!-- TODO file doesn't exist: [More use cases →](docs/use-cases.md) -->
 
 ---
 
@@ -414,72 +483,15 @@ docker-compose up -d
 ```
 
 Services:
-- OpenSearch: http://localhost:9200
+- Vector Search: http://localhost:9200
 - API: http://localhost:8000
 - Dashboards: http://localhost:5601
 
-### AWS Budget Deployment (~$50/month)
-```bash
-cd infrastructure/cdk
-cdk bootstrap
-cdk deploy MedicalKgBudgetStack
-```
+### Cloud Deployment
 
-Components:
-- Single OpenSearch t3.small instance
-- S3 for paper storage
-- Lambda for ingestion
-- VPC endpoints (no NAT)
+See the `infrastructure/` directory for deployment options and configurations.
 
-### AWS Production (~$1000-1500/month)
-```bash
-cdk deploy MedicalKgProductionStack
-```
-
-Components:
-- Multi-AZ OpenSearch cluster
-- Neptune graph database
-- ECS Fargate services
-- Application Load Balancer
-- Auto-scaling + monitoring
-
-[Deployment guide →](docs/deployment.md)
-
----
-
-## Roadmap
-
-**Phase 1 (Current)**: Core Infrastructure
-- [x] Schema with mandatory provenance
-- [x] JSON query language
-- [x] Python + TypeScript clients
-- [ ] AWS deployment scripts
-
-**Phase 2 (Q1 2026)**: Data & Quality
-- [ ] Ingest 10,000 papers (POC)
-- [ ] Entity resolution & deduplication
-- [ ] Contradiction detection
-- [ ] Quality metrics dashboard
-
-**Phase 3 (Q2 2026)**: Query Capabilities
-- [ ] Multi-hop path queries
-- [ ] Temporal queries
-- [ ] Aggregation & analytics
-- [ ] RDF export
-
-**Phase 4 (Q3 2026)**: User Interfaces
-- [ ] Web query interface
-- [ ] Visualization dashboard
-- [ ] MCP server
-- [ ] Example notebooks
-
-**Phase 5 (Q4 2026)**: Scale
-- [ ] 100,000+ papers
-- [ ] Query optimization
-- [ ] Real-time updates
-- [ ] Multi-region
-
-[Detailed roadmap →](docs/roadmap.md)
+<!-- TODO file doesn't exist: [Deployment guide →](docs/deployment.md) -->
 
 ---
 
@@ -498,7 +510,7 @@ We need help from:
 3. Make your changes with tests
 4. Open a Pull Request
 
-[Contributing guide →](CONTRIBUTING.md) | [Code of conduct →](CODE_OF_CONDUCT.md)
+<!-- TODO files don't exist: [Contributing guide →](CONTRIBUTING.md) | [Code of conduct →](CODE_OF_CONDUCT.md) -->
 
 ---
 
@@ -512,9 +524,9 @@ MIT License - see [LICENSE](LICENSE)
 
 ## Links
 
-- **Documentation**: https://docs.medgraph.com
-- **API Reference**: https://api.medgraph.com/docs
-- **Demo**: https://demo.medgraph.com
+- **Documentation**: [Link to Documentation]
+- **API Reference**: [Link to API Reference]
+- **Demo**: [Link to Demo]
 - **Discussions**: https://github.com/yourusername/medical-knowledge-graph/discussions
 - **Issues**: https://github.com/yourusername/medical-knowledge-graph/issues
 
@@ -522,9 +534,9 @@ MIT License - see [LICENSE](LICENSE)
 
 ## Contact
 
-- Email: contact@medgraph.com
-- Twitter: @medgraph
-- Discord: [Join our community](https://discord.gg/medgraph)
+- Email: [your-contact-email@example.com]
+- Twitter: @[your-twitter-handle]
+- Discord: [Join our community]([your-discord-invite-link])
 
 ---
 

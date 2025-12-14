@@ -1,0 +1,1396 @@
+[
+  {
+    "title": "Example 1: Find Treatments for a Disease",
+    "query": {
+      "find": "nodes",
+      "node_pattern": {
+        "node_type": "drug",
+        "var": "drug"
+      },
+      "edge_pattern": {
+        "relation_type": "treats",
+        "direction": "outgoing",
+        "min_confidence": 0.7,
+        "var": "treatment"
+      },
+      "filters": [
+        {
+          "field": "target.node_type",
+          "operator": "eq",
+          "value": "disease"
+        },
+        {
+          "field": "target.name",
+          "operator": "eq",
+          "value": "breast cancer"
+        }
+      ],
+      "aggregate": {
+        "group_by": [
+          "drug.name"
+        ],
+        "aggregations": {
+          "paper_count": [
+            "count",
+            "treatment.evidence.paper_id"
+          ],
+          "avg_confidence": [
+            "avg",
+            "treatment.confidence"
+          ],
+          "total_evidence": [
+            "count",
+            "treatment.evidence"
+          ]
+        }
+      },
+      "order_by": [
+        [
+          "paper_count",
+          "desc"
+        ],
+        [
+          "avg_confidence",
+          "desc"
+        ]
+      ],
+      "limit": 20
+    },
+    "expected_response": {
+      "results": [
+        {
+          "drug.name": "tamoxifen",
+          "paper_count": 234,
+          "avg_confidence": 0.89,
+          "total_evidence": 456
+        },
+        {
+          "drug.name": "trastuzumab",
+          "paper_count": 189,
+          "avg_confidence": 0.92,
+          "total_evidence": 312
+        }
+      ],
+      "metadata": {
+        "total_results": 3,
+        "query_time_ms": 0
+      }
+    }
+  },
+  {
+    "title": "Example 2: Find Genes Associated with Disease",
+    "query": {
+      "find": "nodes",
+      "node_pattern": {
+        "node_type": "gene",
+        "var": "gene"
+      },
+      "edge_pattern": {
+        "relation_types": [
+          "associated_with",
+          "causes",
+          "increases_risk"
+        ],
+        "direction": "incoming",
+        "min_confidence": 0.6,
+        "var": "association"
+      },
+      "filters": [
+        {
+          "field": "source.node_type",
+          "operator": "eq",
+          "value": "disease"
+        },
+        {
+          "field": "source.name",
+          "operator": "eq",
+          "value": "Alzheimer disease"
+        }
+      ],
+      "return_fields": [
+        "gene.name",
+        "gene.external_ids.hgnc",
+        "gene.external_ids.entrez",
+        "association.relation_type",
+        "association.confidence",
+        "association.evidence.paper_id"
+      ],
+      "order_by": [
+        [
+          "association.confidence",
+          "desc"
+        ]
+      ],
+      "limit": 50
+    }
+  },
+  {
+    "title": "Example 3: Multi-Hop Query - Drug Mechanism of Action",
+    "query": {
+      "find": "paths",
+      "path_pattern": {
+        "start": {
+          "node_type": "drug",
+          "name": "metformin",
+          "var": "drug"
+        },
+        "edges": [
+          [
+            {
+              "relation_types": [
+                "binds_to",
+                "inhibits",
+                "activates"
+              ],
+              "var": "drug_target"
+            },
+            {
+              "node_types": [
+                "protein",
+                "gene"
+              ],
+              "var": "target"
+            }
+          ],
+          [
+            {
+              "relation_types": [
+                "inhibits",
+                "activates",
+                "upregulates",
+                "downregulates"
+              ],
+              "var": "target_effect"
+            },
+            {
+              "node_type": "biomarker",
+              "var": "biomarker"
+            }
+          ]
+        ],
+        "max_hops": 2,
+        "avoid_cycles": true
+      },
+      "filters": [
+        {
+          "field": "biomarker.name_pattern",
+          "operator": "regex",
+          "value": ".*(glucose|blood sugar|glyc).*"
+        }
+      ],
+      "return_fields": [
+        "drug.name",
+        "target.name",
+        "target.node_type",
+        "drug_target.relation_type",
+        "biomarker.name",
+        "target_effect.relation_type",
+        "path.confidence_score"
+      ]
+    }
+  },
+  {
+    "title": "Example 4: Drug Repurposing Discovery",
+    "query": {
+      "find": "paths",
+      "path_pattern": {
+        "start": {
+          "node_type": "disease",
+          "name": "Alzheimer disease",
+          "var": "alzheimers"
+        },
+        "edges": [
+          [
+            {
+              "relation_types": [
+                "associated_with",
+                "causes"
+              ],
+              "min_confidence": 0.6,
+              "var": "disease_gene"
+            },
+            {
+              "node_type": "gene",
+              "var": "gene"
+            }
+          ],
+          [
+            {
+              "relation_type": "encodes",
+              "var": "gene_protein"
+            },
+            {
+              "node_type": "protein",
+              "var": "protein"
+            }
+          ],
+          [
+            {
+              "relation_types": [
+                "binds_to",
+                "inhibits",
+                "activates"
+              ],
+              "direction": "incoming",
+              "var": "drug_protein"
+            },
+            {
+              "node_type": "drug",
+              "property_filters": [
+                {
+                  "field": "properties.fda_approved",
+                  "operator": "eq",
+                  "value": true
+                }
+              ],
+              "var": "drug"
+            }
+          ],
+          [
+            {
+              "relation_type": "treats",
+              "direction": "outgoing",
+              "var": "drug_indication"
+            },
+            {
+              "node_type": "disease",
+              "var": "current_indication"
+            }
+          ]
+        ],
+        "max_hops": 4
+      },
+      "filters": [
+        {
+          "field": "current_indication.name",
+          "operator": "ne",
+          "value": "Alzheimer disease"
+        }
+      ],
+      "aggregate": {
+        "group_by": [
+          "drug.name",
+          "current_indication.name"
+        ],
+        "aggregations": {
+          "protein_targets": [
+            "count",
+            "protein.name"
+          ],
+          "evidence_strength": [
+            "avg",
+            "disease_gene.confidence"
+          ]
+        }
+      },
+      "order_by": [
+        [
+          "protein_targets",
+          "desc"
+        ],
+        [
+          "evidence_strength",
+          "desc"
+        ]
+      ],
+      "limit": 10
+    }
+  },
+  {
+    "title": "Example 5: Compare Treatment Evidence Quality",
+    "query": {
+      "find": "edges",
+      "edge_pattern": {
+        "relation_type": "treats",
+        "min_confidence": 0.5,
+        "var": "treatment"
+      },
+      "filters": [
+        {
+          "field": "source.node_type",
+          "operator": "eq",
+          "value": "drug"
+        },
+        {
+          "field": "source.name",
+          "operator": "in",
+          "value": [
+            "atorvastatin",
+            "simvastatin",
+            "evolocumab",
+            "alirocumab"
+          ]
+        },
+        {
+          "field": "target.name_pattern",
+          "operator": "regex",
+          "value": ".*(hypercholesterolemia|high cholesterol).*"
+        }
+      ],
+      "aggregate": {
+        "group_by": [
+          "source.name",
+          "target.name"
+        ],
+        "aggregations": {
+          "total_papers": [
+            "count",
+            "treatment.evidence.paper_id"
+          ],
+          "rct_count": [
+            "count",
+            "treatment.evidence[study_type='rct'].paper_id"
+          ],
+          "meta_analysis_count": [
+            "count",
+            "treatment.evidence[study_type='meta_analysis'].paper_id"
+          ],
+          "avg_confidence": [
+            "avg",
+            "treatment.confidence"
+          ],
+          "avg_sample_size": [
+            "avg",
+            "treatment.evidence.sample_size"
+          ],
+          "significant_results": [
+            "count",
+            "treatment.measurement[p_value<0.05]"
+          ]
+        }
+      },
+      "order_by": [
+        [
+          "rct_count",
+          "desc"
+        ],
+        [
+          "meta_analysis_count",
+          "desc"
+        ]
+      ]
+    }
+  },
+  {
+    "title": "Example 6: Identify Contradictory Evidence",
+    "query": {
+      "find": "edges",
+      "edge_pattern": {
+        "relation_types": [
+          "prevents",
+          "increases_risk",
+          "decreases_risk",
+          "associated_with"
+        ],
+        "var": "relationship"
+      },
+      "filters": [
+        {
+          "field": "source.name",
+          "operator": "eq",
+          "value": "aspirin"
+        },
+        {
+          "field": "target.name_pattern",
+          "operator": "regex",
+          "value": ".*(heart attack|myocardial infarction|MI).*"
+        }
+      ],
+      "aggregate": {
+        "group_by": [
+          "relationship.relation_type"
+        ],
+        "aggregations": {
+          "paper_count": [
+            "count",
+            "relationship.evidence.paper_id"
+          ],
+          "avg_confidence": [
+            "avg",
+            "relationship.confidence"
+          ],
+          "latest_paper_date": [
+            "max",
+            "relationship.evidence.paper_publication_date"
+          ],
+          "avg_sample_size": [
+            "avg",
+            "relationship.evidence.sample_size"
+          ]
+        }
+      },
+      "order_by": [
+        [
+          "relationship.relation_type",
+          "asc"
+        ]
+      ]
+    }
+  },
+  {
+    "title": "Example 7: Differential Diagnosis from Symptoms",
+    "query": {
+      "find": "paths",
+      "path_pattern": {
+        "start": {
+          "node_type": "symptom",
+          "name": [
+            "fatigue",
+            "joint pain",
+            "butterfly rash"
+          ],
+          "var": "symptom"
+        },
+        "edges": [
+          [
+            {
+              "relation_type": "causes",
+              "direction": "incoming",
+              "var": "symptom_disease"
+            },
+            {
+              "node_type": "disease",
+              "var": "disease"
+            }
+          ]
+        ],
+        "max_hops": 1
+      },
+      "aggregate": {
+        "group_by": [
+          "disease.name"
+        ],
+        "aggregations": {
+          "symptom_count": [
+            "count",
+            "symptom.name"
+          ],
+          "specificity_score": [
+            "avg",
+            "symptom_disease.confidence"
+          ],
+          "supporting_papers": [
+            "count",
+            "symptom_disease.evidence.paper_id"
+          ]
+        }
+      },
+      "order_by": [
+        [
+          "symptom_count",
+          "desc"
+        ],
+        [
+          "specificity_score",
+          "desc"
+        ]
+      ]
+    }
+  },
+  {
+    "title": "Example 8: Find Diagnostic Tests",
+    "query": {
+      "find": "nodes",
+      "node_pattern": {
+        "node_types": [
+          "test",
+          "biomarker"
+        ],
+        "var": "diagnostic"
+      },
+      "edge_pattern": {
+        "relation_types": [
+          "diagnoses",
+          "indicates"
+        ],
+        "direction": "outgoing",
+        "min_confidence": 0.6,
+        "var": "diagnostic_rel"
+      },
+      "filters": [
+        {
+          "field": "target.node_type",
+          "operator": "eq",
+          "value": "disease"
+        },
+        {
+          "field": "target.name",
+          "operator": "eq",
+          "value": "systemic lupus erythematosus"
+        }
+      ],
+      "aggregate": {
+        "group_by": [
+          "diagnostic.name",
+          "diagnostic.node_type"
+        ],
+        "aggregations": {
+          "sensitivity": [
+            "avg",
+            "diagnostic_rel.measurement[value_type='sensitivity'].value"
+          ],
+          "specificity": [
+            "avg",
+            "diagnostic_rel.measurement[value_type='specificity'].value"
+          ],
+          "paper_count": [
+            "count",
+            "diagnostic_rel.evidence.paper_id"
+          ]
+        }
+      },
+      "return_fields": [
+        "diagnostic.name",
+        "diagnostic.node_type",
+        "sensitivity",
+        "specificity",
+        "paper_count",
+        "diagnostic_rel.evidence.study_type"
+      ],
+      "order_by": [
+        [
+          "sensitivity",
+          "desc"
+        ],
+        [
+          "specificity",
+          "desc"
+        ]
+      ]
+    }
+  },
+  {
+    "title": "Example 9: Recent Discoveries",
+    "query": {
+      "find": "edges",
+      "edge_pattern": {
+        "relation_types": [
+          "treats",
+          "manages"
+        ],
+        "min_confidence": 0.6,
+        "var": "treatment"
+      },
+      "filters": [
+        {
+          "field": "source.node_type",
+          "operator": "eq",
+          "value": "drug"
+        },
+        {
+          "field": "target.name",
+          "operator": "eq",
+          "value": "multiple sclerosis"
+        },
+        {
+          "field": "treatment.evidence.paper_publication_date",
+          "operator": "gte",
+          "value": "2023-01-01"
+        }
+      ],
+      "aggregate": {
+        "group_by": [
+          "source.name"
+        ],
+        "aggregations": {
+          "paper_count": [
+            "count",
+            "treatment.evidence.paper_id"
+          ],
+          "latest_evidence": [
+            "max",
+            "treatment.evidence.paper_publication_date"
+          ],
+          "avg_confidence": [
+            "avg",
+            "treatment.confidence"
+          ]
+        }
+      },
+      "order_by": [
+        [
+          "latest_evidence",
+          "desc"
+        ],
+        [
+          "paper_count",
+          "desc"
+        ]
+      ]
+    }
+  },
+  {
+    "title": "Example 10: Population-Specific Treatment",
+    "query": {
+      "find": "edges",
+      "edge_pattern": {
+        "relation_type": "treats",
+        "var": "treatment"
+      },
+      "filters": [
+        {
+          "field": "source.properties.drug_class",
+          "operator": "eq",
+          "value": "ACE inhibitor"
+        },
+        {
+          "field": "target.name",
+          "operator": "eq",
+          "value": "hypertension"
+        },
+        {
+          "field": "treatment.evidence.study_population",
+          "operator": "regex",
+          "value": ".*(elderly|geriatric|age>65|older adult).*"
+        }
+      ],
+      "return_fields": [
+        "source.name",
+        "treatment.measurement.value",
+        "treatment.measurement.unit",
+        "treatment.measurement.value_type",
+        "treatment.evidence.paper_id",
+        "treatment.evidence.sample_size",
+        "treatment.evidence.study_type"
+      ],
+      "aggregate": {
+        "group_by": [
+          "source.name"
+        ],
+        "aggregations": {
+          "avg_effect_size": [
+            "avg",
+            "treatment.measurement[value_type='effect_size'].value"
+          ],
+          "study_count": [
+            "count",
+            "treatment.evidence.paper_id"
+          ],
+          "total_sample_size": [
+            "sum",
+            "treatment.evidence.sample_size"
+          ]
+        }
+      },
+      "order_by": [
+        [
+          "avg_effect_size",
+          "desc"
+        ]
+      ]
+    }
+  },
+  {
+    "title": "Example 11: Drug-Drug Interactions",
+    "query": {
+      "find": "paths",
+      "path_pattern": {
+        "start": {
+          "node_type": "drug",
+          "name": "warfarin",
+          "var": "drug1"
+        },
+        "edges": [
+          [
+            {
+              "relation_type": "interacts_with",
+              "var": "interaction"
+            },
+            {
+              "node_type": "drug",
+              "property_filters": [
+                {
+                  "field": "properties.drug_class",
+                  "operator": "eq",
+                  "value": "NSAID"
+                }
+              ],
+              "var": "drug2"
+            }
+          ]
+        ],
+        "max_hops": 1
+      },
+      "return_fields": [
+        "drug1.name",
+        "drug2.name",
+        "interaction.relation_type",
+        "interaction.properties.severity",
+        "interaction.properties.mechanism",
+        "interaction.evidence.paper_id",
+        "interaction.evidence.case_count"
+      ],
+      "order_by": [
+        [
+          "interaction.properties.severity",
+          "desc"
+        ]
+      ]
+    }
+  },
+  {
+    "title": "Example 12: Get Paper Details",
+    "query": {
+      "find": "nodes",
+      "node_pattern": {
+        "node_type": "paper",
+        "id": "PMC12345678"
+      },
+      "return_fields": [
+        "properties.title",
+        "properties.abstract",
+        "properties.authors",
+        "properties.journal",
+        "properties.publication_date",
+        "properties.mesh_terms",
+        "properties.doi",
+        "properties.citation_count"
+      ]
+    }
+  },
+  {
+    "title": "Example 13: Track Hypothesis Evolution (PR #3 Feature)",
+    "query": {
+      "find": "paths",
+      "path_pattern": {
+        "start": {
+          "node_type": "hypothesis",
+          "name": "Amyloid Cascade Hypothesis",
+          "var": "hypothesis"
+        },
+        "edges": [
+          [
+            {
+              "relation_type": "tested_by",
+              "var": "test_relationship"
+            },
+            {
+              "node_type": "paper",
+              "var": "paper"
+            }
+          ]
+        ],
+        "max_hops": 1
+      },
+      "return_fields": [
+        "hypothesis.name",
+        "hypothesis.status",
+        "hypothesis.proposed_date",
+        "paper.pmc_id",
+        "paper.title",
+        "paper.publication_date",
+        "test_relationship.test_outcome",
+        "test_relationship.study_design_id"
+      ],
+      "order_by": [
+        [
+          "paper.publication_date",
+          "desc"
+        ]
+      ],
+      "limit": 20
+    },
+    "expected_response": {
+      "results": [
+        {
+          "hypothesis.name": "Amyloid Cascade Hypothesis",
+          "hypothesis.status": "controversial",
+          "paper.pmc_id": "PMC9876543",
+          "paper.title": "Aducanumab fails to meet primary endpoints",
+          "test_relationship.test_outcome": "refuted",
+          "test_relationship.study_design_id": "OBI:0000008"
+        }
+      ]
+    }
+  },
+  {
+    "title": "Example 14: Query by Study Design Quality (PR #3 Feature)",
+    "query": {
+      "find": "edges",
+      "edge_pattern": {
+        "relation_type": "treats",
+        "min_confidence": 0.7,
+        "var": "treatment"
+      },
+      "filters": [
+        {
+          "field": "source.node_type",
+          "operator": "eq",
+          "value": "drug"
+        },
+        {
+          "field": "target.name",
+          "operator": "eq",
+          "value": "breast cancer"
+        },
+        {
+          "field": "treatment.evidence.obi_study_design",
+          "operator": "eq",
+          "value": "OBI:0000008"
+        },
+        {
+          "field": "treatment.evidence.eco_type",
+          "operator": "eq",
+          "value": "ECO:0007673"
+        }
+      ],
+      "return_fields": [
+        "source.name",
+        "treatment.confidence",
+        "treatment.evidence.paper_id",
+        "treatment.evidence.study_type",
+        "treatment.evidence.sample_size",
+        "treatment.evidence.obi_study_design",
+        "treatment.evidence.eco_type"
+      ],
+      "aggregate": {
+        "group_by": [
+          "source.name"
+        ],
+        "aggregations": {
+          "rct_count": [
+            "count",
+            "treatment.evidence.paper_id"
+          ],
+          "avg_sample_size": [
+            "avg",
+            "treatment.evidence.sample_size"
+          ],
+          "avg_confidence": [
+            "avg",
+            "treatment.confidence"
+          ]
+        }
+      },
+      "order_by": [
+        [
+          "rct_count",
+          "desc"
+        ],
+        [
+          "avg_confidence",
+          "desc"
+        ]
+      ]
+    }
+  },
+  {
+    "title": "Example 15: Statistical Methods Analysis (PR #3 Feature)",
+    "query": {
+      "find": "paths",
+      "path_pattern": {
+        "start": {
+          "node_type": "drug",
+          "name": "pembrolizumab",
+          "var": "drug"
+        },
+        "edges": [
+          [
+            {
+              "relation_type": "treats",
+              "var": "treatment"
+            },
+            {
+              "node_type": "disease",
+              "var": "disease"
+            }
+          ]
+        ],
+        "max_hops": 1
+      },
+      "return_fields": [
+        "drug.name",
+        "disease.name",
+        "treatment.evidence.paper_id",
+        "treatment.evidence.stato_methods",
+        "treatment.confidence"
+      ],
+      "filters": [
+        {
+          "field": "treatment.evidence.stato_methods",
+          "operator": "contains",
+          "value": "STATO:0000304"
+        }
+      ]
+    },
+    "expected_response": {
+      "results": [
+        {
+          "drug.name": "pembrolizumab",
+          "disease.name": "melanoma",
+          "treatment.evidence.paper_id": "PMC7654321",
+          "treatment.evidence.stato_methods": [
+            "STATO:0000304",
+            "STATO:0000376"
+          ],
+          "treatment.confidence": 0.92
+        }
+      ]
+    }
+  },
+  {
+    "title": "Example 16: Evidence Line Tracking (PR #3 Feature)",
+    "query": {
+      "find": "paths",
+      "path_pattern": {
+        "start": {
+          "node_type": "evidence_line",
+          "var": "evidence_line"
+        },
+        "edges": [
+          [
+            {
+              "relation_type": "supports",
+              "var": "support_rel"
+            },
+            {
+              "node_type": "hypothesis",
+              "var": "hypothesis"
+            }
+          ]
+        ],
+        "max_hops": 1
+      },
+      "filters": [
+        {
+          "field": "hypothesis.name",
+          "operator": "contains",
+          "value": "PARP inhibitor"
+        }
+      ],
+      "return_fields": [
+        "evidence_line.name",
+        "evidence_line.strength",
+        "evidence_line.sepio_type",
+        "evidence_line.eco_type",
+        "evidence_line.evidence_items",
+        "hypothesis.name",
+        "hypothesis.status"
+      ],
+      "order_by": [
+        [
+          "evidence_line.strength",
+          "desc"
+        ]
+      ]
+    }
+  },
+  {
+    "title": "Example 17: Hypothesis Predictions (PR #3 Feature)",
+    "query": {
+      "find": "paths",
+      "path_pattern": {
+        "start": {
+          "node_type": "hypothesis",
+          "entity_id": "HYPOTHESIS:parp_inhibitor_synthetic_lethality",
+          "var": "hypothesis"
+        },
+        "edges": [
+          [
+            {
+              "relation_type": "predicts",
+              "var": "prediction"
+            },
+            {
+              "node_type": "disease",
+              "var": "disease"
+            }
+          ]
+        ],
+        "max_hops": 1
+      },
+      "return_fields": [
+        "hypothesis.name",
+        "hypothesis.description",
+        "hypothesis.status",
+        "disease.name",
+        "prediction.prediction_type",
+        "prediction.testable",
+        "prediction.confidence"
+      ]
+    }
+  },
+  {
+    "title": "Example 18: Find Papers that Generate Evidence (PR #3 Feature)",
+    "query": {
+      "find": "paths",
+      "path_pattern": {
+        "start": {
+          "node_type": "paper",
+          "var": "paper"
+        },
+        "edges": [
+          [
+            {
+              "relation_type": "generates",
+              "var": "generation"
+            },
+            {
+              "node_type": "evidence_line",
+              "var": "evidence"
+            }
+          ]
+        ],
+        "max_hops": 1
+      },
+      "filters": [
+        {
+          "field": "paper.study_type",
+          "operator": "eq",
+          "value": "rct"
+        },
+        {
+          "field": "generation.quality_score",
+          "operator": "gte",
+          "value": 0.8
+        }
+      ],
+      "return_fields": [
+        "paper.pmc_id",
+        "paper.title",
+        "paper.study_type",
+        "evidence.name",
+        "evidence.strength",
+        "generation.quality_score",
+        "generation.eco_type"
+      ],
+      "order_by": [
+        [
+          "generation.quality_score",
+          "desc"
+        ]
+      ],
+      "limit": 20
+    }
+  },
+  {
+    "title": "Example 19: Protein-Centric Query (Coverage for Protein Entity)",
+    "query": {
+      "find": "paths",
+      "path_pattern": {
+        "start": {
+          "node_type": "drug",
+          "var": "drug"
+        },
+        "edges": [
+          [
+            {
+              "relation_types": [
+                "binds_to",
+                "inhibits",
+                "activates"
+              ],
+              "var": "drug_target"
+            },
+            {
+              "node_type": "protein",
+              "var": "protein"
+            }
+          ]
+        ],
+        "max_hops": 1
+      },
+      "filters": [
+        {
+          "field": "drug.properties.fda_approved",
+          "operator": "eq",
+          "value": true
+        }
+      ],
+      "return_fields": [
+        "drug.name",
+        "drug.drug_class",
+        "protein.name",
+        "protein.uniprot_id",
+        "protein.function",
+        "drug_target.relation_type",
+        "drug_target.confidence"
+      ],
+      "aggregate": {
+        "group_by": [
+          "protein.name",
+          "protein.uniprot_id"
+        ],
+        "aggregations": {
+          "drug_count": [
+            "count",
+            "drug.name"
+          ],
+          "avg_confidence": [
+            "avg",
+            "drug_target.confidence"
+          ]
+        }
+      },
+      "order_by": [
+        [
+          "drug_count",
+          "desc"
+        ],
+        [
+          "avg_confidence",
+          "desc"
+        ]
+      ],
+      "limit": 50
+    }
+  },
+  {
+    "title": "Example 20: Study Design Quality Filter (PR #3 Feature)",
+    "query": {
+      "find": "nodes",
+      "node_pattern": {
+        "node_type": "study_design",
+        "var": "design"
+      },
+      "filters": [
+        {
+          "field": "design.evidence_level",
+          "operator": "lte",
+          "value": 2
+        }
+      ],
+      "return_fields": [
+        "design.name",
+        "design.obi_id",
+        "design.design_type",
+        "design.evidence_level",
+        "design.description"
+      ],
+      "order_by": [
+        [
+          "design.evidence_level",
+          "asc"
+        ]
+      ]
+    }
+  },
+  {
+    "title": "Example 21: Statistical Method Classification (PR #3 Feature)",
+    "query": {
+      "find": "nodes",
+      "node_pattern": {
+        "node_type": "statistical_method",
+        "var": "method"
+      },
+      "filters": [
+        {
+          "field": "method.method_type",
+          "operator": "eq",
+          "value": "hypothesis_test"
+        }
+      ],
+      "return_fields": [
+        "method.name",
+        "method.stato_id",
+        "method.method_type",
+        "method.description",
+        "method.assumptions"
+      ],
+      "limit": 20
+    }
+  },
+  {
+    "title": "Example 22: Evidence Refuting Hypotheses (PR #3 Feature)",
+    "query": {
+      "find": "paths",
+      "path_pattern": {
+        "start": {
+          "node_type": "paper",
+          "var": "paper"
+        },
+        "edges": [
+          [
+            {
+              "relation_type": "refutes",
+              "var": "refutation"
+            },
+            {
+              "node_type": "hypothesis",
+              "var": "hypothesis"
+            }
+          ]
+        ],
+        "max_hops": 1
+      },
+      "filters": [
+        {
+          "field": "hypothesis.name",
+          "operator": "contains",
+          "value": "Amyloid"
+        }
+      ],
+      "return_fields": [
+        "paper.pmc_id",
+        "paper.title",
+        "paper.publication_date",
+        "paper.study_type",
+        "hypothesis.name",
+        "hypothesis.status",
+        "refutation.refutation_strength",
+        "refutation.alternative_explanation"
+      ],
+      "order_by": [
+        [
+          "paper.publication_date",
+          "desc"
+        ],
+        [
+          "refutation.refutation_strength",
+          "desc"
+        ]
+      ]
+    }
+  },
+  {
+    "title": "Example 23: Find Drugs that Treat Breast Cancer",
+    "query": {
+      "find": "relationships",
+      "filters": [
+        {
+          "field": "object.name",
+          "operator": "eq",
+          "value": "Breast Cancer"
+        },
+        {
+          "field": "predicate",
+          "operator": "eq",
+          "value": "TREATS"
+        }
+      ],
+      "return_fields": [
+        "subject.name",
+        "subject.type",
+        "predicate",
+        "confidence",
+        "evidence_count",
+        "papers"
+      ],
+      "order_by": [
+        [
+          "confidence",
+          "desc"
+        ]
+      ]
+    }
+  },
+  {
+    "title": "Example 24: Trace Metformin's Mechanism of Action",
+    "query": {
+      "find": "paths",
+      "path_pattern": {
+        "start": {
+          "node_type": "drug",
+          "filters": [
+            {
+              "field": "name",
+              "operator": "eq",
+              "value": "Metformin"
+            }
+          ],
+          "var": "drug"
+        },
+        "edges": [
+          [
+            {
+              "relation_type": "activates",
+              "var": "activation"
+            },
+            {
+              "node_type": "protein",
+              "var": "protein"
+            }
+          ],
+          [
+            {
+              "relation_type": "downregulates",
+              "var": "downreg"
+            },
+            {
+              "node_type": "biomarker",
+              "var": "marker"
+            }
+          ]
+        ],
+        "max_hops": 2
+      },
+      "return_fields": [
+        "drug.name",
+        "protein.name",
+        "marker.name",
+        "activation.confidence",
+        "downreg.confidence"
+      ]
+    }
+  },
+  {
+    "title": "Example 25: Find Papers Supporting a Relationship",
+    "query": {
+      "find": "papers",
+      "filters": [
+        {
+          "field": "relationships.subject.name",
+          "operator": "eq",
+          "value": "Metformin"
+        },
+        {
+          "field": "relationships.object.name",
+          "operator": "eq",
+          "value": "Type 2 Diabetes"
+        },
+        {
+          "field": "relationships.predicate",
+          "operator": "eq",
+          "value": "TREATS"
+        }
+      ],
+      "return_fields": [
+        "paper_id",
+        "title",
+        "authors",
+        "publication_date",
+        "journal"
+      ]
+    }
+  },
+  {
+    "title": "Example 26: Multi-hop Query - Aspirin Prevention Path",
+    "query": {
+      "find": "paths",
+      "path_pattern": {
+        "start": {
+          "node_type": "drug",
+          "filters": [
+            {
+              "field": "name",
+              "operator": "eq",
+              "value": "Aspirin"
+            }
+          ],
+          "var": "drug"
+        },
+        "edges": [
+          [
+            {
+              "relation_type": "prevents",
+              "var": "prevention"
+            },
+            {
+              "node_type": "disease",
+              "var": "disease"
+            }
+          ]
+        ],
+        "max_hops": 1
+      },
+      "return_fields": [
+        "drug.name",
+        "disease.name",
+        "prevention.confidence",
+        "prevention.evidence_count",
+        "prevention.metadata.risk_reduction",
+        "prevention.metadata.study_type"
+      ]
+    }
+  }
+]
