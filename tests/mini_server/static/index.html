@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Literature Graph API - Demo UI</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Prism.js for syntax highlighting -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🧬 Medical Literature Graph API</h1>
+            <p class="subtitle">Interactive Demo Interface</p>
+        </header>
+
+        <section class="info-section">
+            <h2>About This API</h2>
+            <p>
+                The Medical Literature Graph API is a <strong>provenance-first knowledge graph</strong> 
+                built on PubMed/PMC literature. Every relationship in the graph is traceable to 
+                specific evidence from peer-reviewed research papers.
+            </p>
+            <p>
+                This demo interface allows you to interactively test the API by:
+            </p>
+            <ul>
+                <li>Selecting from pre-built query examples</li>
+                <li>Editing and customizing queries</li>
+                <li>Viewing formatted JSON responses</li>
+                <li>Exploring multi-hop graph queries</li>
+            </ul>
+            <div class="endpoints-info">
+                <strong>Available Endpoints:</strong>
+                <ul>
+                    <li><code>POST /api/v1/query</code> - Main query endpoint</li>
+                    <li><code>GET /docs</code> - Interactive API documentation</li>
+                    <li><code>GET /api/v1/stats</code> - Graph statistics</li>
+                </ul>
+            </div>
+        </section>
+
+        <section class="query-section">
+            <h2>Try a Query</h2>
+            
+            <div class="form-group">
+                <label for="example-select">Select an Example:</label>
+                <select id="example-select" class="select-input">
+                    <option value="">-- Choose an example --</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="query-input">Query JSON:</label>
+                <div class="editor-container">
+                    <textarea id="query-input" class="code-input" rows="20" placeholder="Select an example or paste your own JSON query here..."></textarea>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button id="submit-button" class="btn btn-primary">
+                    <span class="btn-text">Execute Query</span>
+                    <span class="btn-spinner" style="display: none;">⏳</span>
+                </button>
+                <button id="clear-button" class="btn btn-secondary">Clear</button>
+                <button id="format-button" class="btn btn-secondary">Format JSON</button>
+            </div>
+        </section>
+
+        <section class="response-section" id="response-section" style="display: none;">
+            <h2>Response</h2>
+            <div class="response-header">
+                <span id="response-status" class="status-badge"></span>
+                <span id="response-time" class="time-badge"></span>
+            </div>
+            <div class="response-container">
+                <pre><code id="response-output" class="language-json"></code></pre>
+            </div>
+        </section>
+
+        <section class="error-section" id="error-section" style="display: none;">
+            <h2>Error</h2>
+            <div class="error-container">
+                <pre><code id="error-output"></code></pre>
+            </div>
+        </section>
+    </div>
+
+    <footer>
+        <p>
+            Medical Literature Graph API v0.1.0 | 
+            <a href="/docs" target="_blank">API Docs</a> | 
+            <a href="https://github.com/wware/med-lit-graph" target="_blank">GitHub</a>
+        </p>
+    </footer>
+
+    <!-- Prism.js for syntax highlighting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
