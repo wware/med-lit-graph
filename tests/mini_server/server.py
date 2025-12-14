@@ -291,13 +291,13 @@ async def get_stats():
 async def get_examples():
     """Get parsed examples from EXAMPLES.md"""
     examples_file = static_path / "examples.json"
-    
+
     if not examples_file.exists():
         raise HTTPException(status_code=404, detail="Examples file not found")
-    
-    with open(examples_file, 'r', encoding='utf-8') as f:
+
+    with open(examples_file, "r", encoding="utf-8") as f:
         examples = json.load(f)
-    
+
     return {"examples": examples, "total": len(examples)}
 
 
