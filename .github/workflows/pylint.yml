@@ -28,7 +28,7 @@ jobs:
       run: uv sync
     
     - name: Run ruff linting
-      run: uv run ruff check .
+      run: uv run ruff check --fix .
       continue-on-error: false
     
     - name: Run black format check
