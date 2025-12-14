@@ -377,9 +377,9 @@ entity = collection.get_by_umls("C0006142")
 
 **With canonical IDs:** 1000 papers all reference `C0011860`, creating a single unified knowledge base
 
-### Implementation in AWS
+### Example Production Implementation
 
-For a production deployment, `EntityCollection` would be implemented as:
+For a production deployment, `EntityCollection` can be implemented in various ways:
 
 #### Development/Small Scale
 ```python
@@ -388,50 +388,51 @@ collection = EntityCollection.load("entities.jsonl")
 entity = collection.get_by_id("C0006142")
 ```
 
-#### Production/Large Scale (AWS)
+#### Production/Large Scale
 
-**Option 1: DynamoDB + S3**
+**Option 1: Key-Value Store + Object Storage**
 ```python
-# Master entity collection in S3 (versioned)
-s3://med-graph-entities/
+# Master entity collection in versioned object storage
+storage://med-graph-entities/
   └── entities-v1.jsonl
   └── entities-v2.jsonl
 
-# DynamoDB for fast lookups
+# Key-value database for fast lookups
 Table: canonical-entities
   Partition Key: entity_id (e.g., "C0006142")
   Attributes: entity_type, name, synonyms, embedding, ontology_mappings
-  GSI: umls_id, hgnc_id, rxnorm_id (for ontology-specific lookups)
+  Indexes: umls_id, hgnc_id, rxnorm_id (for ontology-specific lookups)
 
-# Lambda function for entity resolution
+# Entity resolution function
 def resolve_entity(mention_text: str, entity_type: str) -> str:
-    """Map mention → canonical ID using DynamoDB"""
+    """Map mention → canonical ID using key-value store"""
     # 1. Exact match on name/synonyms
-    response = dynamodb.query(
-        IndexName='synonym-index',
-        KeyConditionExpression='synonym = :text',
-        FilterExpression='entity_type = :type'
+    response = kv_store.query(
+        index='synonym-index',
+        key='synonym',
+        value=mention_text,
+        filter={'entity_type': entity_type}
     )
     if response['Items']:
         return response['Items'][0]['entity_id']
 
-    # 2. Embedding similarity search via OpenSearch
+    # 2. Embedding similarity search via vector database
     embedding = embed(mention_text)
-    opensearch_results = opensearch.knn_search(
+    vector_results = vector_db.knn_search(
         index='entities',
         vector=embedding,
         k=5
     )
-    return opensearch_results[0]['entity_id']  # Best match
+    return vector_results[0]['entity_id']  # Best match
 ```
 
 **Option 2: Hybrid Approach**
 ```python
 # Entities stored across multiple systems for different purposes:
-# - S3 for immutable entity snapshots (version control)
-# - DynamoDB for fast API lookups (entity resolution)
-# - Neptune for graph queries (multi-hop traversal)
-# - OpenSearch for semantic entity search (embedding similarity)
+# - Object storage for immutable entity snapshots (version control)
+# - Key-value store for fast API lookups (entity resolution)
+# - Graph database for graph queries (multi-hop traversal)
+# - Vector database for semantic entity search (embedding similarity)
 ```
 
 #### Entity Resolution Pipeline
@@ -451,7 +452,7 @@ Paper Processing Flow:
          │
          ▼
 ┌─────────────────┐
-│ Entity Linking  │ ← EntityCollection / DynamoDB
+│ Entity Linking  │ ← EntityCollection / Key-Value Store
 │ "T2DM"→C0011860 │
 └────────┬────────┘
          │
