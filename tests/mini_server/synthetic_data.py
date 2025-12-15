@@ -138,13 +138,13 @@ def generate_entities() -> Dict[str, Dict]:
         "sepio_id": "SEPIO:0000001",
     }
 
-    # Paper: PMC9876 (for Example 13)
-    entities["PMC9876"] = {
-        "id": "PMC9876",
+    # Paper: PMC9876543 (for Example 13)
+    entities["PMC9876543"] = {
+        "id": "PMC9876543",
         "type": "paper",
         "name": "Aducanumab fails to meet primary endpoints",
-        "canonical_id": "PMC9876",
-        "pmc_id": "PMC9876",
+        "canonical_id": "PMC9876543",
+        "pmc_id": "PMC9876543",
         "title": "Aducanumab fails to meet primary endpoints",
         "publication_date": "2019-03-21",
         "mentions": 1,
@@ -257,16 +257,16 @@ def generate_relationships() -> List[Dict]:
         }
     )
 
-    # Amyloid Cascade Hypothesis TESTED_BY PMC9876 (for Example 13)
+    # Amyloid Cascade Hypothesis TESTED_BY PMC9876543 (for Example 13)
     relationships.append(
         {
             "id": "rel_006",
             "subject_id": "HYPOTHESIS:amyloid_cascade_alzheimers",
             "predicate": "TESTED_BY",
-            "object_id": "PMC9876",
+            "object_id": "PMC9876543",
             "confidence": 0.95,
             "evidence_count": 1,
-            "papers": ["PMC9876"],
+            "papers": ["PMC9876543"],
             "metadata": {"test_outcome": "refuted", "study_design_id": "OBI:0000008", "methodology": "randomized controlled trial"},
         }
     )
@@ -322,9 +322,9 @@ def generate_papers() -> Dict[str, Dict]:
         "relationship_count": 1,
     }
 
-    papers["PMC9876"] = {
-        "paper_id": "PMC9876",
-        "pmc_id": "PMC9876",
+    papers["PMC9876543"] = {
+        "paper_id": "PMC9876543",
+        "pmc_id": "PMC9876543",
         "title": "Aducanumab fails to meet primary endpoints",
         "authors": ["Biogen Research Team"],
         "abstract": "Phase 3 trial of aducanumab in early Alzheimer's disease failed to meet primary endpoints, calling into question the amyloid cascade hypothesis.",
