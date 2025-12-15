@@ -21,6 +21,7 @@ requires-python = ">=3.9"
 dependencies = [
     "black>=25.11.0",
     "fastapi==0.115.5",
+    "langchain[community,ollama]>=0.3.27",
     "mypy>=1.19.0",
     "numpy>=2.0.2",
     "pydantic==2.10.3", # Highly useful for defining a rigid 'schema'

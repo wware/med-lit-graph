@@ -29,9 +29,8 @@ All medical entities (Disease, Gene, Drug, Protein, etc.) share these base prope
 import json
 from datetime import datetime
 from enum import Enum
-from typing import Literal, cast
-
-from pydantic import BaseModel, ConfigDict, Field
+from typing import Literal, cast, List, Optional, Dict, Any
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from tqdm import tqdm
 
 # ============================================================================
@@ -297,59 +296,397 @@ class Pathway(BaseMedicalEntity):
     genes_involved: list[str] = Field(default_factory=list)
 
 
-# Research Metadata Nodes
+# ============================================================================
+# Provenance Classes
+# ============================================================================
+
+
+class ExtractionPipelineInfo(BaseModel):
+    """
+    Information about the extraction pipeline version.
+
+    Tracks the exact code version that performed entity/relationship extraction.
+    Essential for reproducibility and debugging extraction quality issues.
+    """
+
+    name: str = Field(..., description="Pipeline name (e.g., 'ollama_langchain_pipeline')")
+    version: str = Field(..., description="Semantic version of the pipeline")
+    git_commit: str = Field(..., description="Full git commit hash")
+    git_commit_short: str = Field(..., description="Short git commit hash (7 chars)")
+    git_branch: str = Field(..., description="Git branch name")
+    git_dirty: bool = Field(..., description="Whether working directory had uncommitted changes")
+    repo_url: str = Field(..., description="Repository URL")
+
+
+class ModelInfo(BaseModel):
+    """
+    Information about a model used in extraction.
+
+    Allows comparing extraction quality across different LLMs and versions.
+    """
+
+    name: str = Field(..., description="Model name/identifier")
+    provider: str = Field(..., description="Model provider (e.g., 'ollama', 'anthropic')")
+    temperature: Optional[float] = Field(None, description="Temperature parameter if applicable")
+    version: Optional[str] = Field(None, description="Model version if known")
+
+
+class PromptInfo(BaseModel):
+    """
+    Information about the prompt used.
+
+    Tracks prompt evolution.  Critical for understanding extraction behavior changes.
+    """
+
+    version: str = Field(..., description="Prompt version identifier")
+    template: str = Field(..., description="Prompt template name")
+    checksum: Optional[str] = Field(None, description="SHA256 of actual prompt text for exact reproduction")
+
+
+class ExecutionInfo(BaseModel):
+    """
+    Information about when and where extraction was performed.
+
+    Useful for debugging issues related to specific machines or time periods.
+    """
+
+    timestamp: str = Field(..., description="ISO 8601 UTC timestamp")
+    hostname: str = Field(..., description="Hostname of machine that ran extraction")
+    python_version: str = Field(..., description="Python version")
+    duration_seconds: Optional[float] = Field(None, description="Extraction duration in seconds")
+
+
+class EntityResolutionInfo(BaseModel):
+    """
+    Information about entity resolution process.
+
+    Tracks how entities were matched to canonical IDs.  Helps identify when
+    entity deduplication is working poorly.
+    """
+
+    canonical_entities_matched: int = Field(..., description="Number of entities matched to existing canonical IDs")
+    new_entities_created: int = Field(..., description="Number of new canonical entities created")
+    similarity_threshold: float = Field(..., description="Similarity threshold used for matching")
+    embedding_model: str = Field(..., description="Embedding model used for similarity")
+
+
+class ExtractionProvenance(BaseModel):
+    """
+    Complete provenance metadata for an extraction.
+
+    This is the complete audit trail of how extraction was performed.
+    Enables:
+    - Reproducing exact extraction with same code/models/prompts
+    - Comparing outputs from different parser versions
+    - Debugging quality issues
+    - Tracking parser evolution over time
+    - Meeting reproducibility requirements for research
+
+    Example queries enabled by provenance:
+    - "Find all papers extracted with prompt v1 so I can re-extract with v2"
+    - "Which papers were extracted with uncommitted code changes?"
+    - "Compare entity extraction quality between llama3.1:70b and claude-4"
+    """
+
+    extraction_pipeline: ExtractionPipelineInfo
+    models: Dict[str, ModelInfo] = Field(..., description="Models used, keyed by role (e.g., 'llm', 'embeddings')")
+    prompt: PromptInfo
+    execution: ExecutionInfo
+    entity_resolution: Optional[EntityResolutionInfo] = Field(None, description="Entity resolution details if applicable")
+
+
+# ============================================================================
+# Entity and Relationship Classes
+# ============================================================================
+
+
+class EntityReference(BaseModel):
+    """
+    Reference to an entity in the knowledge graph.
+
+    Lightweight pointer to a canonical entity (Disease, Drug, Gene, etc.)
+    with the name as it appeared in this specific paper.
+    """
+
+    id: str = Field(..., description="Canonical entity ID")
+    name: str = Field(..., description="Entity name as mentioned in paper")
+    type: str = Field(..., description="Entity type (drug, disease, gene, protein, etc.)")
+    canonical_id: Optional[str] = Field(None, description="External ID (UMLS, RxNorm, etc.)")
+
+
+class RelationshipEvidence(BaseModel):
+    """
+    Evidence for a relationship extracted from a paper.
+
+    Represents a claim like "Drug X treats Disease Y" with supporting evidence
+    and confidence scoring.
+    """
+
+    subject_id: str = Field(..., description="Subject entity canonical ID")
+    predicate: str = Field(..., description="Relationship type")
+    object_id: str = Field(..., description="Object entity canonical ID")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score")
+    evidence: str = Field(..., description="Direct quote from paper supporting this relationship")
+    section: str = Field(..., description="Paper section (abstract, methods, results, discussion)")
+    metadata: Optional[Dict[str, Any]] = Field(None, description="Additional metadata (study_type, measurements, etc.)")
+
+
+# ============================================================================
+# Enhanced Paper Metadata
+# ============================================================================
+
+
+class PaperMetadata(BaseModel):
+    """
+    Extended metadata about the research paper.
+
+    Combines study characteristics (for evidence quality assessment) with
+    bibliographic information (for citations and filtering).
+
+    This is MORE than just storage - these fields enable critical queries:
+    - "Show me only RCT evidence for this drug-disease relationship"
+    - "What's the sample size distribution for studies on this topic?"
+    - "Find papers from high-impact journals on this mutation"
+    """
+
+    # Study characteristics (for evidence quality)
+    study_type: Optional[Literal["observational", "rct", "meta_analysis", "case_report", "review"]] = Field(None, description="Type of study - used for evidence level filtering")
+    sample_size: Optional[int] = Field(None, description="Study sample size - larger = more reliable")
+    study_population: Optional[str] = Field(None, description="Description of study population")
+    primary_outcome: Optional[str] = Field(None, description="Primary outcome measured")
+    clinical_phase: Optional[str] = Field(None, description="Clinical trial phase if applicable")
+
+    # Bibliographic information
+    publication_date: Optional[str] = Field(None, description="Publication date (YYYY-MM-DD)")
+    journal: Optional[str] = Field(None, description="Journal name")
+    doi: Optional[str] = Field(None, description="Digital Object Identifier")
+    pmid: Optional[str] = Field(None, description="PubMed ID")
+
+    # Indexing and categorization
+    mesh_terms: List[str] = Field(default_factory=list, description="Medical Subject Headings - NLM's controlled vocabulary for indexing")
+
+
+# ============================================================================
+# Best-of-Breed Paper Model
+# ============================================================================
 
 
 class Paper(BaseModel):
     """
-    Represents a research paper in the medical literature.
+    A research paper with extracted entities, relationships, and full provenance.
 
-    Stores metadata about scientific publications including identifiers,
-    bibliographic information, and study characteristics used for evidence
-    quality assessment and provenance tracking.
+    This is the COMPLETE representation of a paper in the knowledge graph, combining:
+    1. Bibliographic metadata (authors, journal, identifiers)
+    2. Text content (title, abstract)
+    3. Extracted knowledge (entities and relationships)
+    4. Extraction provenance (how extraction was performed)
 
-    Attributes:
-        pmc_id: PubMed Central ID (primary identifier)
-        pmid: PubMed ID for cross-referencing
-        doi: Digital Object Identifier
-        title: Full paper title
-        abstract: Complete abstract text
-        authors: List of author names
-        journal: Journal name
-        publication_date: Publication date (ISO format recommended)
-        study_type: Type of study (observational, rct, meta_analysis, case_report, review)
-        sample_size: Number of subjects/participants
-        mesh_terms: Medical Subject Headings for indexing
+    Design philosophy:
+    - Top-level fields are FREQUENTLY QUERIED (paper_id, title, authors, publication_date)
+    - Nested objects group related data (metadata for study info, provenance for extraction)
+    - Field aliases provide backward compatibility with existing code
 
-    Example:
-        >>> paper = Paper(
-        ...     pmc_id="PMC123456",
-        ...     pmid="12345678",
-        ...     doi="10.1234/example",
-        ...     title="Efficacy of Drug X in Disease Y",
-        ...     abstract="This randomized controlled trial...",
-        ...     authors=["Smith J", "Doe A"],
-        ...     journal="New England Journal of Medicine",
-        ...     publication_date="2023-01-15",
-        ...     study_type="rct",
-        ...     sample_size=500,
-        ...     mesh_terms=["Breast Neoplasms", "Drug Therapy"]
-        ... )
+    Why certain fields are top-level:
+    - `paper_id`: Primary key, referenced everywhere
+    - `title`, `abstract`: Core content, always displayed
+    - `authors`: Essential for citations, frequently filtered
+    - `publication_date`: Frequently used for filtering by recency
+    - `journal`: Frequently used for quality filtering
+
+    Why other fields are nested:
+    - `metadata`: Study details, accessed together for evidence assessment
+    - `extraction_provenance`: Technical details, only for debugging/reproducibility
     """
 
-    model_config = ConfigDict(use_enum_values=True)
+    # Pydantic v2 configuration - use model_config, NOT Config class
+    model_config = ConfigDict(
+        use_enum_values=True,  # Serialize enums as their values
+        populate_by_name=True,  # Allow setting fields by alias OR field name
+        json_schema_extra={  # This replaces the old Config. schema_extra
+            "example": {
+                "paper_id": "PMC8437152",
+                "pmid": "34567890",
+                "doi": "10.1234/nejm.2023.001",
+                "title": "Efficacy of Olaparib in BRCA-Mutated Breast Cancer",
+                "abstract": "Background:  PARP inhibitors have shown promise...",
+                "authors": ["Smith J", "Johnson A", "Williams K"],
+                "publication_date": "2023-06-15",
+                "journal": "New England Journal of Medicine",
+                "entities": [
+                    {"id": "DRUG: olaparib", "name": "Olaparib", "type": "drug", "canonical_id": "RxNorm:1187832"},
+                    {"id": "DISEASE:breast_cancer", "name": "Breast Cancer", "type": "disease", "canonical_id": "UMLS:C0006142"},
+                ],
+                "relationships": [
+                    {
+                        "subject_id": "DRUG:olaparib",
+                        "predicate": "TREATS",
+                        "object_id": "DISEASE:breast_cancer",
+                        "confidence": 0.95,
+                        "evidence": "Olaparib significantly improved progression-free survival",
+                        "section": "abstract",
+                    }
+                ],
+                "metadata": {
+                    "study_type": "rct",
+                    "sample_size": 302,
+                    "study_population": "Women with BRCA1/2-mutated metastatic breast cancer",
+                    "primary_outcome": "Progression-free survival",
+                    "clinical_phase": "III",
+                    "journal": "New England Journal of Medicine",
+                    "publication_date": "2023-06-15",
+                    "mesh_terms": ["Breast Neoplasms", "BRCA1 Protein", "PARP Inhibitors"],
+                },
+                "extraction_provenance": {
+                    "extraction_pipeline": {
+                        "name": "ollama_langchain_pipeline",
+                        "version": "1.0.0",
+                        "git_commit": "abc123def456...",
+                        "git_commit_short": "abc123d",
+                        "git_branch": "main",
+                        "git_dirty": False,
+                        "repo_url": "https://github.com/wware/med-lit-graph",
+                    },
+                    "models": {
+                        "llm": {"name": "llama3.1:70b", "provider": "ollama", "temperature": 0.1},
+                        "embeddings": {"name": "microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext", "provider": "huggingface"},
+                    },
+                    "prompt": {"version": "v1_detailed", "template": "medical_extraction_prompt_v1"},
+                    "execution": {"timestamp": "2025-12-15T14:30:00Z", "hostname": "extraction-server-01", "python_version": "3.12.0", "duration_seconds": 45.3},
+                },
+            }
+        },
+    )
 
-    pmc_id: str  # PubMed Central ID
-    pmid: str | None = None  # PubMed ID
-    doi: str | None = None  # Digital Object Identifier
-    title: str
-    abstract: str
-    authors: list[str] = Field(default_factory=list)
-    journal: str
-    publication_date: str | None = None  # Date published
-    study_type: Literal["observational", "rct", "meta_analysis", "case_report", "review"] | None = None
-    sample_size: int | None = None  # Number of subjects
-    mesh_terms: list[str] = Field(default_factory=list)  # Medical Subject Headings
+    # ========== CORE IDENTIFICATION ==========
+
+    paper_id: str = Field(..., description="Unique identifier - PMC ID preferred, but can be DOI or PMID")
+
+    pmid: Optional[str] = Field(None, description="PubMed ID - different from PMC ID")
+
+    doi: Optional[str] = Field(None, description="Digital Object Identifier")
+
+    # ========== CONTENT ==========
+
+    title: str = Field(..., description="Full paper title")
+    abstract: str = Field(..., description="Complete abstract text")
+
+    # ========== BIBLIOGRAPHIC METADATA ==========
+
+    authors: List[str] = Field(default_factory=list, description="List of author names in citation order")
+
+    publication_date: Optional[str] = Field(None, description="Publication date in ISO format (YYYY-MM-DD)")
+
+    journal: Optional[str] = Field(None, description="Journal name")
+
+    # ========== EXTRACTED KNOWLEDGE ==========
+
+    entities: List[EntityReference] = Field(default_factory=list, description="Entities mentioned in paper")
+
+    relationships: List[RelationshipEvidence] = Field(default_factory=list, description="Relationships extracted from paper")
+
+    # ========== STUDY METADATA ==========
+
+    metadata: PaperMetadata = Field(default_factory=PaperMetadata, description="Extended metadata including study type, sample size, MeSH terms")
+
+    # ========== EXTRACTION PROVENANCE ==========
+
+    extraction_provenance: ExtractionProvenance = Field(..., description="Complete provenance of how extraction was performed")
+
+    # ========== CONVENIENCE PROPERTIES ==========
+
+    @property
+    def study_type(self) -> Optional[str]:
+        """Convenience property for accessing study_type from metadata."""
+        return self.metadata.study_type  # pylint: disable=no-member
+
+    @property
+    def sample_size(self) -> Optional[int]:
+        """Convenience property for accessing sample_size from metadata."""
+        return self.metadata.sample_size  # pylint: disable=no-member
+
+    @property
+    def mesh_terms(self) -> List[str]:
+        """Convenience property for accessing mesh_terms from metadata."""
+        return self.metadata.mesh_terms  # pylint:  disable=no-member
+
+    # ========== VALIDATION ==========
+
+    @field_validator("publication_date")
+    @classmethod
+    def validate_publication_date(cls, v: Optional[str]) -> Optional[str]:
+        """Ensure publication_date is in ISO format if provided."""
+        if v is not None:
+            try:
+                datetime.fromisoformat(v.replace("Z", "+00:00"))
+            except ValueError:
+                raise ValueError(f"publication_date must be in ISO format (YYYY-MM-DD), got: {v}")
+        return v
+
+
+# ============================================================================
+# HOW ALIASES WORK - EXAMPLES
+# ============================================================================
+
+"""
+ALIAS EXAMPLE 1: Reading data with different field names
+---------------------------------------------------------
+
+If you have old JSON with 'pmc_id' instead of 'paper_id':
+
+    old_json = {
+        "pmc_id": "PMC123456",  # Old field name
+        "title": "Some paper",
+        "abstract": "Some abstract",
+        ...
+    }
+
+    # Pydantic will automatically map 'pmc_id' to 'paper_id'
+    paper = Paper.model_validate(old_json)
+    print(paper.paper_id)  # "PMC123456"
+
+
+ALIAS EXAMPLE 2: Accessing the field
+-------------------------------------
+
+Once you have a Paper object, you ALWAYS use the real field name:
+
+    paper = Paper(paper_id="PMC123456", ...)
+    print(paper.paper_id)  # "PMC123456"
+
+    # NOTE: paper. pmc_id is a PROPERTY that returns paper_id
+    print(paper. pmc_id)  # "PMC123456" (same value)
+
+
+ALIAS EXAMPLE 3: Serialization
+-------------------------------
+
+When you serialize to JSON/dict, the alias is used:
+
+    paper_dict = paper.model_dump()
+    # paper_dict contains 'paper_id', NOT 'pmc_id'
+
+    paper_dict = paper.model_dump(by_alias=True)
+    # paper_dict contains 'paper_id' (the alias)
+
+
+PROPERTY PATTERN: Convenience access to nested fields
+------------------------------------------------------
+
+The @property decorators provide convenient access to frequently-used nested fields:
+
+    # Instead of:
+    if paper.metadata.study_type == "rct":
+        ...
+
+    # You can write:
+    if paper.study_type == "rct":
+        ...
+
+    # Both work!  The property just makes it more convenient.
+"""
+
+
+#############################################
 
 
 class Author(BaseModel):
