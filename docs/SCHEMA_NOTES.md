@@ -36,7 +36,7 @@ class EntityType(str, Enum):
     STATISTICAL_METHOD = "statistical_method"  # STATO methods
     EVIDENCE_LINE = "evidence_line"  # SEPIO evidence structures
 
-class RelationType(str, Enum):
+class PredicateType(str, Enum):
     # Causal relationships
     CAUSES = "causes"
     PREVENTS = "prevents"
@@ -160,7 +160,7 @@ class GraphEdge(BaseModel):
     edge_id: str  # Unique edge ID
     source_id: str  # Source node ID
     target_id: str  # Target node ID
-    relation_type: RelationType
+    relation_type: PredicateType
 
     # Evidence and provenance
     confidence: float = Field(ge=0.0, le=1.0)  # 0-1 confidence score
@@ -257,8 +257,8 @@ class PropertyFilter(BaseModel):
 
 class EdgePattern(BaseModel):
     """Pattern for matching edges"""
-    relation_type: RelationType | None = None
-    relation_types: list[RelationType] | None = None
+    relation_type: PredicateType | None = None
+    relation_types: list[PredicateType] | None = None
 
     # Direction
     direction: Literal["outgoing", "incoming", "both"] = "outgoing"
@@ -666,7 +666,7 @@ class NaturalLanguageQueryParser:
 Question: {natural_query}
 
 Available entity types: {[e.value for e in EntityType]}
-Available relationship types: {[r.value for r in RelationType]}
+Available relationship types: {[r.value for r in PredicateType]}
 
 Return a JSON query following this schema:
 {GraphQuery.model_json_schema()}

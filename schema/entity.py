@@ -410,11 +410,11 @@ class EntityReference(BaseModel):
 
     id: str = Field(..., description="Canonical entity ID")
     name: str = Field(..., description="Entity name as mentioned in paper")
-    type: str = Field(..., description="Entity type (drug, disease, gene, protein, etc.)")
+    type: EntityType = Field(..., description="Entity type (drug, disease, gene, protein, etc.)")
     canonical_id: Optional[str] = Field(None, description="External ID (UMLS, RxNorm, etc.)")
 
 
-class RelationshipEvidence(BaseModel):
+class AssertedRelationship(BaseModel):
     """
     Evidence for a relationship extracted from a paper.
 
@@ -582,7 +582,7 @@ class Paper(BaseModel):
 
     entities: List[EntityReference] = Field(default_factory=list, description="Entities mentioned in paper")
 
-    relationships: List[RelationshipEvidence] = Field(default_factory=list, description="Relationships extracted from paper")
+    relationships: List[AssertedRelationship] = Field(default_factory=list, description="Relationships extracted from paper")
 
     # ========== STUDY METADATA ==========
 
@@ -899,11 +899,11 @@ class EvidenceLine(BaseMedicalEntity):
 
 
 # ============================================================================
-# Evidence and Measurement Classes (from med-lit-graph)
+# Evidence and Measurement Classes
 # ============================================================================
 
 
-class Evidence(BaseModel):
+class EvidenceItem(BaseModel):
     """
     Detailed evidence for a relationship extracted from a paper.
 
@@ -928,7 +928,7 @@ class Evidence(BaseModel):
         stato_methods: List of STATO statistical method IDs used in the study
 
     Example:
-        >>> evidence = Evidence(
+        >>> evidence = EvidenceItem(
         ...     paper_id="PMC999",
         ...     section_type="results",
         ...     paragraph_idx=5,
@@ -1048,7 +1048,7 @@ class ExtractedEntity(BaseModel):
 
     mention_text: str  # "T2DM"
     canonical_id: str  # Links to canonical entity ID (e.g., "C0011860")
-    entity_type: str  # "disease"
+    entity_type: EntityType  # "disease"
 
     # Position in text
     start_char: int
@@ -1084,6 +1084,60 @@ class EntityMention(BaseModel):
     chunk_ids: list[str]  # Which chunks mention this entity
 
 
+class PredicateType(str, Enum):
+    """
+    All possible relationship types in the knowledge graph.
+
+    Provides type safety and enables validation of relationship usage.
+    Organized by category for clarity.
+    """
+
+    # Causal relationships
+    CAUSES = "causes"
+    PREVENTS = "prevents"
+    INCREASES_RISK = "increases_risk"
+    DECREASES_RISK = "decreases_risk"
+
+    # Treatment relationships
+    TREATS = "treats"
+    MANAGES = "manages"
+    CONTRAINDICATED_FOR = "contraindicated_for"
+    SIDE_EFFECT = "side_effect"
+
+    # Biological/Molecular relationships
+    BINDS_TO = "binds_to"
+    INHIBITS = "inhibits"
+    ACTIVATES = "activates"
+    UPREGULATES = "upregulates"
+    DOWNREGULATES = "downregulates"
+    ENCODES = "encodes"
+    METABOLIZES = "metabolizes"
+    PARTICIPATES_IN = "participates_in"
+
+    # Clinical/Diagnostic relationships
+    DIAGNOSES = "diagnoses"
+    DIAGNOSED_BY = "diagnosed_by"
+    INDICATES = "indicates"
+    PRECEDES = "precedes"
+    CO_OCCURS_WITH = "co_occurs_with"
+    ASSOCIATED_WITH = "associated_with"
+
+    # Drug interactions
+    INTERACTS_WITH = "interacts_with"
+
+    # Location relationships
+    LOCATED_IN = "located_in"
+    AFFECTS = "affects"
+
+    # Provenance relationships
+    AUTHORED_BY = "authored_by"
+    CITES = "cites"
+    CITED_BY = "cited_by"
+    CONTRADICTS = "contradicts"
+
+    # Recommendation: Allow free-text predicates only as a fallback with validation warnings - how do I do that?
+
+
 class Relationship(BaseModel):
     """
     Represents a relationship between two entities extracted from a paper.
@@ -1102,7 +1156,7 @@ class Relationship(BaseModel):
     """
 
     subject_id: str  # Canonical entity ID (e.g., "RxNorm:1187832")
-    predicate: str  # "TREATS", "CAUSES", "ASSOCIATED_WITH"
+    predicate: PredicateType  # "TREATS", "CAUSES", "ASSOCIATED_WITH"
     object_id: str  # Canonical entity ID (e.g., "C0006142")
 
     # Evidence

@@ -379,7 +379,7 @@ npm install @medgraph/client
 ```
 
 ```typescript
-import { MedicalGraphClient, QueryBuilder, EntityType, RelationType } from '@medgraph/client';
+import { MedicalGraphClient, QueryBuilder, EntityType, PredicateType } from '@medgraph/client';
 
 const client = new MedicalGraphClient();
 
@@ -387,7 +387,7 @@ const treatments = await client.findTreatments('diabetes');
 
 const query = new QueryBuilder()
   .findNodes(EntityType.GENE)
-  .withEdge(RelationType.ASSOCIATED_WITH, { minConfidence: 0.7 })
+  .withEdge(PredicateType.ASSOCIATED_WITH, { minConfidence: 0.7 })
   .filterTarget(EntityType.DISEASE, { name: 'breast cancer' })
   .build();
 

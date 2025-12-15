@@ -17,7 +17,7 @@
  * // Complex query using builder
  * const query = new QueryBuilder()
  *   .findNodes(EntityType.DRUG)
- *   .withEdge(RelationType.TREATS, { minConfidence: 0.7 })
+ *   .withEdge(PredicateType.TREATS, { minConfidence: 0.7 })
  *   .filterTarget(EntityType.DISEASE, { name: 'diabetes' })
  *   .limit(10)
  *   .build();
@@ -47,7 +47,7 @@ export enum EntityType {
   MEASUREMENT = 'measurement'
 }
 
-export enum RelationType {
+export enum PredicateType {
   // Causal
   CAUSES = 'causes',
   PREVENTS = 'prevents',
@@ -128,8 +128,8 @@ export interface NodePattern {
 }
 
 export interface EdgePattern {
-  relation_type?: RelationType;
-  relation_types?: RelationType[];
+  relation_type?: PredicateType;
+  relation_types?: PredicateType[];
   direction?: Direction;
   min_confidence?: number;
   property_filters?: PropertyFilter[];
@@ -224,7 +224,7 @@ export class QueryBuilder {
    * Find edges/relationships
    */
   findEdges(
-    relationType?: RelationType,
+    relationType?: PredicateType,
     options: { var?: string } = {}
   ): this {
     this.query.find = 'edges';
@@ -251,7 +251,7 @@ export class QueryBuilder {
    * Add edge pattern to node query
    */
   withEdge(
-    relationType: RelationType | RelationType[],
+    relationType: PredicateType | PredicateType[],
     options: {
       direction?: Direction;
       minConfidence?: number;
@@ -503,7 +503,7 @@ export class MedicalGraphClient {
   ): Promise<QueryResult> {
     const query = new QueryBuilder()
       .findNodes(EntityType.DRUG)
-      .withEdge(RelationType.TREATS, {
+      .withEdge(PredicateType.TREATS, {
         minConfidence: options.minConfidence || 0.6
       })
       .filterTarget(EntityType.DISEASE, { name: disease })
@@ -534,7 +534,7 @@ export class MedicalGraphClient {
     const query = new QueryBuilder()
       .findNodes(EntityType.GENE)
       .withEdge(
-        [RelationType.ASSOCIATED_WITH, RelationType.CAUSES, RelationType.INCREASES_RISK],
+        [PredicateType.ASSOCIATED_WITH, PredicateType.CAUSES, PredicateType.INCREASES_RISK],
         {
           direction: 'incoming',
           minConfidence: options.minConfidence || 0.5
@@ -570,7 +570,7 @@ export class MedicalGraphClient {
         var: 'diagnostic'
       },
       edge_pattern: {
-        relation_types: [RelationType.DIAGNOSES, RelationType.INDICATES],
+        relation_types: [PredicateType.DIAGNOSES, PredicateType.INDICATES],
         direction: 'outgoing',
         min_confidence: options.minConfidence || 0.6
       },
@@ -606,9 +606,9 @@ export class MedicalGraphClient {
           {
             edge: {
               relation_types: [
-                RelationType.BINDS_TO,
-                RelationType.INHIBITS,
-                RelationType.ACTIVATES
+                PredicateType.BINDS_TO,
+                PredicateType.INHIBITS,
+                PredicateType.ACTIVATES
               ],
               var: 'interaction'
             },
@@ -642,7 +642,7 @@ export class MedicalGraphClient {
     const query: GraphQuery = {
       find: 'edges',
       edge_pattern: {
-        relation_type: RelationType.TREATS,
+        relation_type: PredicateType.TREATS,
         min_confidence: 0.5
       },
       filters: [
@@ -725,9 +725,9 @@ export class MedicalGraphClient {
       find: 'edges',
       edge_pattern: {
         relation_types: [
-          RelationType.TREATS,
-          RelationType.CONTRAINDICATES,
-          RelationType.INCREASES_RISK
+          PredicateType.TREATS,
+          PredicateType.CONTRAINDICATES,
+          PredicateType.INCREASES_RISK
         ]
       },
       filters: [

@@ -5,12 +5,12 @@ The Evidence class now supports standardized classification of evidence types,
 study designs, and statistical methods using biomedical ontology IDs.
 """
 
-from schema.entity import Evidence
+from schema.entity import EvidenceItem
 
 
 def test_evidence_with_eco_type():
     """Test Evidence with ECO (Evidence & Conclusion Ontology) type ID"""
-    evidence = Evidence(
+    evidence = EvidenceItem(
         paper_id="PMC999888",
         confidence=0.92,
         eco_type="ECO:0007673",  # RCT evidence
@@ -22,7 +22,7 @@ def test_evidence_with_eco_type():
 
 def test_evidence_with_obi_study_design():
     """Test Evidence with OBI (Ontology for Biomedical Investigations) study design ID"""
-    evidence = Evidence(
+    evidence = EvidenceItem(
         paper_id="PMC999888",
         confidence=0.85,
         study_type="rct",
@@ -35,7 +35,7 @@ def test_evidence_with_obi_study_design():
 
 def test_evidence_with_stato_methods():
     """Test Evidence with STATO (Statistics Ontology) statistical method IDs"""
-    evidence = Evidence(
+    evidence = EvidenceItem(
         paper_id="PMC999888",
         confidence=0.88,
         stato_methods=["STATO:0000288", "STATO:0000376"],  # t-test, Kaplan-Meier
@@ -48,7 +48,7 @@ def test_evidence_with_stato_methods():
 
 def test_evidence_with_all_ontology_references():
     """Test Evidence with complete ontology classification"""
-    evidence = Evidence(
+    evidence = EvidenceItem(
         paper_id="PMC999888",
         confidence=0.92,
         section_type="results",
@@ -80,7 +80,7 @@ def test_evidence_with_all_ontology_references():
 def test_evidence_ontology_fields_are_optional():
     """Test that ontology fields are optional and can be omitted"""
     # Evidence without any ontology IDs should still be valid
-    evidence = Evidence(
+    evidence = EvidenceItem(
         paper_id="PMC123456",
         confidence=0.7,
         study_type="observational",
@@ -95,25 +95,25 @@ def test_evidence_ontology_fields_are_optional():
 def test_evidence_eco_hierarchy():
     """Test representing ECO evidence hierarchy"""
     # Different levels of clinical evidence
-    rct_evidence = Evidence(
+    rct_evidence = EvidenceItem(
         paper_id="PMC_RCT_001",
         eco_type="ECO:0007673",  # RCT evidence
         confidence=1.0,
     )
 
-    cohort_evidence = Evidence(
+    cohort_evidence = EvidenceItem(
         paper_id="PMC_COHORT_001",
         eco_type="ECO:0007674",  # Cohort study evidence
         confidence=0.8,
     )
 
-    case_control_evidence = Evidence(
+    case_control_evidence = EvidenceItem(
         paper_id="PMC_CASE_CONTROL_001",
         eco_type="ECO:0007675",  # Case-control study evidence
         confidence=0.6,
     )
 
-    case_report_evidence = Evidence(
+    case_report_evidence = EvidenceItem(
         paper_id="PMC_CASE_REPORT_001",
         eco_type="ECO:0007676",  # Case report evidence
         confidence=0.4,
@@ -136,7 +136,7 @@ def test_evidence_study_type_to_eco_mapping():
     }
 
     for study_type, eco_id in study_type_to_eco.items():
-        evidence = Evidence(
+        evidence = EvidenceItem(
             paper_id=f"PMC_{study_type}",
             study_type=study_type,
             eco_type=eco_id,
@@ -147,7 +147,7 @@ def test_evidence_study_type_to_eco_mapping():
 
 def test_evidence_with_multiple_statistical_methods():
     """Test Evidence can track multiple statistical methods used"""
-    evidence = Evidence(
+    evidence = EvidenceItem(
         paper_id="PMC999888",
         confidence=0.90,
         stato_methods=[
@@ -165,7 +165,7 @@ def test_evidence_with_multiple_statistical_methods():
 
 def test_evidence_serialization_with_ontology_ids():
     """Test that Evidence with ontology IDs can be serialized/deserialized"""
-    evidence = Evidence(
+    evidence = EvidenceItem(
         paper_id="PMC999888",
         confidence=0.92,
         eco_type="ECO:0007673",
@@ -182,7 +182,7 @@ def test_evidence_serialization_with_ontology_ids():
     assert "STATO:0000288" in data["stato_methods"]
 
     # Deserialize back
-    evidence2 = Evidence.model_validate(data)
+    evidence2 = EvidenceItem.model_validate(data)
     assert evidence2.eco_type == evidence.eco_type
     assert evidence2.obi_study_design == evidence.obi_study_design
     assert evidence2.stato_methods == evidence.stato_methods
@@ -190,7 +190,7 @@ def test_evidence_serialization_with_ontology_ids():
 
 def test_evidence_empty_stato_methods_list():
     """Test that stato_methods defaults to empty list"""
-    evidence = Evidence(
+    evidence = EvidenceItem(
         paper_id="PMC123",
         confidence=0.5,
     )

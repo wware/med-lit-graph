@@ -20,7 +20,7 @@ import pytest
 import requests
 
 from schema.entity import EntityType
-from schema.relationship import RelationType
+from schema.relationship import PredicateType
 
 logger = logging.getLogger(__name__)
 
@@ -162,7 +162,7 @@ class TestCurlExamplesSchemaCompliance:
     @pytest.fixture(scope="class")
     def valid_relation_types(self):
         """Get all valid relationship types from schema."""
-        return [r.value for r in RelationType]
+        return [r.value for r in PredicateType]
 
     def test_all_queries_are_valid_json(self, curl_queries):
         """Verify that all curl examples contain valid JSON."""

@@ -15,7 +15,7 @@ pnpm add @medgraph/client
 ## Basic Setup
 
 ```typescript
-import { MedicalGraphClient, QueryBuilder, EntityType, RelationType } from '@medgraph/client';
+import { MedicalGraphClient, QueryBuilder, EntityType, PredicateType } from '@medgraph/client';
 
 // Initialize client
 const client = new MedicalGraphClient({
@@ -66,7 +66,7 @@ const mechanism = await client.findDrugMechanisms('metformin');
 // Build a custom query
 const query = new QueryBuilder()
   .findNodes(EntityType.DRUG)
-  .withEdge(RelationType.TREATS, { minConfidence: 0.7 })
+  .withEdge(PredicateType.TREATS, { minConfidence: 0.7 })
   .filterTarget(EntityType.DISEASE, { name: 'diabetes' })
   .orderBy('confidence', 'desc')
   .limit(10)
@@ -82,7 +82,7 @@ const results = await client.execute(query);
 ```typescript
 const query = new QueryBuilder()
   .findNodes(EntityType.GENE)
-  .withEdge(RelationType.ASSOCIATED_WITH, {
+  .withEdge(PredicateType.ASSOCIATED_WITH, {
     direction: 'incoming',
     minConfidence: 0.6
   })
@@ -127,7 +127,7 @@ const query: GraphQuery = {
     edges: [
       {
         edge: {
-          relation_types: [RelationType.ASSOCIATED_WITH, RelationType.CAUSES],
+          relation_types: [PredicateType.ASSOCIATED_WITH, PredicateType.CAUSES],
           min_confidence: 0.6,
           var: 'disease_gene'
         },
@@ -138,7 +138,7 @@ const query: GraphQuery = {
       },
       {
         edge: {
-          relation_type: RelationType.ENCODES,
+          relation_type: PredicateType.ENCODES,
           var: 'gene_protein'
         },
         node: {
@@ -148,7 +148,7 @@ const query: GraphQuery = {
       },
       {
         edge: {
-          relation_types: [RelationType.BINDS_TO, RelationType.INHIBITS, RelationType.ACTIVATES],
+          relation_types: [PredicateType.BINDS_TO, PredicateType.INHIBITS, PredicateType.ACTIVATES],
           direction: 'incoming',
           var: 'drug_protein'
         },
@@ -198,7 +198,7 @@ const builder = new QueryBuilder()
   })
   .addPathStep(
     {
-      relation_types: [RelationType.BINDS_TO, RelationType.INHIBITS],
+      relation_types: [PredicateType.BINDS_TO, PredicateType.INHIBITS],
       var: 'interaction'
     },
     {
@@ -208,7 +208,7 @@ const builder = new QueryBuilder()
   )
   .addPathStep(
     {
-      relation_types: [RelationType.UPREGULATES, RelationType.DOWNREGULATES],
+      relation_types: [PredicateType.UPREGULATES, PredicateType.DOWNREGULATES],
       var: 'regulation'
     },
     {
@@ -277,7 +277,7 @@ const batchResults = await client.batch([
     id: 'treatments',
     query: new QueryBuilder()
       .findNodes(EntityType.DRUG)
-      .withEdge(RelationType.TREATS)
+      .withEdge(PredicateType.TREATS)
       .filterTarget(EntityType.DISEASE, { name: 'diabetes' })
       .limit(10)
       .build()
@@ -286,7 +286,7 @@ const batchResults = await client.batch([
     id: 'genes',
     query: new QueryBuilder()
       .findNodes(EntityType.GENE)
-      .withEdge(RelationType.ASSOCIATED_WITH, { direction: 'incoming' })
+      .withEdge(PredicateType.ASSOCIATED_WITH, { direction: 'incoming' })
       .filterTarget(EntityType.DISEASE, { name: 'diabetes' })
       .limit(10)
       .build()
@@ -295,7 +295,7 @@ const batchResults = await client.batch([
     id: 'diagnostics',
     query: new QueryBuilder()
       .findNodes(EntityType.TEST)
-      .withEdge(RelationType.DIAGNOSES)
+      .withEdge(PredicateType.DIAGNOSES)
       .filterTarget(EntityType.DISEASE, { name: 'diabetes' })
       .build()
   }
@@ -340,7 +340,7 @@ async function getAllTreatments(disease: string) {
   while (hasMore) {
     const query = new QueryBuilder()
       .findNodes(EntityType.DRUG)
-      .withEdge(RelationType.TREATS)
+      .withEdge(PredicateType.TREATS)
       .filterTarget(EntityType.DISEASE, { name: disease })
       .limit(pageSize)
       .offset(offset)
@@ -574,7 +574,7 @@ treatments.results.forEach(treatment => {
 // Type-safe query builder
 const typedQuery = new QueryBuilder()
   .findNodes(EntityType.DRUG)
-  .withEdge(RelationType.TREATS, { minConfidence: 0.7 })
+  .withEdge(PredicateType.TREATS, { minConfidence: 0.7 })
   .filterTarget(EntityType.DISEASE, { name: 'diabetes' })
   .build();
 
@@ -588,7 +588,7 @@ const typedResults = await client.execute<TreatmentResult>(typedQuery);
 
 ```typescript
 import { describe, it, expect, beforeAll } from 'vitest';
-import { MedicalGraphClient, QueryBuilder, EntityType, RelationType } from '@medgraph/client';
+import { MedicalGraphClient, QueryBuilder, EntityType, PredicateType } from '@medgraph/client';
 
 describe('MedicalGraphClient', () => {
   let client: MedicalGraphClient;
@@ -611,7 +611,7 @@ describe('MedicalGraphClient', () => {
   it('should build valid queries', () => {
     const query = new QueryBuilder()
       .findNodes(EntityType.DRUG)
-      .withEdge(RelationType.TREATS)
+      .withEdge(PredicateType.TREATS)
       .limit(10)
       .build();
 

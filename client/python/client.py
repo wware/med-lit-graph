@@ -46,7 +46,7 @@ class EntityType(str, Enum):
     AUTHOR = "author"
 
 
-class RelationType(str, Enum):
+class PredicateType(str, Enum):
     """Relationship types between entities"""
 
     # Causal
@@ -102,8 +102,8 @@ class NodePattern(BaseModel):
 class EdgePattern(BaseModel):
     """Pattern for matching edges"""
 
-    relation_type: Optional[RelationType] = None
-    relation_types: Optional[list[RelationType]] = None
+    relation_type: Optional[PredicateType] = None
+    relation_types: Optional[list[PredicateType]] = None
     direction: Literal["outgoing", "incoming", "both"] = "outgoing"
     min_confidence: Optional[float] = None
     property_filters: Optional[list[PropertyFilter]] = None
@@ -159,16 +159,16 @@ class QueryBuilder:
         self._query.node_pattern = NodePattern(node_type=EntityType(node_type) if isinstance(node_type, str) else node_type, name=name, name_pattern=name_pattern, var=var)
         return self
 
-    def find_edges(self, relation_type: Optional[str | RelationType] = None, var: str = "r") -> "QueryBuilder":
+    def find_edges(self, relation_type: Optional[str | PredicateType] = None, var: str = "r") -> "QueryBuilder":
         """Find edges/relationships"""
         self._query.find = "edges"
-        self._query.edge_pattern = EdgePattern(relation_type=RelationType(relation_type) if isinstance(relation_type, str) and relation_type else None, var=var)
+        self._query.edge_pattern = EdgePattern(relation_type=PredicateType(relation_type) if isinstance(relation_type, str) and relation_type else None, var=var)
         return self
 
-    def with_edge(self, relation_type: str | RelationType, direction: Literal["outgoing", "incoming", "both"] = "outgoing", min_confidence: Optional[float] = None, var: str = "r") -> "QueryBuilder":
+    def with_edge(self, relation_type: str | PredicateType, direction: Literal["outgoing", "incoming", "both"] = "outgoing", min_confidence: Optional[float] = None, var: str = "r") -> "QueryBuilder":
         """Add edge pattern to node query"""
         self._query.edge_pattern = EdgePattern(
-            relation_type=RelationType(relation_type) if isinstance(relation_type, str) else relation_type, direction=direction, min_confidence=min_confidence, var=var
+            relation_type=PredicateType(relation_type) if isinstance(relation_type, str) else relation_type, direction=direction, min_confidence=min_confidence, var=var
         )
         return self
 
@@ -297,7 +297,7 @@ class MedicalGraphClient:
         query = (
             QueryBuilder()
             .find_nodes(EntityType.DRUG)
-            .with_edge(RelationType.TREATS, min_confidence=min_confidence)
+            .with_edge(PredicateType.TREATS, min_confidence=min_confidence)
             .filter_target(EntityType.DISEASE, name=disease)
             .aggregate(["drug.name"], paper_count=("count", "treatment_rel.evidence.paper_id"), avg_confidence=("avg", "treatment_rel.confidence"))
             .order_by("paper_count", "desc")
@@ -340,7 +340,7 @@ class MedicalGraphClient:
         query = GraphQuery(
             find="nodes",
             node_pattern=NodePattern(node_types=[EntityType.TEST, EntityType.BIOMARKER], var="diagnostic"),
-            edge_pattern=EdgePattern(relation_types=[RelationType.DIAGNOSES, RelationType.INDICATES], direction="outgoing", min_confidence=min_confidence),
+            edge_pattern=EdgePattern(relation_types=[PredicateType.DIAGNOSES, PredicateType.INDICATES], direction="outgoing", min_confidence=min_confidence),
             filters=[PropertyFilter(field="target.name", operator="eq", value=disease)],
             aggregate=AggregationSpec(
                 group_by=["diagnostic.name", "diagnostic.node_type"], aggregations={"paper_count": ("count", "rel.evidence.paper_id"), "avg_confidence": ("avg", "rel.confidence")}
@@ -383,7 +383,7 @@ class MedicalGraphClient:
         """
         query = GraphQuery(
             find="edges",
-            edge_pattern=EdgePattern(relation_type=RelationType.TREATS, min_confidence=0.5),
+            edge_pattern=EdgePattern(relation_type=PredicateType.TREATS, min_confidence=0.5),
             filters=[PropertyFilter(field="source.name", operator="in", value=drugs), PropertyFilter(field="target.name", operator="eq", value=disease)],
             aggregate=AggregationSpec(
                 group_by=["source.name"],
@@ -439,7 +439,7 @@ class MedicalGraphClient:
         """
         query = GraphQuery(
             find="edges",
-            edge_pattern=EdgePattern(relation_types=[RelationType.TREATS, RelationType.CONTRAINDICATES, RelationType.INCREASES_RISK]),
+            edge_pattern=EdgePattern(relation_types=[PredicateType.TREATS, PredicateType.CONTRAINDICATES, PredicateType.INCREASES_RISK]),
             filters=[PropertyFilter(field="source.name", operator="eq", value=drug), PropertyFilter(field="target.name", operator="eq", value=disease)],
             aggregate=AggregationSpec(group_by=["rel.relation_type"], aggregations={"paper_count": ("count", "rel.evidence.paper_id"), "avg_confidence": ("avg", "rel.confidence")}),
         )
@@ -462,7 +462,7 @@ if __name__ == "__main__":
     query = (
         QueryBuilder()
         .find_nodes(EntityType.GENE)
-        .with_edge(RelationType.ASSOCIATED_WITH, direction="incoming", min_confidence=0.6)
+        .with_edge(PredicateType.ASSOCIATED_WITH, direction="incoming", min_confidence=0.6)
         .filter_target(EntityType.DISEASE, name_pattern=".*breast cancer.*")
         .aggregate(["gene.name"], paper_count=("count", "rel.evidence.paper_id"), avg_confidence=("avg", "rel.confidence"))
         .order_by("paper_count", "desc")

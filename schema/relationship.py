@@ -3,73 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from .entity import Evidence, Measurement
-
-# ============================================================================
-# Relationship Type Enumeration
-# ============================================================================
-
-
-class RelationType(str, Enum):
-    """
-    All possible relationship types in the knowledge graph.
-
-    Provides type safety and enables validation of relationship usage.
-    Organized by category for clarity.
-    """
-
-    # Causal relationships
-    CAUSES = "causes"
-    PREVENTS = "prevents"
-    INCREASES_RISK = "increases_risk"
-    DECREASES_RISK = "decreases_risk"
-
-    # Treatment relationships
-    TREATS = "treats"
-    MANAGES = "manages"
-    CONTRAINDICATED_FOR = "contraindicated_for"
-    SIDE_EFFECT = "side_effect"
-
-    # Biological/Molecular relationships
-    BINDS_TO = "binds_to"
-    INHIBITS = "inhibits"
-    ACTIVATES = "activates"
-    UPREGULATES = "upregulates"
-    DOWNREGULATES = "downregulates"
-    ENCODES = "encodes"
-    METABOLIZES = "metabolizes"
-    PARTICIPATES_IN = "participates_in"
-
-    # Clinical/Diagnostic relationships
-    DIAGNOSES = "diagnoses"
-    DIAGNOSED_BY = "diagnosed_by"
-    INDICATES = "indicates"
-    PRECEDES = "precedes"
-    CO_OCCURS_WITH = "co_occurs_with"
-    ASSOCIATED_WITH = "associated_with"
-
-    # Drug interactions
-    INTERACTS_WITH = "interacts_with"
-
-    # Location relationships
-    LOCATED_IN = "located_in"
-    AFFECTS = "affects"
-
-    # Provenance relationships
-    AUTHORED_BY = "authored_by"
-    CITES = "cites"
-    CITED_BY = "cited_by"
-    CONTRADICTS = "contradicts"
-    SUPPORTS = "supports"
-    STUDIED_IN = "studied_in"
-    PART_OF = "part_of"
-
-    # Hypothesis and evidence relationships
-    PREDICTS = "predicts"
-    REFUTES = "refutes"
-    TESTED_BY = "tested_by"
-    GENERATES = "generates"
-
+from .entity import EvidenceItem, Measurement, PredicateType
 
 # ============================================================================
 # Base Relationship Classes
@@ -90,7 +24,7 @@ class BaseRelationship(BaseModel):
     model_config = ConfigDict(use_enum_values=True)
 
     subject_id: str
-    predicate: RelationType
+    predicate: PredicateType
     object_id: str
 
     # Direction
@@ -118,14 +52,14 @@ class BaseMedicalRelationship(BaseRelationship):
         contradicted_by: List of PMC IDs with contradicting findings
         first_reported: Date when this relationship was first observed
         last_updated: Date of most recent supporting evidence
-        evidence: List of detailed Evidence objects (optional, for rich provenance)
+        evidence: List of detailed EvidenceItem objects (optional, for rich provenance)
         measurements: List of quantitative measurements (optional)
         properties: Flexible dict for relationship-specific properties
 
     Example (lightweight):
         >>> relationship = Treats(
         ...     subject_id="RxNorm:1187832",
-        ...     predicate=RelationType.TREATS,
+        ...     predicate=PredicateType.TREATS,
         ...     object_id="C0006142",
         ...     source_papers=["PMC123", "PMC456"],
         ...     confidence=0.85,
@@ -136,10 +70,10 @@ class BaseMedicalRelationship(BaseRelationship):
     Example (rich provenance):
         >>> relationship = Treats(
         ...     subject_id="RxNorm:1187832",
-        ...     predicate=RelationType.TREATS,
+        ...     predicate=PredicateType.TREATS,
         ...     object_id="C0006142",
         ...     confidence=0.85,
-        ...     evidence=[Evidence(paper_id="PMC123", study_type="rct", sample_size=302)],
+        ...     evidence=[EvidenceItem(paper_id="PMC123", study_type="rct", sample_size=302)],
         ...     measurements=[Measurement(value=0.59, value_type="response_rate")],
         ...     response_rate=0.59
         ... )
@@ -156,7 +90,7 @@ class BaseMedicalRelationship(BaseRelationship):
     last_updated: str | None = None  # Most recent evidence
 
     # Rich provenance (optional)
-    evidence: list[Evidence] = Field(default_factory=list)
+    evidence: list[EvidenceItem] = Field(default_factory=list)
 
     # Measurements (optional)
     measurements: list[Measurement] = Field(default_factory=list)
@@ -179,7 +113,7 @@ class Causes(BaseMedicalRelationship):
     Example:
         >>> causes = Causes(
         ...     subject_id="C0006142",  # Breast Cancer
-        ...     predicate=RelationType.CAUSES,
+        ...     predicate=PredicateType.CAUSES,
         ...     object_id="C0030193",  # Pain
         ...     frequency="often",
         ...     onset="late",
@@ -189,7 +123,7 @@ class Causes(BaseMedicalRelationship):
         ... )
     """
 
-    predicate: Literal[RelationType.CAUSES] = RelationType.CAUSES
+    predicate: Literal[PredicateType.CAUSES] = PredicateType.CAUSES
     frequency: Literal["always", "often", "sometimes", "rarely"] | None = None
     onset: Literal["early", "late"] | None = None
     severity: Literal["mild", "moderate", "severe"] | None = None
@@ -210,7 +144,7 @@ class Treats(BaseMedicalRelationship):
     Example:
         >>> treats = Treats(
         ...     subject_id="RxNorm:1187832",  # Olaparib
-        ...     predicate=RelationType.TREATS,
+        ...     predicate=PredicateType.TREATS,
         ...     object_id="C0006142",  # Breast Cancer
         ...     efficacy="significant improvement in PFS",
         ...     response_rate=0.59,
@@ -221,7 +155,7 @@ class Treats(BaseMedicalRelationship):
         ... )
     """
 
-    predicate: Literal[RelationType.TREATS] = RelationType.TREATS
+    predicate: Literal[PredicateType.TREATS] = PredicateType.TREATS
     efficacy: str | None = None  # Effectiveness measure
     response_rate: float | None = Field(None, ge=0.0, le=1.0)  # Percentage of patients responding
     line_of_therapy: Literal["first-line", "second-line", "third-line", "maintenance", "salvage"] | None = None
@@ -243,7 +177,7 @@ class IncreasesRisk(BaseMedicalRelationship):
     Example:
         >>> risk = IncreasesRisk(
         ...     subject_id="HGNC:1100",  # BRCA1
-        ...     predicate=RelationType.INCREASES_RISK,
+        ...     predicate=PredicateType.INCREASES_RISK,
         ...     object_id="C0006142",  # Breast Cancer
         ...     risk_ratio=5.0,
         ...     penetrance=0.72,
@@ -254,7 +188,7 @@ class IncreasesRisk(BaseMedicalRelationship):
         ... )
     """
 
-    predicate: Literal[RelationType.INCREASES_RISK] = RelationType.INCREASES_RISK
+    predicate: Literal[PredicateType.INCREASES_RISK] = PredicateType.INCREASES_RISK
     risk_ratio: float | None = Field(None, gt=0.0)  # Numeric risk increase (e.g., 2.5x)
     penetrance: float | None = Field(None, ge=0.0, le=1.0)  # Percentage who develop condition
     age_of_onset: str | None = None  # Typical age
@@ -281,7 +215,7 @@ class AssociatedWith(BaseMedicalRelationship):
     Example:
         >>> assoc = AssociatedWith(
         ...     subject_id="C0011849",  # Diabetes
-        ...     predicate=RelationType.ASSOCIATED_WITH,
+        ...     predicate=PredicateType.ASSOCIATED_WITH,
         ...     object_id="C0020538",  # Hypertension
         ...     association_type="positive",
         ...     strength="strong",
@@ -291,7 +225,7 @@ class AssociatedWith(BaseMedicalRelationship):
         ... )
     """
 
-    predicate: Literal[RelationType.ASSOCIATED_WITH] = RelationType.ASSOCIATED_WITH
+    predicate: Literal[PredicateType.ASSOCIATED_WITH] = PredicateType.ASSOCIATED_WITH
     association_type: Literal["positive", "negative", "neutral"] | None = None
     strength: Literal["strong", "moderate", "weak"] | None = None
     statistical_significance: float | None = Field(None, ge=0.0, le=1.0)  # p-value
@@ -312,7 +246,7 @@ class InteractsWith(BaseMedicalRelationship):
     Example:
         >>> interaction = InteractsWith(
         ...     subject_id="RxNorm:123",  # Warfarin
-        ...     predicate=RelationType.INTERACTS_WITH,
+        ...     predicate=PredicateType.INTERACTS_WITH,
         ...     object_id="RxNorm:456",  # Aspirin
         ...     interaction_type="synergistic",
         ...     severity="major",
@@ -323,7 +257,7 @@ class InteractsWith(BaseMedicalRelationship):
         ... )
     """
 
-    predicate: Literal[RelationType.INTERACTS_WITH] = RelationType.INTERACTS_WITH
+    predicate: Literal[PredicateType.INTERACTS_WITH] = PredicateType.INTERACTS_WITH
     directed: bool = False  # Bidirectional
     interaction_type: Literal["synergistic", "antagonistic", "additive"] | None = None
     severity: Literal["major", "moderate", "minor"] | None = None
@@ -336,7 +270,7 @@ class Encodes(BaseMedicalRelationship):
     Gene -[ENCODES]-> Protein
     """
 
-    predicate: Literal[RelationType.ENCODES] = RelationType.ENCODES
+    predicate: Literal[PredicateType.ENCODES] = PredicateType.ENCODES
     transcript_variants: int | None = None  # Number of variants
     tissue_specificity: str | None = None  # Where expressed
 
@@ -346,7 +280,7 @@ class ParticipatesIn(BaseMedicalRelationship):
     Gene/Protein -[PARTICIPATES_IN]-> Pathway
     """
 
-    predicate: Literal[RelationType.PARTICIPATES_IN] = RelationType.PARTICIPATES_IN
+    predicate: Literal[PredicateType.PARTICIPATES_IN] = PredicateType.PARTICIPATES_IN
     role: str | None = None  # Function in pathway
     regulatory_effect: Literal["activates", "inhibits", "modulates"] | None = None
 
@@ -356,7 +290,7 @@ class ContraindicatedFor(BaseMedicalRelationship):
     Drug -[CONTRAINDICATED_FOR]-> Disease/Condition
     """
 
-    predicate: Literal[RelationType.CONTRAINDICATED_FOR] = RelationType.CONTRAINDICATED_FOR
+    predicate: Literal[PredicateType.CONTRAINDICATED_FOR] = PredicateType.CONTRAINDICATED_FOR
     severity: Literal["absolute", "relative"] | None = None
     reason: str | None = None  # Why contraindicated
 
@@ -375,7 +309,7 @@ class DiagnosedBy(BaseMedicalRelationship):
     Example:
         >>> diagnosis = DiagnosedBy(
         ...     subject_id="C0006142",  # Breast Cancer
-        ...     predicate=RelationType.DIAGNOSED_BY,
+        ...     predicate=PredicateType.DIAGNOSED_BY,
         ...     object_id="LOINC:123",  # Mammography
         ...     sensitivity=0.87,
         ...     specificity=0.91,
@@ -385,7 +319,7 @@ class DiagnosedBy(BaseMedicalRelationship):
         ... )
     """
 
-    predicate: Literal[RelationType.DIAGNOSED_BY] = RelationType.DIAGNOSED_BY
+    predicate: Literal[PredicateType.DIAGNOSED_BY] = PredicateType.DIAGNOSED_BY
     sensitivity: float | None = Field(None, ge=0.0, le=1.0)  # True positive rate
     specificity: float | None = Field(None, ge=0.0, le=1.0)  # True negative rate
     standard_of_care: bool = False  # Whether this is standard practice
@@ -405,7 +339,7 @@ class SideEffect(BaseMedicalRelationship):
     Example:
         >>> side_effect = SideEffect(
         ...     subject_id="RxNorm:1187832",  # Olaparib
-        ...     predicate=RelationType.SIDE_EFFECT,
+        ...     predicate=PredicateType.SIDE_EFFECT,
         ...     object_id="C0027497",  # Nausea
         ...     frequency="common",
         ...     severity="mild",
@@ -415,7 +349,7 @@ class SideEffect(BaseMedicalRelationship):
         ... )
     """
 
-    predicate: Literal[RelationType.SIDE_EFFECT] = RelationType.SIDE_EFFECT
+    predicate: Literal[PredicateType.SIDE_EFFECT] = PredicateType.SIDE_EFFECT
     frequency: Literal["common", "uncommon", "rare"] | None = None
     severity: Literal["mild", "moderate", "severe"] | None = None
     reversible: bool = True  # Whether side effect is reversible
@@ -457,14 +391,14 @@ class Cites(ResearchRelationship):
     Example:
         >>> citation = Cites(
         ...     subject_id="PMC123",
-        ...     predicate=RelationType.CITES,
+        ...     predicate=PredicateType.CITES,
         ...     object_id="PMC456",
         ...     context="discussion",
         ...     sentiment="supports"
         ... )
     """
 
-    predicate: Literal[RelationType.CITES] = RelationType.CITES
+    predicate: Literal[PredicateType.CITES] = PredicateType.CITES
     context: Literal["introduction", "methods", "results", "discussion"] | None = None
     sentiment: Literal["supports", "contradicts", "mentions"] | None = None
 
@@ -482,14 +416,14 @@ class StudiedIn(ResearchRelationship):
     Example:
         >>> studied = StudiedIn(
         ...     subject_id="RxNorm:1187832",  # Olaparib
-        ...     predicate=RelationType.STUDIED_IN,
+        ...     predicate=PredicateType.STUDIED_IN,
         ...     object_id="PMC999",
         ...     role="primary_focus",
         ...     section="results"
         ... )
     """
 
-    predicate: Literal[RelationType.STUDIED_IN] = RelationType.STUDIED_IN
+    predicate: Literal[PredicateType.STUDIED_IN] = PredicateType.STUDIED_IN
     role: Literal["primary_focus", "secondary_finding", "mentioned"] | None = None
     section: Literal["results", "methods", "discussion", "introduction"] | None = None
 
@@ -499,7 +433,7 @@ class AuthoredBy(ResearchRelationship):
     Paper -[AUTHORED_BY]-> Author
     """
 
-    predicate: Literal[RelationType.AUTHORED_BY] = RelationType.AUTHORED_BY
+    predicate: Literal[PredicateType.AUTHORED_BY] = PredicateType.AUTHORED_BY
     position: Literal["first", "last", "corresponding", "middle"] | None = None
 
 
@@ -508,7 +442,7 @@ class PartOf(ResearchRelationship):
     Paper -[PART_OF]-> ClinicalTrial
     """
 
-    predicate: Literal[RelationType.PART_OF] = RelationType.PART_OF
+    predicate: Literal[PredicateType.PART_OF] = PredicateType.PART_OF
     publication_type: Literal["protocol", "results", "analysis"] | None = None
 
 
@@ -531,7 +465,7 @@ class Predicts(BaseMedicalRelationship):
     Example:
         >>> predicts = Predicts(
         ...     subject_id="HYPOTHESIS:amyloid_cascade",
-        ...     predicate=RelationType.PREDICTS,
+        ...     predicate=PredicateType.PREDICTS,
         ...     object_id="C0002395",  # Alzheimer's disease
         ...     prediction_type="positive",
         ...     testable=True,
@@ -539,7 +473,7 @@ class Predicts(BaseMedicalRelationship):
         ... )
     """
 
-    predicate: Literal[RelationType.PREDICTS] = RelationType.PREDICTS
+    predicate: Literal[PredicateType.PREDICTS] = PredicateType.PREDICTS
     prediction_type: Literal["positive", "negative", "conditional"] | None = None
     conditions: str | None = None  # Conditions under which prediction holds
     testable: bool = True  # Whether empirically testable
@@ -559,7 +493,7 @@ class Refutes(BaseMedicalRelationship):
     Example:
         >>> refutes = Refutes(
         ...     subject_id="PMC999888",
-        ...     predicate=RelationType.REFUTES,
+        ...     predicate=PredicateType.REFUTES,
         ...     object_id="HYPOTHESIS:amyloid_cascade",
         ...     refutation_strength="moderate",
         ...     source_papers=["PMC999888"],
@@ -567,7 +501,7 @@ class Refutes(BaseMedicalRelationship):
         ... )
     """
 
-    predicate: Literal[RelationType.REFUTES] = RelationType.REFUTES
+    predicate: Literal[PredicateType.REFUTES] = PredicateType.REFUTES
     refutation_strength: Literal["strong", "moderate", "weak"] | None = None
     alternative_explanation: str | None = None
     limitations: str | None = None
@@ -587,7 +521,7 @@ class TestedBy(BaseMedicalRelationship):
     Example:
         >>> tested = TestedBy(
         ...     subject_id="HYPOTHESIS:parp_inhibitor_synthetic_lethality",
-        ...     predicate=RelationType.TESTED_BY,
+        ...     predicate=PredicateType.TESTED_BY,
         ...     object_id="PMC999888",
         ...     test_outcome="supported",
         ...     methodology="randomized controlled trial",
@@ -597,7 +531,7 @@ class TestedBy(BaseMedicalRelationship):
         ... )
     """
 
-    predicate: Literal[RelationType.TESTED_BY] = RelationType.TESTED_BY
+    predicate: Literal[PredicateType.TESTED_BY] = PredicateType.TESTED_BY
     test_outcome: Literal["supported", "refuted", "inconclusive"] | None = None
     methodology: str | None = None
     study_design_id: str | None = None  # OBI study design ID
@@ -617,7 +551,7 @@ class Generates(BaseMedicalRelationship):
     Example:
         >>> generates = Generates(
         ...     subject_id="PMC999888",
-        ...     predicate=RelationType.GENERATES,
+        ...     predicate=PredicateType.GENERATES,
         ...     object_id="EVIDENCE_LINE:olaparib_brca_001",
         ...     evidence_type="experimental",
         ...     eco_type="ECO:0007673",
@@ -626,7 +560,7 @@ class Generates(BaseMedicalRelationship):
         ... )
     """
 
-    predicate: Literal[RelationType.GENERATES] = RelationType.GENERATES
+    predicate: Literal[PredicateType.GENERATES] = PredicateType.GENERATES
     evidence_type: str | None = None
     eco_type: str | None = None  # ECO evidence type ID
     quality_score: float | None = Field(None, ge=0.0, le=1.0)
@@ -637,7 +571,7 @@ class Generates(BaseMedicalRelationship):
 # ============================================================================
 
 
-def create_relationship(predicate: RelationType, subject_id: str, object_id: str, **kwargs) -> BaseMedicalRelationship | ResearchRelationship:
+def create_relationship(predicate: PredicateType, subject_id: str, object_id: str, **kwargs) -> BaseMedicalRelationship | ResearchRelationship:
     """
     Factory function to create the appropriate relationship type.
 
@@ -654,7 +588,7 @@ def create_relationship(predicate: RelationType, subject_id: str, object_id: str
 
     Example:
         >>> rel = create_relationship(
-        ...     RelationType.TREATS,
+        ...     PredicateType.TREATS,
         ...     subject_id="RxNorm:1187832",
         ...     object_id="C0006142",
         ...     response_rate=0.59,
@@ -662,24 +596,24 @@ def create_relationship(predicate: RelationType, subject_id: str, object_id: str
         ... )
     """
     relationship_classes = {
-        RelationType.CAUSES: Causes,
-        RelationType.TREATS: Treats,
-        RelationType.INCREASES_RISK: IncreasesRisk,
-        RelationType.ASSOCIATED_WITH: AssociatedWith,
-        RelationType.INTERACTS_WITH: InteractsWith,
-        RelationType.DIAGNOSED_BY: DiagnosedBy,
-        RelationType.SIDE_EFFECT: SideEffect,
-        RelationType.ENCODES: Encodes,
-        RelationType.PARTICIPATES_IN: ParticipatesIn,
-        RelationType.CONTRAINDICATED_FOR: ContraindicatedFor,
-        RelationType.CITES: Cites,
-        RelationType.STUDIED_IN: StudiedIn,
-        RelationType.AUTHORED_BY: AuthoredBy,
-        RelationType.PART_OF: PartOf,
-        RelationType.PREDICTS: Predicts,
-        RelationType.REFUTES: Refutes,
-        RelationType.TESTED_BY: TestedBy,
-        RelationType.GENERATES: Generates,
+        PredicateType.CAUSES: Causes,
+        PredicateType.TREATS: Treats,
+        PredicateType.INCREASES_RISK: IncreasesRisk,
+        PredicateType.ASSOCIATED_WITH: AssociatedWith,
+        PredicateType.INTERACTS_WITH: InteractsWith,
+        PredicateType.DIAGNOSED_BY: DiagnosedBy,
+        PredicateType.SIDE_EFFECT: SideEffect,
+        PredicateType.ENCODES: Encodes,
+        PredicateType.PARTICIPATES_IN: ParticipatesIn,
+        PredicateType.CONTRAINDICATED_FOR: ContraindicatedFor,
+        PredicateType.CITES: Cites,
+        PredicateType.STUDIED_IN: StudiedIn,
+        PredicateType.AUTHORED_BY: AuthoredBy,
+        PredicateType.PART_OF: PartOf,
+        PredicateType.PREDICTS: Predicts,
+        PredicateType.REFUTES: Refutes,
+        PredicateType.TESTED_BY: TestedBy,
+        PredicateType.GENERATES: Generates,
     }
 
     cls = relationship_classes.get(predicate, BaseMedicalRelationship)

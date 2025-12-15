@@ -481,7 +481,7 @@ Excellent! I've created a complete **TypeScript/JavaScript client library** for 
 ```typescript
 const query = new QueryBuilder()
   .findNodes(EntityType.DRUG)
-  .withEdge(RelationType.TREATS, { minConfidence: 0.7 })
+  .withEdge(PredicateType.TREATS, { minConfidence: 0.7 })
   .filterTarget(EntityType.DISEASE, { name: 'diabetes' })
   .aggregate(['drug.name'], {
     paper_count: ['count', 'rel.evidence.paper_id']

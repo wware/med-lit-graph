@@ -1088,14 +1088,14 @@ All queries are validated before execution. Common validation errors:
 
 ```python
 import os
-from medgraph import MedicalGraphClient, QueryBuilder, EntityType, RelationType
+from medgraph import MedicalGraphClient, QueryBuilder, EntityType, PredicateType
 
 client = MedicalGraphClient(os.getenv("MEDGRAPH_SERVER"))
 
 # Using QueryBuilder
 query = (QueryBuilder()
     .find_nodes(EntityType.DRUG)
-    .with_edge(RelationType.TREATS, min_confidence=0.7)
+    .with_edge(PredicateType.TREATS, min_confidence=0.7)
     .filter_target(EntityType.DISEASE, name="diabetes")
     .aggregate(
         ["drug.name"],
@@ -1112,13 +1112,13 @@ results = client.execute(query)
 ### TypeScript
 
 ```typescript
-import { MedicalGraphClient, QueryBuilder, EntityType, RelationType } from '@medgraph/client';
+import { MedicalGraphClient, QueryBuilder, EntityType, PredicateType } from '@medgraph/client';
 
 const client = new MedicalGraphClient();
 
 const query = new QueryBuilder()
   .findNodes(EntityType.DRUG)
-  .withEdge(RelationType.TREATS, { minConfidence: 0.7 })
+  .withEdge(PredicateType.TREATS, { minConfidence: 0.7 })
   .filterTarget(EntityType.DISEASE, { name: 'diabetes' })
   .aggregate(
     ['drug.name'],

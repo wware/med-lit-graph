@@ -117,7 +117,7 @@ Provides a clean public API with all entity and relationship classes exported.
 ## Quick Start
 
 ```python
-from schema import Disease, Drug, Treats, RelationType, create_relationship
+from schema import Disease, Drug, Treats, PredicateType, create_relationship
 
 # Create entities
 disease = Disease(
@@ -135,7 +135,7 @@ drug = Drug(
 
 # Create relationship with evidence
 treats = create_relationship(
-    RelationType.TREATS,
+    PredicateType.TREATS,
     subject_id=drug.entity_id,
     object_id=disease.entity_id,
     response_rate=0.59,
@@ -147,7 +147,7 @@ treats = create_relationship(
 ### Hypothesis Tracking Example
 
 ```python
-from schema import Hypothesis, Predicts, TestedBy, Refutes, RelationType
+from schema import Hypothesis, Predicts, TestedBy, Refutes, PredicateType
 
 # Create a hypothesis
 hypothesis = Hypothesis(
@@ -164,7 +164,7 @@ hypothesis = Hypothesis(
 # Hypothesis predicts an outcome
 predicts = Predicts(
     subject_id=hypothesis.entity_id,
-    predicate=RelationType.PREDICTS,
+    predicate=PredicateType.PREDICTS,
     object_id="C0006142",  # Breast Cancer
     prediction_type="positive",
     testable=True,
@@ -175,7 +175,7 @@ predicts = Predicts(
 # Hypothesis tested by a study
 tested_by = TestedBy(
     subject_id=hypothesis.entity_id,
-    predicate=RelationType.TESTED_BY,
+    predicate=PredicateType.TESTED_BY,
     object_id="PMC999888",  # Clinical trial paper
     test_outcome="supported",
     methodology="randomized controlled trial",
@@ -187,7 +187,7 @@ tested_by = TestedBy(
 # Evidence refutes a competing hypothesis
 refutes = Refutes(
     subject_id="PMC111222",  # Paper with contradicting findings
-    predicate=RelationType.REFUTES,
+    predicate=PredicateType.REFUTES,
     object_id="HYPOTHESIS:competing_mechanism",
     refutation_strength="moderate",
     alternative_explanation="Alternative pathway identified",

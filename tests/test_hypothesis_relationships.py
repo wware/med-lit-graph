@@ -10,17 +10,17 @@ from schema.relationship import (
     Refutes,
     TestedBy,
     Generates,
-    RelationType,
+    PredicateType,
     create_relationship,
 )
-from schema.entity import Evidence
+from schema.entity import EvidenceItem
 
 
 def test_predicts_relationship():
     """Test hypothesis predicting an outcome"""
     predicts = Predicts(
         subject_id="HYPOTHESIS:amyloid_cascade",
-        predicate=RelationType.PREDICTS,
+        predicate=PredicateType.PREDICTS,
         object_id="C0002395",  # Alzheimer's disease
         prediction_type="positive",
         testable=True,
@@ -29,7 +29,7 @@ def test_predicts_relationship():
         confidence=0.8,
     )
 
-    assert predicts.predicate == RelationType.PREDICTS
+    assert predicts.predicate == PredicateType.PREDICTS
     assert predicts.subject_id == "HYPOTHESIS:amyloid_cascade"
     assert predicts.object_id == "C0002395"
     assert predicts.prediction_type == "positive"
@@ -41,7 +41,7 @@ def test_refutes_relationship():
     """Test evidence refuting a hypothesis"""
     refutes = Refutes(
         subject_id="PMC999888",
-        predicate=RelationType.REFUTES,
+        predicate=PredicateType.REFUTES,
         object_id="HYPOTHESIS:amyloid_cascade",
         refutation_strength="moderate",
         alternative_explanation="Tau pathology may be primary driver",
@@ -50,7 +50,7 @@ def test_refutes_relationship():
         confidence=0.75,
     )
 
-    assert refutes.predicate == RelationType.REFUTES
+    assert refutes.predicate == PredicateType.REFUTES
     assert refutes.refutation_strength == "moderate"
     assert refutes.alternative_explanation is not None
     assert refutes.limitations is not None
@@ -60,7 +60,7 @@ def test_tested_by_relationship():
     """Test hypothesis being tested by a study"""
     tested = TestedBy(
         subject_id="HYPOTHESIS:parp_inhibitor_synthetic_lethality",
-        predicate=RelationType.TESTED_BY,
+        predicate=PredicateType.TESTED_BY,
         object_id="PMC999888",
         test_outcome="supported",
         methodology="randomized controlled trial",
@@ -69,7 +69,7 @@ def test_tested_by_relationship():
         confidence=0.90,
     )
 
-    assert tested.predicate == RelationType.TESTED_BY
+    assert tested.predicate == PredicateType.TESTED_BY
     assert tested.test_outcome == "supported"
     assert tested.study_design_id == "OBI:0000008"
     assert tested.methodology == "randomized controlled trial"
@@ -79,7 +79,7 @@ def test_generates_relationship():
     """Test study generating evidence"""
     generates = Generates(
         subject_id="PMC999888",
-        predicate=RelationType.GENERATES,
+        predicate=PredicateType.GENERATES,
         object_id="EVIDENCE_LINE:olaparib_brca_001",
         evidence_type="experimental",
         eco_type="ECO:0007673",  # RCT evidence
@@ -88,7 +88,7 @@ def test_generates_relationship():
         confidence=0.95,
     )
 
-    assert generates.predicate == RelationType.GENERATES
+    assert generates.predicate == PredicateType.GENERATES
     assert generates.evidence_type == "experimental"
     assert generates.eco_type == "ECO:0007673"
     assert generates.quality_score == 0.92
@@ -131,7 +131,7 @@ def test_create_relationship_factory_for_hypothesis_relations():
     """Test factory function creates correct relationship types for new relations"""
     # Test PREDICTS
     predicts = create_relationship(
-        RelationType.PREDICTS,
+        PredicateType.PREDICTS,
         subject_id="HYPOTHESIS:001",
         object_id="OUTCOME:001",
         prediction_type="positive",
@@ -140,7 +140,7 @@ def test_create_relationship_factory_for_hypothesis_relations():
 
     # Test REFUTES
     refutes = create_relationship(
-        RelationType.REFUTES,
+        PredicateType.REFUTES,
         subject_id="PMC001",
         object_id="HYPOTHESIS:001",
         refutation_strength="strong",
@@ -149,7 +149,7 @@ def test_create_relationship_factory_for_hypothesis_relations():
 
     # Test TESTED_BY
     tested = create_relationship(
-        RelationType.TESTED_BY,
+        PredicateType.TESTED_BY,
         subject_id="HYPOTHESIS:001",
         object_id="PMC002",
         test_outcome="supported",
@@ -158,7 +158,7 @@ def test_create_relationship_factory_for_hypothesis_relations():
 
     # Test GENERATES
     generates = create_relationship(
-        RelationType.GENERATES,
+        PredicateType.GENERATES,
         subject_id="PMC003",
         object_id="EVIDENCE:001",
         eco_type="ECO:0007673",
@@ -225,7 +225,7 @@ def test_generates_quality_score_bounds():
 
 def test_hypothesis_relationships_with_evidence():
     """Test that hypothesis relationships can include detailed evidence"""
-    evidence = Evidence(
+    evidence = EvidenceItem(
         paper_id="PMC999888",
         confidence=0.92,
         section_type="results",

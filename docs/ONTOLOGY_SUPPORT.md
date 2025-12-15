@@ -162,11 +162,11 @@ evidence = Evidence(
 Hypothesis predicting an observable outcome.
 
 ```python
-from schema.relationship import Predicts, RelationType
+from schema.relationship import Predicts, PredicateType
 
 predicts = Predicts(
     subject_id="HYPOTHESIS:amyloid_cascade",
-    predicate=RelationType.PREDICTS,
+    predicate=PredicateType.PREDICTS,
     object_id="C0002395",  # Alzheimer's disease
     prediction_type="positive",  # positive, negative, conditional
     testable=True,
@@ -180,11 +180,11 @@ predicts = Predicts(
 Evidence refuting a hypothesis.
 
 ```python
-from schema.relationship import Refutes, RelationType
+from schema.relationship import Refutes, PredicateType
 
 refutes = Refutes(
     subject_id="PMC999888",
-    predicate=RelationType.REFUTES,
+    predicate=PredicateType.REFUTES,
     object_id="HYPOTHESIS:amyloid_cascade",
     refutation_strength="moderate",  # strong, moderate, weak
     alternative_explanation="Tau pathology may be primary driver",
@@ -199,11 +199,11 @@ refutes = Refutes(
 Hypothesis being tested by a study.
 
 ```python
-from schema.relationship import TestedBy, RelationType
+from schema.relationship import TestedBy, PredicateType
 
 tested = TestedBy(
     subject_id="HYPOTHESIS:parp_inhibitor_synthetic_lethality",
-    predicate=RelationType.TESTED_BY,
+    predicate=PredicateType.TESTED_BY,
     object_id="PMC999888",
     test_outcome="supported",  # supported, refuted, inconclusive
     methodology="randomized controlled trial",
@@ -218,11 +218,11 @@ tested = TestedBy(
 Study generating evidence.
 
 ```python
-from schema.relationship import Generates, RelationType
+from schema.relationship import Generates, PredicateType
 
 generates = Generates(
     subject_id="PMC999888",
-    predicate=RelationType.GENERATES,
+    predicate=PredicateType.GENERATES,
     object_id="EVIDENCE_LINE:olaparib_brca_001",
     evidence_type="experimental",
     eco_type="ECO:0007673",  # RCT evidence

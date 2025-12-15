@@ -8,7 +8,7 @@ evidence tracking and measurements.
 The schema is organized into three main modules:
 - entity: Entity type definitions and entity classes
 - relationship: Relationship type definitions and relationship classes
-- Supporting classes: Evidence, Measurement for rich provenance tracking
+- Supporting classes: EvidenceItem, Measurement for rich provenance tracking
 
 Quick Start Examples:
 
@@ -29,11 +29,11 @@ Quick Start Examples:
     )
 
     # Create relationships
-    from schema.relationship import Treats, RelationType
+    from schema.relationship import Treats, PredicateType
 
     treats = Treats(
         subject_id=drug.entity_id,
-        predicate=RelationType.TREATS,
+        predicate=PredicateType.TREATS,
         object_id=disease.entity_id,
         response_rate=0.59,
         source_papers=["PMC999"],
@@ -44,7 +44,7 @@ Quick Start Examples:
     from schema.relationship import create_relationship
 
     rel = create_relationship(
-        RelationType.TREATS,
+        PredicateType.TREATS,
         subject_id=drug.entity_id,
         object_id=disease.entity_id,
         response_rate=0.59
@@ -62,7 +62,7 @@ from .entity import (
     EntityCollection,
     EntityMention,
     EntityType,
-    Evidence,
+    EvidenceItem,
     EvidenceLine,
     ExtractedEntity,
     Gene,
@@ -98,7 +98,7 @@ from .relationship import (
     PartOf,
     Predicts,
     Refutes,
-    RelationType,
+    PredicateType,
     ResearchRelationship,
     SideEffect,
     StudiedIn,
@@ -110,7 +110,7 @@ from .relationship import (
 __all__ = [
     # Enums
     "EntityType",
-    "RelationType",
+    "PredicateType",
     # Base classes
     "BaseMedicalEntity",
     "BaseRelationship",
@@ -139,7 +139,7 @@ __all__ = [
     "StatisticalMethod",
     "EvidenceLine",
     # Evidence and measurements
-    "Evidence",
+    "EvidenceItem",
     "Measurement",
     # Relationship classes
     "Causes",

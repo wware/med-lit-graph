@@ -93,11 +93,11 @@ const contradictions = await client.findContradictoryEvidence(
 Build custom queries with the fluent API:
 
 ```typescript
-import { QueryBuilder, EntityType, RelationType } from '@medgraph/client';
+import { QueryBuilder, EntityType, PredicateType } from '@medgraph/client';
 
 const query = new QueryBuilder()
   .findNodes(EntityType.GENE)
-  .withEdge(RelationType.ASSOCIATED_WITH, {
+  .withEdge(PredicateType.ASSOCIATED_WITH, {
     direction: 'incoming',
     minConfidence: 0.6
   })
@@ -135,18 +135,18 @@ const query: GraphQuery = {
     edges: [
       {
         edge: {
-          relation_types: [RelationType.ASSOCIATED_WITH],
+          relation_types: [PredicateType.ASSOCIATED_WITH],
           min_confidence: 0.6
         },
         node: { node_type: EntityType.GENE, var: 'gene' }
       },
       {
-        edge: { relation_type: RelationType.ENCODES },
+        edge: { relation_type: PredicateType.ENCODES },
         node: { node_type: EntityType.PROTEIN, var: 'protein' }
       },
       {
         edge: {
-          relation_types: [RelationType.BINDS_TO, RelationType.INHIBITS],
+          relation_types: [PredicateType.BINDS_TO, PredicateType.INHIBITS],
           direction: 'incoming'
         },
         node: {
@@ -174,7 +174,7 @@ const results = await client.batch([
     id: 'treatments',
     query: new QueryBuilder()
       .findNodes(EntityType.DRUG)
-      .withEdge(RelationType.TREATS)
+      .withEdge(PredicateType.TREATS)
       .filterTarget(EntityType.DISEASE, { name: 'diabetes' })
       .limit(10)
       .build()
@@ -183,7 +183,7 @@ const results = await client.batch([
     id: 'genes',
     query: new QueryBuilder()
       .findNodes(EntityType.GENE)
-      .withEdge(RelationType.ASSOCIATED_WITH, { direction: 'incoming' })
+      .withEdge(PredicateType.ASSOCIATED_WITH, { direction: 'incoming' })
       .filterTarget(EntityType.DISEASE, { name: 'diabetes' })
       .limit(10)
       .build()
@@ -206,7 +206,7 @@ async function getAllResults(disease: string) {
   while (hasMore) {
     const query = new QueryBuilder()
       .findNodes(EntityType.DRUG)
-      .withEdge(RelationType.TREATS)
+      .withEdge(PredicateType.TREATS)
       .filterTarget(EntityType.DISEASE, { name: disease })
       .limit(pageSize)
       .offset(offset)
@@ -307,7 +307,7 @@ enum EntityType {
 ### Relationship Types
 
 ```typescript
-enum RelationType {
+enum PredicateType {
   // Causal
   CAUSES, PREVENTS, INCREASES_RISK, DECREASES_RISK,
   
@@ -450,7 +450,7 @@ import {
   MedicalGraphClient,
   QueryBuilder,
   EntityType,
-  RelationType,
+  PredicateType,
   GraphQuery,
   QueryResult,
   NodePattern,

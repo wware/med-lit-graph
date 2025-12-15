@@ -12,9 +12,9 @@ from schema.relationship import (
     Treats,
     Causes,
     IncreasesRisk,
-    RelationType,
+    PredicateType,
 )
-from schema.entity import Evidence
+from schema.entity import EvidenceItem
 
 
 def test_relationship_without_evidence_or_source_papers():
@@ -31,7 +31,7 @@ def test_relationship_without_evidence_or_source_papers():
     treats = Treats(
         subject_id="RxNorm:1187832",  # Olaparib
         object_id="UMLS:C0006142",  # Breast Cancer
-        predicate=RelationType.TREATS,
+        predicate=PredicateType.TREATS,
         response_rate=0.59,
         # Note: No evidence, no source_papers
     )
@@ -42,7 +42,7 @@ def test_relationship_without_evidence_or_source_papers():
     assert treats.evidence_count == 0
 
     # TODO: If provenance should be mandatory, add min_length=1 to these fields:
-    # evidence: list[Evidence] = Field(default_factory=list, min_length=1)
+    # evidence: list[EvidenceItem] = Field(default_factory=list, min_length=1)
     # source_papers: list[str] = Field(default_factory=list, min_length=1)
 
 
@@ -51,12 +51,12 @@ def test_relationship_with_source_papers_only():
     Test lightweight provenance (just paper IDs, no detailed Evidence objects).
 
     This is explicitly supported by the schema design - you can provide just
-    source_papers for lightweight tracking without full Evidence objects.
+    source_papers for lightweight tracking without full EvidenceItem objects.
     """
     treats = Treats(
         subject_id="RxNorm:1187832",
         object_id="UMLS:C0006142",
-        predicate=RelationType.TREATS,
+        predicate=PredicateType.TREATS,
         source_papers=["PMC123", "PMC456"],
         evidence_count=2,
         confidence=0.85,
@@ -71,11 +71,11 @@ def test_relationship_with_source_papers_only():
 
 def test_relationship_with_evidence_objects():
     """
-    Test rich provenance with detailed Evidence objects.
+    Test rich provenance with detailed EvidenceItem objects.
 
     This is the recommended approach for medical relationships.
     """
-    evidence = Evidence(
+    evidence = EvidenceItem(
         paper_id="PMC999888",
         section_type="results",
         paragraph_idx=8,
@@ -89,7 +89,7 @@ def test_relationship_with_evidence_objects():
     treats = Treats(
         subject_id="RxNorm:1187832",
         object_id="UMLS:C0006142",
-        predicate=RelationType.TREATS,
+        predicate=PredicateType.TREATS,
         evidence=[evidence],
         source_papers=["PMC999888"],  # Should match evidence[0].paper_id
         evidence_count=1,
@@ -108,7 +108,7 @@ def test_evidence_missing_required_paper_id_fails():
     Evidence MUST have a paper_id - this is truly mandatory.
     """
     with pytest.raises(ValidationError) as exc_info:
-        Evidence(
+        EvidenceItem(
             # Missing paper_id - should fail
             section_type="results",
             confidence=0.85,
@@ -124,7 +124,7 @@ def test_evidence_with_minimal_fields():
     """
     Evidence only requires paper_id - everything else is optional.
     """
-    evidence = Evidence(paper_id="PMC123")
+    evidence = EvidenceItem(paper_id="PMC123")
 
     assert evidence.paper_id == "PMC123"
     assert evidence.confidence == 0.5  # default
@@ -143,7 +143,7 @@ def test_empty_evidence_list_is_allowed():
     treats = Treats(
         subject_id="RxNorm:1187832",
         object_id="UMLS:C0006142",
-        predicate=RelationType.TREATS,
+        predicate=PredicateType.TREATS,
         evidence=[],  # Empty list currently allowed
         response_rate=0.59,
     )
@@ -160,7 +160,7 @@ def test_confidence_score_bounds():
         treats = Treats(
             subject_id="RxNorm:1",
             object_id="UMLS:C1",
-            predicate=RelationType.TREATS,
+            predicate=PredicateType.TREATS,
             source_papers=["PMC1"],
             confidence=conf,
         )
@@ -171,7 +171,7 @@ def test_confidence_score_bounds():
         Treats(
             subject_id="RxNorm:1",
             object_id="UMLS:C1",
-            predicate=RelationType.TREATS,
+            predicate=PredicateType.TREATS,
             source_papers=["PMC1"],
             confidence=1.5,  # > 1.0 should fail
         )
@@ -181,7 +181,7 @@ def test_confidence_score_bounds():
         Treats(
             subject_id="RxNorm:1",
             object_id="UMLS:C1",
-            predicate=RelationType.TREATS,
+            predicate=PredicateType.TREATS,
             source_papers=["PMC1"],
             confidence=-0.1,  # < 0.0 should fail
         )
@@ -192,30 +192,30 @@ def test_evidence_confidence_bounds():
     Evidence confidence must also be between 0.0 and 1.0.
     """
     # Valid
-    evidence = Evidence(paper_id="PMC123", confidence=0.95)
+    evidence = EvidenceItem(paper_id="PMC123", confidence=0.95)
     assert evidence.confidence == 0.95
 
     # Invalid - too high
     with pytest.raises(ValidationError):
-        Evidence(paper_id="PMC123", confidence=1.1)
+        EvidenceItem(paper_id="PMC123", confidence=1.1)
 
     # Invalid - negative
     with pytest.raises(ValidationError):
-        Evidence(paper_id="PMC123", confidence=-0.5)
+        EvidenceItem(paper_id="PMC123", confidence=-0.5)
 
 
 def test_multiple_evidence_from_different_papers():
     """
     Test aggregating evidence from multiple papers.
     """
-    evidence1 = Evidence(paper_id="PMC111", study_type="rct", confidence=0.9, sample_size=100)
-    evidence2 = Evidence(paper_id="PMC222", study_type="observational", confidence=0.7, sample_size=500)
-    evidence3 = Evidence(paper_id="PMC333", study_type="meta_analysis", confidence=0.95, sample_size=2000)
+    evidence1 = EvidenceItem(paper_id="PMC111", study_type="rct", confidence=0.9, sample_size=100)
+    evidence2 = EvidenceItem(paper_id="PMC222", study_type="observational", confidence=0.7, sample_size=500)
+    evidence3 = EvidenceItem(paper_id="PMC333", study_type="meta_analysis", confidence=0.95, sample_size=2000)
 
     treats = Treats(
         subject_id="RxNorm:1187832",
         object_id="UMLS:C0006142",
-        predicate=RelationType.TREATS,
+        predicate=PredicateType.TREATS,
         evidence=[evidence1, evidence2, evidence3],
         source_papers=["PMC111", "PMC222", "PMC333"],
         evidence_count=3,
@@ -240,7 +240,7 @@ def test_contradictory_evidence_tracking():
     treats = Treats(
         subject_id="RxNorm:1",
         object_id="UMLS:C1",
-        predicate=RelationType.TREATS,
+        predicate=PredicateType.TREATS,
         source_papers=["PMC111", "PMC222"],  # Papers supporting
         contradicted_by=["PMC333", "PMC444"],  # Papers contradicting
         evidence_count=2,
@@ -260,7 +260,7 @@ def test_different_relationship_types_with_evidence():
     causes = Causes(
         subject_id="UMLS:C0006142",  # Breast Cancer
         object_id="UMLS:C0030193",  # Pain
-        predicate=RelationType.CAUSES,
+        predicate=PredicateType.CAUSES,
         source_papers=["PMC555"],
         frequency="often",
         onset="late",
@@ -272,7 +272,7 @@ def test_different_relationship_types_with_evidence():
     risk = IncreasesRisk(
         subject_id="HGNC:1100",  # BRCA1
         object_id="UMLS:C0006142",  # Breast Cancer
-        predicate=RelationType.INCREASES_RISK,
+        predicate=PredicateType.INCREASES_RISK,
         source_papers=["PMC123", "PMC456"],
         evidence_count=2,
         risk_ratio=5.0,
