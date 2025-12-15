@@ -8,7 +8,7 @@
 
 Transform millions of medical research papers into a queryable knowledge graph with full citation traceability. Every relationship is backed by specific evidence from peer-reviewed literature, enabling doctors and researchers to verify every claim.
 
-<!-- **🔬 Try it**: TODO - links to non-existent services: [Demo](https://demo.medgraph.example.com) | [API Docs](https://api.medgraph.example.com/docs) | [Examples](examples/) -->
+**🔬 Try it**: [Demo](https://mini-server.fly.dev) | [API Docs](https://mini-server.fly.dev/docs)
 
 ---
 
