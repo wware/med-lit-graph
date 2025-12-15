@@ -1,66 +1,92 @@
-# Quickstart: Local Paper Ingestion with Ollama
+# Ingestion Pipeline Quickstart
 
-This guide provides instructions for setting up and running the local paper ingestion pipeline using Ollama and specialized embedding models.
+This guide walks you through the process of populating the Medical Knowledge Graph with real data from PubMed Central (PMC).
 
-## 1. Setup
+## Prerequisites
 
-First, ensure you have the necessary dependencies and models installed.
+- Docker & Docker Compose
+- 50GB+ Disk Space (for Ollama models and Vector DB)
+- 16GB+ RAM (Recommended)
 
-```bash
-# Navigate to the project directory
-cd ~/med-lit-graph
+## 1. Finding Papers to Ingest
 
-# Install Python dependencies
-pip install -r ingestion/requirements.txt
+Before running the pipeline, it's helpful to identify good search terms.
 
-# Pull the large language model for extraction (choose one)
-ollama pull llama3.1:70b      # Best accuracy, needs ~40GB RAM
-# or
-ollama pull qwen2.5:32b       # Good balance, ~20GB RAM
+1.  Go to [PubMed Central](https://www.ncbi.nlm.nih.gov/pmc/).
+2.  Try search terms like:
+    - `"metformin type 2 diabetes"`
+    - `"BRCA1 breast cancer treatment"`
+    - `"Alzheimer's amyloid hypothesis"`
+3.  Filter for "Open Access" to ensure full text availability.
+4.  Note a few relevant PMC IDs (e.g., `PMC1234567`) or just keep your search query handy.
 
-# Pull the default embedding model for entity matching
-ollama pull nomic-embed-text
-```
+## 2. Starting the Stack
 
-## 2. Running the Ingestion Pipeline
-
-Once the setup is complete, you can run the ingestion script with a query. The script will search PubMed, download the relevant papers, and use the local Ollama model to extract entities and relationships.
-
-### Standard Ingestion
-
-This command uses the default `nomic-embed-text` for entity matching.
+We use Docker Compose to run the necessary services: **PostgreSQL** (with `pgvector`) and **Ollama** (for local LLM inference).
 
 ```bash
-python ingestion/ingest_papers.py \
-  --query "metformin diabetes AMPK" \
-  --limit 100 \
-  --model llama3.1:70b
+cd ingestion
+docker compose up -d
 ```
 
-### Ingestion with Biomedical Embeddings
+> **Note:** Data is persisted locally in `ingestion/data/postgres`. This allows other stacks to access the same database by mounting this directory.
 
-For improved accuracy in medical entity matching, you can use specialized models like `BiomedBERT` or `PubMedBERT`. These models are trained on biomedical literature and provide better results for recognizing and deduplicating clinical and biological terms.
+## 3. Preparing the LLM
 
-The first run will download the selected model (approx. 400MB), which will be cached for future use.
+To get high-quality extractions, we recommend using a capable model like `llama3.1:70b`.
 
 ```bash
-# Run with the default BioBERT model
-python ingestion/ingest_papers.py \
-  --query "metformin diabetes AMPK" \
-  --limit 100
-
-# Or specify another HuggingFace model
-python ingestion/ingest_papers.py \
-  --query "PARP inhibitors breast cancer" \
-  --embedding-model "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext" \
-  --limit 50
+# Pull the model (this may take a while)
+docker compose exec ollama ollama pull llama3.1:70b
 ```
 
-### How It Works
+## 4. Running the Ingestion Pipeline
 
-1.  **Searches PubMed** for papers matching the query.
-2.  **Downloads JATS XML** from the PubMed Central (PMC) repository.
-3.  **Extracts Entities & Relationships** using the specified Ollama model.
-4.  **Deduplicates Entities** using vector similarity search with the chosen embedding model.
-5.  **Saves JSON Output** to `data/papers/`, with one file per paper.
-6.  **Builds an Entity Database** in `data/entity_db/` to maintain canonical entity identifiers.
+The pipeline searches PubMed based on your query, downloads full-text XML, extracts entities/relationships using the LLM, resolves entities, and saves everything to PostgreSQL.
+
+Run the script inside the `ingest` container or using a one-off container:
+
+```bash
+docker compose run --rm ingest python ingest_papers.py \
+  --query "metformin type 2 diabetes" \
+  --limit 10 \
+  --model "llama3.1:70b"
+```
+
+**What happens next:**
+1.  **Search**: Queries PubMed API for 10 relevant papers.
+2.  **Download**: Fetches full-text JATS XML for each paper.
+3.  **Extract**: Uses `llama3.1:70b` to identifying entities (Drugs, Diseases, etc.) and relationships (TREATS, CAUSES).
+4.  **Embed**: Generates vector embeddings for entities using BiomedBERT.
+5.  **Persist**: Saves structured data to `medgraph` Postgres database.
+
+## 5. Verification
+
+You can verify the data was ingested by querying the database directly:
+
+```bash
+docker compose exec postgres psql -U postgres -d medgraph -c "
+SELECT
+    p.id as paper,
+    count(distinct e.id) as entities,
+    count(distinct r.id) as relationships
+FROM papers p
+LEFT JOIN evidence ev ON p.id = ev.paper_id
+LEFT JOIN relationships r ON ev.relationship_id = r.id
+LEFT JOIN entities e on e.id = r.subject_id OR e.id = r.object_id
+GROUP BY p.id;
+"
+```
+
+## 6. Accessing Data from Other Stacks
+
+Since the database files are stored in `ingestion/data/postgres`, you can point any other Docker stack to this directory to access the graph data.
+
+Example volume configuration for another stack:
+```yaml
+services:
+  retrieval_db:
+    image: pgvector/pgvector:pg16
+    volumes:
+      - ./path/to/ingestion/data/postgres:/var/lib/postgresql/data
+```

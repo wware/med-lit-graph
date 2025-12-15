@@ -16,7 +16,7 @@ The following metadata is captured for every extraction:
     -   A "dirty" flag to indicate if there were uncommitted changes.
 -   **Models Used**:
     -   LLM name and version (e.g., `llama3.1:70b`)
-    -   Embedding model name (e.g., `dmis-lab/biobert-base-cased-v1.2`)
+    -   Embedding model name (e.g., `microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext`)
     -   Model parameters (e.g., temperature).
 -   **Prompt**:
     -   The version or name of the prompt template used for extraction.
@@ -53,7 +53,7 @@ The quality of the extracted data is heavily dependent on the quality of the pro
 
 -   **Explicit Ontology**: Clearly define the types of entities and relationships to be extracted (e.g., `GENE`, `DISEASE`, `COMPOUND`).
 -   **Evidence Requirements**: Specify the textual evidence required to support a relationship.
--   **Confidence Scoring**: Provide a rubric for the model to assign `HIGH`, `MEDIUM`, or `LOW` confidence to its findings.
+-   **Confidence Scoring**: Provide a rubric for the model to assign numeric confidence (0.0-1.0) based on study type (e.g., RCT = 0.9-1.0, Case Report = 0.5-0.69).
 -   **Error Prevention**: Explicitly list common mistakes for the model to avoid.
 -   **Quality Checklist**: Force the model to review its own output against a checklist before finalizing the result.
 -   **Few-Shot Examples**: Include 2-3 examples of high-quality input text and the desired JSON output.

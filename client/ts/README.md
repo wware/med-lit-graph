@@ -17,15 +17,12 @@ Query medical research papers, drug-disease relationships, gene associations, an
 ## Installation
 
 ```bash
-npm install @medgraph/client
-```
+# To install dependencies:
+cd client/ts
+npm install
 
-Or with your preferred package manager:
-
-```bash
-yarn add @medgraph/client
-pnpm add @medgraph/client
-bun add @medgraph/client
+# To use as a local package:
+npm link
 ```
 
 ## Quick Start
@@ -93,7 +90,7 @@ const contradictions = await client.findContradictoryEvidence(
 Build custom queries with the fluent API:
 
 ```typescript
-import { QueryBuilder, EntityType, PredicateType } from '@medgraph/client';
+import { MedicalGraphClient, QueryBuilder, EntityType, PredicateType } from '@medgraph/client';
 
 const query = new QueryBuilder()
   .findNodes(EntityType.GENE)
@@ -101,8 +98,8 @@ const query = new QueryBuilder()
     direction: 'incoming',
     minConfidence: 0.6
   })
-  .filterTarget(EntityType.DISEASE, { 
-    namePattern: '.*cancer.*' 
+  .filterTarget(EntityType.DISEASE, {
+    namePattern: '.*cancer.*'
   })
   .aggregate(
     ['gene.name'],
@@ -241,37 +238,37 @@ new MedicalGraphClient(config: ClientConfig | string)
 
 #### Methods
 
-**`execute<T>(query: GraphQuery): Promise<QueryResult<T>>`**  
+**`execute<T>(query: GraphQuery): Promise<QueryResult<T>>`**
 Execute a graph query
 
-**`executeRaw<T>(queryDict: Record<string, any>): Promise<QueryResult<T>>`**  
+**`executeRaw<T>(queryDict: Record<string, any>): Promise<QueryResult<T>>`**
 Execute a raw query object
 
-**`findTreatments(disease: string, options?): Promise<QueryResult>`**  
+**`findTreatments(disease: string, options?): Promise<QueryResult>`**
 Find drugs that treat a disease
 
-**`findDiseaseGenes(disease: string, options?): Promise<QueryResult>`**  
+**`findDiseaseGenes(disease: string, options?): Promise<QueryResult>`**
 Find genes associated with a disease
 
-**`findDiagnosticTests(disease: string, options?): Promise<QueryResult>`**  
+**`findDiagnosticTests(disease: string, options?): Promise<QueryResult>`**
 Find diagnostic tests for a disease
 
-**`findDrugMechanisms(drugName: string): Promise<QueryResult>`**  
+**`findDrugMechanisms(drugName: string): Promise<QueryResult>`**
 Find mechanism of action for a drug
 
-**`compareTreatmentEvidence(disease: string, drugs: string[]): Promise<QueryResult>`**  
+**`compareTreatmentEvidence(disease: string, drugs: string[]): Promise<QueryResult>`**
 Compare evidence quality across treatments
 
-**`searchBySymptoms(symptoms: string[], options?): Promise<QueryResult>`**  
+**`searchBySymptoms(symptoms: string[], options?): Promise<QueryResult>`**
 Differential diagnosis from symptoms
 
-**`findContradictoryEvidence(drug: string, disease: string): Promise<QueryResult>`**  
+**`findContradictoryEvidence(drug: string, disease: string): Promise<QueryResult>`**
 Find contradictory relationships
 
-**`getPaperDetails(paperId: string): Promise<QueryResult>`**  
+**`getPaperDetails(paperId: string): Promise<QueryResult>`**
 Get details about a specific paper
 
-**`batch(queries: Array<{id: string, query: GraphQuery}>): Promise<Record<string, QueryResult>>`**  
+**`batch(queries: Array<{id: string, query: GraphQuery}>): Promise<Record<string, QueryResult>>`**
 Execute multiple queries in parallel
 
 ### QueryBuilder
@@ -310,17 +307,17 @@ enum EntityType {
 enum PredicateType {
   // Causal
   CAUSES, PREVENTS, INCREASES_RISK, DECREASES_RISK,
-  
+
   // Treatment
   TREATS, MANAGES, CONTRAINDICATES,
-  
+
   // Biological
   BINDS_TO, INHIBITS, ACTIVATES,
   UPREGULATES, DOWNREGULATES, ENCODES,
-  
+
   // Clinical
   DIAGNOSES, INDICATES, ASSOCIATED_WITH,
-  
+
   // Provenance
   CITES, CONTRADICTS, SUPPORTS
 }
@@ -433,7 +430,7 @@ try {
 } catch (error) {
   if (error instanceof Error) {
     console.error('Query failed:', error.message);
-    
+
     if (error.name === 'AbortError') {
       console.error('Request timed out');
     }
@@ -446,7 +443,7 @@ try {
 Full TypeScript support with comprehensive types:
 
 ```typescript
-import { 
+import {
   MedicalGraphClient,
   QueryBuilder,
   EntityType,
@@ -484,5 +481,5 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Related Projects
 
-- [@medgraph/python](https://pypi.org/project/medgraph-client/) - Python client
-- [@medgraph/server](https://github.com/yourusername/medgraph-server) - MCP server implementation
+- [Python Client](../python/README.md)
+- [MCP Server](../../mcp/server.py)

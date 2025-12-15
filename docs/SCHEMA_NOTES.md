@@ -214,12 +214,12 @@ class ConflictingEvidence(BaseModel):
 
 ---
 
-## JSON Query Language for Neptune
+## JSON Query Language for PostgreSQL
 
 ### Design Principles
 
 1. **Declarative**: Describe what you want, not how to get it
-2. **Translatable**: Must map cleanly to both Gremlin and openCypher
+2. **Translatable**: Maps cleanly to PostgreSQL SQL (using CTEs for paths)
 3. **Composable**: Support complex multi-hop queries
 4. **Filterable**: Rich filtering on node/edge properties
 5. **Aggregatable**: Support counts, grouping, statistics
@@ -350,23 +350,17 @@ class AggregationSpec(BaseModel):
 }
 ```
 
-**Translation to openCypher:**
-```cypher
-MATCH (drug:drug)-[r:treats]->(disease:disease)
+**Translation to SQL (PostgreSQL):**
+```sql
+SELECT drug.*
+FROM entities AS drug
+JOIN relationships AS r ON drug.id = r.subject_id
+JOIN entities AS disease ON r.object_id = disease.id
 WHERE disease.name = 'breast cancer'
+  AND r.predicate = 'treats'
   AND r.confidence >= 0.7
-RETURN drug
 ORDER BY r.confidence DESC
-LIMIT 10
-```
-
-**Translation to Gremlin:**
-```gremlin
-g.V().hasLabel('disease').has('name', 'breast cancer')
-  .inE('treats').has('confidence', gte(0.7))
-  .outV().hasLabel('drug')
-  .order().by('confidence', desc)
-  .limit(10)
+LIMIT 10;
 ```
 
 ### Example 2: Find genes associated with a disease through any mechanism
@@ -543,30 +537,13 @@ g.V().hasLabel('disease').has('name', 'breast cancer')
 ## Query Translator Implementation
 
 ```python
-class QueryTranslator:
-    """Translate JSON queries to Neptune query languages"""
+class SQLQueryExecutor:
+    """Translate JSON queries to PostgreSQL SQL"""
 
-    def to_opencypher(self, query: GraphQuery) -> str:
-        """Translate to openCypher"""
-        if query.find == "nodes":
-            return self._nodes_to_cypher(query)
-        elif query.find == "edges":
-            return self._edges_to_cypher(query)
-        elif query.find == "paths":
-            return self._paths_to_cypher(query)
-        else:
-            raise ValueError(f"Unsupported find type: {query.find}")
-
-    def to_gremlin(self, query: GraphQuery) -> str:
-        """Translate to Gremlin"""
-        if query.find == "nodes":
-            return self._nodes_to_gremlin(query)
-        elif query.find == "edges":
-            return self._edges_to_gremlin(query)
-        elif query.find == "paths":
-            return self._paths_to_gremlin(query)
-        else:
-            raise ValueError(f"Unsupported find type: {query.find}")
+    def execute(self, query: GraphQuery) -> dict:
+        """Translate and execute against PostgreSQL"""
+        sql = self.translate(query)
+        # execute sql...
 
     def _nodes_to_cypher(self, query: GraphQuery) -> str:
         """Generate Cypher for node queries"""
@@ -591,201 +568,6 @@ class QueryTranslator:
                 match_parts.append(f"-[{edge_var}{rel_type}]-")
 
             match_parts.append("(target)")
-
-        parts.append(f"MATCH {''.join(match_parts)}")
-
-        # WHERE clause
-        where_clauses = []
-        if query.filters:
-            for f in query.filters:
-                where_clauses.append(self._filter_to_cypher(f))
-
-        if where_clauses:
-            parts.append(f"WHERE {' AND '.join(where_clauses)}")
-
-        # RETURN clause
-        return_var = query.node_pattern.var or "n"
-        parts.append(f"RETURN {return_var}")
-
-        # ORDER BY
-        if query.order_by:
-            order_clauses = [f"{return_var}.{field} {direction.upper()}"
-                             for field, direction in query.order_by]
-            parts.append(f"ORDER BY {', '.join(order_clauses)}")
-
-        # LIMIT
-        if query.limit:
-            parts.append(f"LIMIT {query.limit}")
-
-        return "\n".join(parts)
-
-    def _filter_to_cypher(self, f: PropertyFilter) -> str:
-        """Convert PropertyFilter to Cypher WHERE clause"""
-        op_map = {
-            "eq": "=",
-            "ne": "<>",
-            "gt": ">",
-            "gte": ">=",
-            "lt": "<",
-            "lte": "<=",
-            "in": "IN",
-            "contains": "CONTAINS",
-            "regex": "=~"
-        }
-
-        op = op_map.get(f.operator, "=")
-
-        if f.operator == "in":
-            value_str = str(f.value) if isinstance(f.value, list) else f"[{f.value}]"
-        elif f.operator == "regex":
-            value_str = f"'{f.value}'"
-        elif isinstance(f.value, str):
-            value_str = f"'{f.value}'"
-        else:
-            value_str = str(f.value)
-
-        return f"{f.field} {op} {value_str}"
-```
-
----
-
-## Integration with LLM Query Generation
-
-```python
-class NaturalLanguageQueryParser:
-    """Convert natural language to structured JSON queries"""
-
-    def __init__(self, llm_client):
-        self.llm_client = llm_client
-
-    def parse(self, natural_query: str) -> GraphQuery:
-        """Convert NL query to structured query using LLM"""
-
-        prompt = f"""Convert this medical research question into a structured graph query.
-
-Question: {natural_query}
-
-Available entity types: {[e.value for e in EntityType]}
-Available relationship types: {[r.value for r in PredicateType]}
-
-Return a JSON query following this schema:
-{GraphQuery.model_json_schema()}
-
-Focus on the core medical entities and relationships. Be specific about confidence thresholds and evidence requirements.
-
-JSON Query:"""
-
-        response = self.llm_client.generate(prompt)
-        query_json = self._extract_json(response)
-        return GraphQuery.model_validate(query_json)
-
-    def _extract_json(self, text: str) -> dict:
-        """Extract JSON from LLM response"""
-        import json
-        import re
-
-        # Try to find JSON block
-        json_match = re.search(r'```json\n(.*?)\n```', text, re.DOTALL)
-        if json_match:
-            return json.loads(json_match.group(1))
-
-        # Try to parse directly
-        return json.loads(text)
-```
-
----
-
-## Complete Per-Paper JSON Schema
-
-```python
-class PaperKnowledgeGraph(BaseModel):
-    """Complete knowledge subgraph for a single paper"""
-
-    # Paper metadata
-    paper_id: str  # PMC ID
-    pmid: str | None = None
-    doi: str | None = None
-    version: str = "v1"
-    status: Literal["active", "corrected", "retracted"] = "active"
-
-    # Bibliographic info
-    metadata: dict = Field(default_factory=lambda: {
-        "title": None,
-        "abstract": None,
-        "authors": [],
-        "journal": None,
-        "publication_date": None,
-        "mesh_terms": [],
-        "keywords": [],
-    })
-
-    # Paper-specific abbreviations
-    abbreviations: dict[str, str] = Field(default_factory=dict)
-
-    # Extracted entities (deduplicated to canonical IDs)
-    entities: list[GraphNode] = Field(default_factory=list)
-
-    # Extracted relationships
-    relationships: list[GraphEdge] = Field(default_factory=list)
-
-    # Text chunks with embeddings
-    chunks: list["TextChunk"] = Field(default_factory=list)
-
-    # Tables
-    tables: list["TableData"] = Field(default_factory=list)
-
-    # Figures (for future image analysis)
-    figures: list[dict] = Field(default_factory=list)
-
-    # Citations within the paper
-    citations: list["Citation"] = Field(default_factory=list)
-
-    # Processing metadata
-    processing_info: dict = Field(default_factory=lambda: {
-        "ingestion_date": None,
-        "parser_version": None,
-        "ner_model": None,
-        "embedding_model": None,
-        "relationship_extractor": None,
-    })
-
-class TextChunk(BaseModel):
-    """Text chunk with embedding and metadata"""
-    chunk_id: str
-    section_type: Literal["abstract", "introduction", "methods", "results", "discussion", "conclusion"]
-    paragraph_idx: int
-    sentence_indices: list[int]  # Which sentences are in this chunk
-
-    text: str
-    embedding: list[float]  # 1024-dim vector
-
-    # Entities mentioned in this chunk
-    entity_mentions: list[str]  # Entity IDs
-
-    # Relationships stated in this chunk
-    relationship_ids: list[str]  # Relationship IDs
-
-class TableData(BaseModel):
-    """Structured table data"""
-    table_id: str
-    caption: str
-    headers: list[str]
-    rows: list[list[str]]
-
-    # Relationships extracted from table
-    extracted_relationships: list[str]  # Relationship IDs
-
-class Citation(BaseModel):
-    """Citation to another paper"""
-    cited_paper_id: str | None = None  # If we have it
-    citation_text: str
-    citation_context: str  # Surrounding text
-    section_type: str
-    paragraph_idx: int
-```
-
----
-
 ## Usage Example: End-to-End
 
 ```python
@@ -796,40 +578,13 @@ user_question = "What drugs have been shown to effectively treat type 2 diabetes
 parser = NaturalLanguageQueryParser(llm_client)
 structured_query = parser.parse(user_question)
 
-# structured_query looks like:
-# {
-#   "find": "nodes",
-#   "node_pattern": {"node_type": "drug"},
-#   "edge_pattern": {
-#     "relation_type": "treats",
-#     "direction": "outgoing",
-#     "min_confidence": 0.7
-#   },
-#   "filters": [
-#     {"field": "target.name", "operator": "eq", "value": "type 2 diabetes"},
-#     {"field": "edge.evidence.study_type", "operator": "eq", "value": "rct"}
-#   ],
-#   "aggregate": {
-#     "group_by": ["node.name"],
-#     "aggregations": {"paper_count": ["count", "edge.evidence.paper_id"]}
-#   },
-#   "order_by": [["paper_count", "desc"]],
-#   "limit": 10
-# }
+# 3. Translate and execute against PostgreSQL
+executor = SQLQueryExecutor("postgresql://postgres:postgres@localhost:5432/medgraph")
+results = executor.execute(structured_query)
 
-# 3. Translate to Neptune query language
-translator = QueryTranslator()
-cypher_query = translator.to_opencypher(structured_query)
-
-# 4. Execute against Neptune
-from neo4j import GraphDatabase
-driver = GraphDatabase.driver("bolt://neptune-endpoint:8182")
-with driver.session() as session:
-    results = session.run(cypher_query)
-
-# 5. Format results for user
-for record in results:
-    drug_name = record["node"]["name"]
+# 4. Format results for user
+for record in results["results"]:
+    drug_name = record["drug.name"]
     paper_count = record["paper_count"]
     print(f"{drug_name}: supported by {paper_count} RCTs")
 ```

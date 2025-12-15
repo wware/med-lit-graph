@@ -17,7 +17,6 @@ import json
 import sys
 from typing import Any, Dict, List, Optional
 
-
 # Add parent directory to path to import from src
 from client.python.client import MedicalGraphClient
 
@@ -29,21 +28,18 @@ class MCPServer:
     Connects AI assistants (Claude Desktop, etc.) to the medical knowledge graph backend.
 
     Attributes:
-        opensearch_host (str): Hostname for OpenSearch.
-        opensearch_port (int): Port for OpenSearch.
+        server_url (str): URL for the Medical Graph API server.
         client (Optional[MedicalGraphClient]): Client for interacting with the medical papers knowledge base.
         tools (List[Dict[str, Any]]): List of tools provided by this server.
     """
 
-    def __init__(self, opensearch_host: str = "localhost", opensearch_port: int = 9200):
-        """Initialize MCP server with OpenSearch connection.
+    def __init__(self, server_url: str = "http://localhost:8000"):
+        """Initialize MCP server with connection to the Medical Graph API.
 
         Args:
-            opensearch_host (str): Hostname for OpenSearch. Defaults to "localhost".
-            opensearch_port (int): Port for OpenSearch. Defaults to 9200.
+            server_url (str): Base URL for the Medical Graph API. Defaults to "http://localhost:8000".
         """
-        self.opensearch_host = opensearch_host
-        self.opensearch_port = opensearch_port
+        self.server_url = server_url
         self.client: Optional[MedicalGraphClient] = None
 
         # Tool definitions for MCP protocol
@@ -117,16 +113,16 @@ class MCPServer:
         ]
 
     async def initialize(self) -> bool:
-        """Initialize OpenSearch client.
+        """Initialize Medical Graph client.
 
         Returns:
             bool: True if initialization was successful, False otherwise.
         """
         try:
-            self.client = MedicalGraphClient(base_url=f"http://{self.opensearch_host}:{self.opensearch_port}")
+            self.client = MedicalGraphClient(base_url=self.server_url)
             return True
         except Exception as e:
-            self._log_error(f"Failed to initialize OpenSearch client: {e}")
+            self._log_error(f"Failed to initialize Medical Graph client: {e}")
             return False
 
     def _log_error(self, message: str) -> None:
@@ -167,7 +163,7 @@ class MCPServer:
         """
         if not self.client:
             return {
-                "content": [{"type": "text", "text": "Error: OpenSearch client not initialized"}],
+                "content": [{"type": "text", "text": "Error: Medical Graph client not initialized"}],
                 "isError": True,
             }
 
@@ -433,12 +429,11 @@ def main():
     """Entry point for MCP server"""
     import os
 
-    # Get OpenSearch config from environment
-    opensearch_host = os.getenv("OPENSEARCH_HOST", "localhost")
-    opensearch_port = int(os.getenv("OPENSEARCH_PORT", "9200"))
+    # Get Backend API config from environment
+    server_url = os.getenv("MEDGRAPH_SERVER", "http://localhost:8000")
 
     # Create and run server
-    server = MCPServer(opensearch_host=opensearch_host, opensearch_port=opensearch_port)
+    server = MCPServer(server_url=server_url)
 
     # Run async event loop
     asyncio.run(server.run())

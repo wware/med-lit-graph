@@ -1,0 +1,48 @@
+services:
+  ollama:
+    build:
+      context: .
+      dockerfile: Dockerfile.ollama
+    #ports:
+    #- "11434:11434"
+    environment:
+      - LANGUAGE_MODEL=${LANGUAGE_MODEL:-llama3.1:70b}
+    volumes:
+      # Use a host directory to persist Ollama models
+      - ~/ollama_data:/root/.ollama
+      # This line is optional. You can use it to mount pre-downloaded models.
+      # - ${OLLAMA_MODELS:-./models}:/models
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      - POSTGRES_DB=medgraph
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+      - ../schema/migration.sql:/docker-entrypoint-initdb.d/init.sql
+
+  ingest:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      # The ingest script needs to know where the Ollama API is.
+      # 'ollama' is the service name in this docker-compose file.
+      - OLLAMA_HOST=http://ollama:11434
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/medgraph
+    depends_on:
+      - ollama
+      - postgres
+    # 'command' is overridden by the command line arguments you provide.
+    # This default is just for documentation.
+    command: >
+      python ingest_papers.py
+      --query "search terms"
+      --limit 10
+      --model "llama3.1:70b"
+
+

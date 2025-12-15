@@ -86,8 +86,8 @@ const query = new QueryBuilder()
     direction: 'incoming',
     minConfidence: 0.6
   })
-  .filterTarget(EntityType.DISEASE, { 
-    namePattern: '.*breast cancer.*' 
+  .filterTarget(EntityType.DISEASE, {
+    namePattern: '.*breast cancer.*'
   })
   .aggregate(
     ['gene.name'],
@@ -372,7 +372,7 @@ try {
 } catch (error) {
   if (error instanceof Error) {
     console.error('Query failed:', error.message);
-    
+
     // Parse error details if available
     if (error.message.includes('API Error:')) {
       // Handle API-specific errors
@@ -433,9 +433,9 @@ function TreatmentSearch() {
       <button onClick={searchTreatments} disabled={loading}>
         Search
       </button>
-      
+
       {loading && <p>Loading...</p>}
-      
+
       <ul>
         {treatments.map((t, i) => (
           <li key={i}>
@@ -513,16 +513,16 @@ app.use(express.json());
 app.post('/api/search/treatments', async (req, res) => {
   try {
     const { disease, minConfidence, limit } = req.body;
-    
+
     const results = await client.findTreatments(disease, {
       minConfidence,
       limit
     });
-    
+
     res.json(results);
   } catch (error) {
-    res.status(500).json({ 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
@@ -532,8 +532,8 @@ app.post('/api/query/custom', async (req, res) => {
     const results = await client.execute(req.body);
     res.json(results);
   } catch (error) {
-    res.status(500).json({ 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
@@ -602,7 +602,7 @@ describe('MedicalGraphClient', () => {
 
   it('should find treatments for a disease', async () => {
     const results = await client.findTreatments('diabetes');
-    
+
     expect(results.results).toBeDefined();
     expect(results.results.length).toBeGreaterThan(0);
     expect(results.metadata.total_results).toBeGreaterThan(0);
@@ -657,9 +657,9 @@ async function* paginateResults(baseQuery: GraphQuery, pageSize = 20) {
   while (hasMore) {
     const query = { ...baseQuery, limit: pageSize, offset };
     const page = await client.execute(query);
-    
+
     yield page.results;
-    
+
     hasMore = page.results.length === pageSize;
     offset += pageSize;
   }

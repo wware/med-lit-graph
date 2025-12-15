@@ -30,7 +30,7 @@ Welcome to the comprehensive documentation for the Medical Knowledge Graph proje
 **[Query Language Notes](QUERY_LANGUAGE_NOTES.md)**
 - JSON-based graph query language design
 - LLM-friendly query structure
-- Translation to Neptune (openCypher/Gremlin)
+- Translation to PostgreSQL SQL (via Recursive CTEs)
 - Natural language to structured query parsing
 - MCP registry and publishing information
 
@@ -93,7 +93,7 @@ Every medical relationship must include evidence from peer-reviewed literature. 
 Per-paper JSON files serve as the immutable source of truth. The graph database is regenerated from these files. See [Design Decisions - Source of Truth](DESIGN_DECISIONS.md#2-immutable-source-of-truth-json-files).
 
 ### Vendor-Neutral Query Language
-JSON-based query language that translates to any graph database (Neptune, Neo4j, ArangoDB). See [Query Language Notes](QUERY_LANGUAGE_NOTES.md) and [Design Decisions - Query Language](DESIGN_DECISIONS.md#3-json-query-language-vs-native-graph-qls).
+JSON-based query language that translates to any relational or graph database (optimized for PostgreSQL). See [Query Language Notes](QUERY_LANGUAGE_NOTES.md) and [Design Decisions - Query Language](DESIGN_DECISIONS.md#3-json-query-language-vs-native-graph-qls).
 
 ### Evidence Quality Weighting
 Automatic confidence scoring based on study type (RCT > meta-analysis > case report). See [Design Decisions - Evidence Weighting](DESIGN_DECISIONS.md#4-evidence-quality-weighting).
