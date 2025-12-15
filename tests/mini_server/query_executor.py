@@ -849,17 +849,22 @@ def build_path_result(path: Dict, start_spec: Dict, edge_specs: List[List]) -> D
     Build a result dictionary from a path.
 
     Includes fields from nodes and edges based on variable names.
+    For each node, includes all its fields prefixed with the variable name.
+    For each edge, includes all its fields prefixed with the edge variable name.
     """
     nodes = path["nodes"]
     edges = path["edges"]
 
     result = {}
 
-    # Add start node fields
+    # Add start node fields - include ALL fields from the node
     start_var = start_spec.get("var", "start")
     if nodes:
-        result[f"{start_var}.name"] = nodes[0]["name"]
-        result[f"{start_var}.id"] = nodes[0]["id"]
+        start_node = nodes[0]
+        for field_name, field_value in start_node.items():
+            # Skip internal fields that shouldn't be exposed
+            if field_name not in ["type", "canonical_id", "mentions", "aliases", "description"]:
+                result[f"{start_var}.{field_name}"] = field_value
 
     # Add intermediate nodes and edges
     for i, edge_pair in enumerate(edge_specs):
@@ -872,14 +877,22 @@ def build_path_result(path: Dict, start_spec: Dict, edge_specs: List[List]) -> D
         if i < len(edges):
             edge = edges[i]
             edge_var = edge_spec.get("var", f"edge{i}")
+            # Add all edge fields, including metadata
             result[f"{edge_var}.relation_type"] = edge["predicate"]
             result[f"{edge_var}.confidence"] = edge.get("confidence", 0.0)
+            # Include metadata fields directly at the edge variable level
+            metadata = edge.get("metadata", {})
+            for meta_key, meta_value in metadata.items():
+                result[f"{edge_var}.{meta_key}"] = meta_value
 
         if i + 1 < len(nodes):
             node = nodes[i + 1]
             node_var = target_spec.get("var", f"node{i + 1}")
-            result[f"{node_var}.name"] = node["name"]
-            result[f"{node_var}.id"] = node["id"]
+            # Add ALL fields from the node
+            for field_name, field_value in node.items():
+                # Skip internal fields that shouldn't be exposed
+                if field_name not in ["type", "canonical_id", "mentions", "aliases", "description"]:
+                    result[f"{node_var}.{field_name}"] = field_value
 
     return result
 

@@ -19,6 +19,7 @@ import multiprocessing
 import socket
 import threading
 import time
+import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from socketserver import ThreadingMixIn
@@ -462,6 +463,7 @@ def mini_server() -> Generator[str, None, None]:
     # Find a free port
     port = _find_free_port()
     base_url = f"http://127.0.0.1:{port}"
+    os.environ["MEDGRAPH_SERVER"] = base_url + "/"
 
     logger.info(f"Starting mini server on port {port}")
 

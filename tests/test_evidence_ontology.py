@@ -5,7 +5,6 @@ The Evidence class now supports standardized classification of evidence types,
 study designs, and statistical methods using biomedical ontology IDs.
 """
 
-import pytest
 from schema.entity import Evidence
 
 

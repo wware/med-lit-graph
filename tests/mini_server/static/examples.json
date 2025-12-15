@@ -1326,30 +1326,33 @@
   {
     "title": "Example 25: Find Papers Supporting a Relationship",
     "query": {
-      "find": "papers",
+      "find": "relationships",
       "filters": [
         {
-          "field": "relationships.subject.name",
+          "field": "subject.name",
           "operator": "eq",
           "value": "Metformin"
         },
         {
-          "field": "relationships.object.name",
+          "field": "object.name",
           "operator": "eq",
           "value": "Type 2 Diabetes"
         },
         {
-          "field": "relationships.predicate",
+          "field": "predicate",
           "operator": "eq",
           "value": "TREATS"
         }
       ],
       "return_fields": [
-        "paper_id",
-        "title",
-        "authors",
-        "publication_date",
-        "journal"
+        "papers"
+      ]
+    },
+    "expected_response": {
+      "results": [
+        {
+          "papers": ["PMC234567", "PMC345678", "PMC456789"]
+        }
       ]
     }
   },

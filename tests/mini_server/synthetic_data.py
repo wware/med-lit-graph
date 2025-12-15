@@ -142,7 +142,6 @@ def generate_entities() -> Dict[str, Dict]:
     entities["PMC9876543"] = {
         "id": "PMC9876543",
         "type": "paper",
-        "name": "Aducanumab fails to meet primary endpoints",
         "canonical_id": "PMC9876543",
         "pmc_id": "PMC9876543",
         "title": "Aducanumab fails to meet primary endpoints",

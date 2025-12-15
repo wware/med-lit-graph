@@ -1539,10 +1539,7 @@ curl -X POST $MEDGRAPH_SERVER/api/v1/query \
       "protein.name": "AMPK",
       "marker.name": "Glycated Hemoglobin",
       "activation.confidence": 0.90,
-      "downreg.confidence": 0.88,
-      "path": [
-        "Metformin -> ACTIVATES -> AMPK -> DOWNREGULATES -> HbA1c"
-      ]
+      "downreg.confidence": 0.88
     }
   ]
 }
@@ -1561,30 +1558,26 @@ curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
-  "find": "papers",
+  "find": "relationships",
   "filters": [
     {
-      "field": "relationships.subject.name",
+      "field": "subject.name",
       "operator": "eq",
       "value": "Metformin"
     },
     {
-      "field": "relationships.object.name",
+      "field": "object.name",
       "operator": "eq",
       "value": "Type 2 Diabetes"
     },
     {
-      "field": "relationships.predicate",
+      "field": "predicate",
       "operator": "eq",
       "value": "TREATS"
     }
   ],
   "return_fields": [
-    "paper_id",
-    "title",
-    "authors",
-    "publication_date",
-    "journal"
+    "papers"
   ]
 }'
 ```
@@ -1596,18 +1589,7 @@ curl -X POST $MEDGRAPH_SERVER/api/v1/query \
   "status": "success",
   "results": [
     {
-      "paper_id": "PMC234567",
-      "title": "Metformin Activation of AMPK and Effects on Glycemic Control",
-      "authors": ["Zhou G", "Myers R", "Li Y", "Chen Y", "Shen X"],
-      "publication_date": "2018-03-15",
-      "journal": "Journal of Clinical Investigation"
-    },
-    {
-      "paper_id": "PMC345678",
-      "title": "Long-term Metformin Use in Type 2 Diabetes: A Cohort Study",
-      "authors": ["Turner RC", "Holman RR", "Cull CA", "Stratton IM"],
-      "publication_date": "2019-06-22",
-      "journal": "Diabetes Care"
+      "papers": ["PMC234567", "PMC345678", "PMC456789"]
     }
   ]
 }
