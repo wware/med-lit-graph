@@ -1,3 +1,7 @@
-grep Filename README.md | \
-    sed -E 's|.*`(PMC[0-9]+)`.*$|curl -fL -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64)" -o \1.xml "https://pmc.ncbi.nlm.nih.gov/articles/\1/?report=xml\&format=text"|' | \
-    bash
+#!/bin/bash
+
+for pmcid in 2545367 269292 268988 322947 323687 238320 269383 329539 1307740; do
+    curl -s "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pmc&id=$pmcid&retmode=xml" \
+         -o "PMC${pmcid}.xml"
+    sleep 10
+done
