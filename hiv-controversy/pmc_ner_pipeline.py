@@ -1,53 +1,32 @@
 # pmc_ner_pipeline.py
 """
-Let’s put together a **Python pipeline** to extract entities from your PMC
-XMLs, normalize them with UMLS IDs (via SciSpacy), and output a CSV suitable
-for building a knowledge graph.
+Stage 1: Entity Extraction Pipeline
 
-### **How it works**
+Extracts biomedical entities from PMC XML files using BioBERT NER model.
+Stores canonical entities in SQLite with alias mappings for entity resolution.
+Outputs co-occurrence edges for knowledge graph construction.
 
-1.  Reads all `PMC*.xml` files from `./pmc_xmls`.
-2.  Extracts abstract text first; falls back to `<body>` if abstract missing.
-3.  Uses **SciSpacy** with **UMLS linking** to find biomedical entities.
-4.  Outputs CSV with columns:
+Usage:
+    docker-compose run pipeline
 
-```
-pmc_id, source_text, entity_text, umls_cuis
-```
-
--   `source_text` can be used for context in KG edges.
--   `umls_cuis` gives canonical IDs, so multiple mentions of the same entity
-    across papers can be merged.
-    
-### **Next Steps / Improvements**
-
--   Add **sentence-level splitting** if you want to extract co-occurrence or relationships.
--   Consider **filtering entity types** (genes, chemicals, diseases) to reduce noise.
--   Later, you can ingest this CSV into **Neo4j** or **NetworkX** to build the knowledge graph.
-
-If you want, I can also extend this script to **produce a node & edge CSV for
-Neo4j directly**, so you could load your KG without extra processing.
-
-CSV will not be the last word on formatting this stuff, but it's sufficient for now.
+Output:
+    - entities.db: SQLite database with canonical entities and aliases
+    - nodes.csv: Extracted nodes for debugging/inspection
+    - edges.csv: Co-occurrence edges for debugging/inspection
 """
 
-# pmc_ner_pipeline_epistemic.py
 from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
 import pandas as pd
 from lxml import etree
 from pathlib import Path
 import sqlite3
 from datetime import datetime
+import os
 
 # ------------------------------
 # Setup NER pipeline
 # ------------------------------
-# Use a model with clear NER capabilities
-model_name = "ugaray96/biobert_ncbi_disease_ner"  # Well-documented, NCBI disease NER
-# For diseases specifically (best for HIV/AIDS focus)
-# model_name = "alvaroalon2/biobert_diseases_ner"  # BC5CDR + NCBI diseases
-# model_name = "d4data/biomedical-ner-all"  # Multi-corpus trained
-# model_name = "raynardj/ner-disease-ncbi-bionlp-bc5cdr-pubmed"
+model_name = "ugaray96/biobert_ncbi_disease_ner"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForTokenClassification.from_pretrained(model_name)
 ner_pipeline = pipeline(
@@ -60,7 +39,6 @@ ner_pipeline = pipeline(
 # ------------------------------
 # Setup SQLite canonical entity DB
 # ------------------------------
-import os
 os.makedirs("/app/output", exist_ok=True)
 db_path = "/app/output/entities.db"
 conn = sqlite3.connect(db_path)
@@ -88,7 +66,21 @@ CREATE TABLE IF NOT EXISTS aliases (
 """)
 conn.commit()
 
+# Stopwords to filter out common non-entity words
+STOPWORDS = {
+    "acquired", "human", "chronic", "enter", "lymph",
+    "the", "and", "or", "but", "with", "from", "that",
+    "this", "these", "those", "their", "there"
+}
+
 def get_or_create_entity(name, entity_type="GENERIC", source=None, confidence=None):
+    """
+    Get existing entity ID or create new canonical entity with alias.
+    
+    This enables entity resolution: multiple mentions of the same entity
+    (e.g., "HIV", "HTLV-III", "LAV") can be mapped to the same canonical ID.
+    Currently does simple name matching; Stage 3 will add embedding-based clustering.
+    """
     # Check if alias exists
     cursor = conn.execute("SELECT entity_id FROM aliases WHERE name=?", (name,))
     row = cursor.fetchone()
@@ -126,7 +118,7 @@ for xml_file in input_dir.glob("PMC*.xml"):
     tree = etree.parse(str(xml_file))
     root = tree.getroot()
 
-    # Extract text
+    # Extract text - prefer abstract, fall back to body
     text_chunks = [p.text for p in root.findall(".//abstract//p") if p.text]
     if not text_chunks:
         text_chunks = [p.text for p in root.findall(".//body//p") if p.text]
@@ -138,24 +130,31 @@ for xml_file in input_dir.glob("PMC*.xml"):
     entities = ner_pipeline(full_text)
     entity_ids_in_text = []
 
-
     for ent in entities:
-        # Skip if it's not actually an entity label
+        # Filter by entity label - this model uses 'Disease' and 'No Disease'
         label = ent.get("entity_group", ent.get("entity", "O"))
-        if label == "O" or label == "0" or not label.startswith(("B-", "I-", "DISEASE", "CHEMICAL")):
+        if label != "Disease":
             continue
 
         name = ent["word"].strip()
 
         # Skip obvious garbage
-        if len(name) < 2 or name in ["(", ")", ",", ".", "-"]:
+        if len(name) < 3:  # Minimum 3 characters
             continue
-        if name.startswith("##"):
+        if name in ["(", ")", ",", ".", "-"]:
+            continue
+        if name.startswith("##"):  # Subword tokens
+            continue
+        if name.lower() in STOPWORDS:  # Common non-entity words
             continue
 
-        label = ent.get("entity_group", "GENERIC")
         confidence = ent.get("score", None)
+        
+        # Skip low-confidence predictions to reduce noise
+        if confidence and confidence < 0.85:
+            continue
 
+        # Get or create canonical entity
         entity_id = get_or_create_entity(
             name=name,
             entity_type=label,
@@ -163,6 +162,7 @@ for xml_file in input_dir.glob("PMC*.xml"):
             confidence=confidence
         )
 
+        # Store node for CSV output
         nodes.append({
             "id": entity_id,
             "name": name,
@@ -174,10 +174,12 @@ for xml_file in input_dir.glob("PMC*.xml"):
         entity_ids_in_text.append(entity_id)
 
     # Build co-occurrence edges with counts
+    # This is EXTRACTION layer only - no semantic predicates yet (that's Stage 4)
     for i in range(len(entity_ids_in_text)):
         for j in range(i + 1, len(entity_ids_in_text)):
             key = tuple(sorted((entity_ids_in_text[i], entity_ids_in_text[j])))
             edges_dict[key] = edges_dict.get(key, 0) + 1
+    
     processed_count += 1
 
 # ------------------------------
@@ -189,9 +191,12 @@ edges_df = pd.DataFrame([
     for k, v in edges_dict.items()
 ])
 
-# Write CSVs for Neo4j
+# Write CSVs for inspection/debugging
 nodes_df.to_csv("/app/output/nodes.csv", index=False)
 edges_df.to_csv("/app/output/edges.csv", index=False)
 
 print(f"Processed {processed_count} XML files.")
 print(f"Nodes: {len(nodes_df)}, Edges: {len(edges_df)}")
+
+# Close database connection
+conn.close()
