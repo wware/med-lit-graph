@@ -487,3 +487,577 @@ Given these papers, which would you rather build first:
 3. **Evidence typing** (distinguishing epidemiological from molecular evidence)
 
 My gut says #2 (claims) is the bottleneck, because once you can represent claims, the other two become clearer. But curious what you think.
+
+
+## Prompt:
+
+_Various complaints about cacheing and docker-build performance issues_...
+
+
+## Response:
+12/17/2025, 12:21:21 PM
+
+## Problem 1: Docker Cache Not Working
+
+Your Dockerfile breaks cache because you `COPY . .` before installing dependencies:
+
+```dockerfile
+WORKDIR /app
+COPY . .                          # ← This invalidates cache every time
+RUN pip install --no-cache-dir -r requirements.txt
+```
+
+**Fix: Copy requirements.txt first, install, then copy code:**
+
+```dockerfile
+FROM python:3.11-slim
+
+# System deps
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        git \
+        wget \
+        curl \
+        && rm -rf /var/lib/apt/lists/*
+RUN pip install --upgrade pip
+
+WORKDIR /app
+
+# Copy and install dependencies FIRST (before copying code)
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy code LAST (this changes frequently)
+COPY . .
+
+EXPOSE 8000
+CMD ["python", "pmc_ner_pipeline.py"]
+```
+
+Now Docker will only re-run `pip install` when `requirements.txt` changes, not when your code changes.
+
+## Problem 2: Model Downloads Every Run
+
+Yes, you absolutely want to cache the Hugging Face models. They go to `~/.cache/huggingface` by default.
+
+**Solution: Mount a volume for model cache**
+
+### Option A: Named Volume (persists between runs)
+
+```bash
+docker build -t hiv-pipeline .
+
+# Create and use a named volume
+docker run -v hf-models:/root/.cache/huggingface \
+           -v $(pwd)/pmc_xmls:/app/pmc_xmls \
+           -v $(pwd)/entities.db:/app/entities.db \
+           hiv-pipeline
+```
+
+### Option B: Bind Mount to Host Directory (easier to inspect)
+
+```bash
+# Create cache directory on host
+mkdir -p ~/.cache/huggingface
+
+docker run -v ~/.cache/huggingface:/root/.cache/huggingface \
+           -v $(pwd)/pmc_xmls:/app/pmc_xmls \
+           -v $(pwd)/entities.db:/app/entities.db \
+           hiv-pipeline
+```
+
+### Option C: Best Practice - Use Docker Compose
+
+Create `docker-compose.yml`:
+
+```yaml
+version: '3.8'
+
+services:
+  pipeline:
+    build: .
+    volumes:
+      # Model cache (persists downloads)
+      - hf-models:/root/.cache/huggingface
+      
+      # Input data (bind mount so you can add files)
+      - ./pmc_xmls:/app/pmc_xmls
+      
+      # Output database (persists results)
+      - ./entities.db:/app/entities.db
+      - ./nodes.csv:/app/nodes.csv
+      - ./edges.csv:/app/edges.csv
+    
+    environment:
+      # Optional: disable tokenizers parallelism warning
+      - TOKENIZERS_PARALLELISM=false
+
+volumes:
+  hf-models:
+```
+
+Then just:
+
+```bash
+docker-compose build  # Only rebuilds when Dockerfile/requirements.txt change
+docker-compose run pipeline
+```
+
+## Even Better: Pre-download Models in Dockerfile
+
+If you want the models **baked into the image** (so first run isn't slow):
+
+```dockerfile
+FROM python:3.11-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        git \
+        wget \
+        curl \
+        && rm -rf /var/lib/apt/lists/*
+RUN pip install --upgrade pip
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Pre-download the model into the image
+RUN python -c "from transformers import AutoTokenizer, AutoModelForTokenClassification; \
+               model_name='dmis-lab/biobert-base-cased-v1.2'; \
+               AutoTokenizer.from_pretrained(model_name); \
+               AutoModelForTokenClassification.from_pretrained(model_name)"
+
+COPY . .
+
+EXPOSE 8000
+CMD ["python", "pmc_ner_pipeline.py"]
+```
+
+This makes the image **larger** (~1.5GB), but the container starts instantly.
+
+## Quick Test
+
+To verify caching works:
+
+```bash
+# First build (slow)
+docker build -t hiv-pipeline .
+
+# Change your Python code
+echo "# test change" >> pmc_ner_pipeline.py
+
+# Second build (should be FAST - only copies new code)
+docker build -t hiv-pipeline .
+```
+
+You should see:
+```
+Step 4/8 : RUN pip install --no-cache-dir -r requirements.txt
+ ---> Using cache
+```
+
+## My Recommendation
+
+Use **docker-compose.yml** with the bind mount approach. That way:
+- Models download once to your host machine
+- You can inspect the model cache if needed
+- `entities.db` persists between runs
+- Easy to add more papers to `pmc_xmls/`
+
+## Prompt
+
+Let's plan on PostgreSQL with Apache AGE for a graph database. Continue to use
+SQLite for the canonical entity store.
+
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Extraction Pipeline                      │
+└─────────────────────────────────────────────────────────────┘
+                           ↓
+         ┌─────────────────┴─────────────────┐
+         ↓                                   ↓
+┌──────────────────────┐          ┌──────────────────────┐
+│  SQLite (entities.db)│          │  PostgreSQL + AGE    │
+│ - Canonical entities │          │  - Graph structure   │
+│ - Entity aliases     │          │  - Nodes (typed)     │
+│ - Resolution log     │          │  - Edges (claims)    │
+│                      │          │  - Provenance        │
+└──────────────────────┘          └──────────────────────┘
+         ↑                                   ↑
+         └────────────────┬──────────────────┘
+                          ↓
+              Queries join both stores
+```
+
+## Why This Split Makes Sense
+
+**SQLite for Entity Canonicalization:**
+- Fast local lookups during extraction
+- Simple key-value semantics
+- Portable (can ship entities.db to others)
+- No network overhead during high-volume extraction
+
+**PostgreSQL+AGE for Graph:**
+- Cypher queries for multi-hop traversal
+- Claims, evidence, provenance as graph
+- ACID transactions across layers
+- Proper indexing for complex queries
+
+## Docker Compose Setup
+
+```yaml
+version: '3.8'
+
+services:
+  postgres:
+    image: apache/age:latest
+    container_name: med-graph-db
+    environment:
+      POSTGRES_USER: medgraph
+      POSTGRES_PASSWORD: medgraph
+      POSTGRES_DB: medical_literature
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - ./init-age.sql:/docker-entrypoint-initdb.d/init-age.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medgraph"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  pipeline:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - hf-models:/root/.cache/huggingface
+      - ./pmc_xmls:/app/pmc_xmls
+      - ./entities.db:/app/entities.db  # SQLite stays local
+      - ./nodes.csv:/app/nodes.csv
+      - ./edges.csv:/app/edges.csv
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=medgraph
+      - POSTGRES_PASSWORD=medgraph
+      - POSTGRES_DB=medical_literature
+      - TOKENIZERS_PARALLELISM=false
+
+volumes:
+  pg-data:
+  hf-models:
+```
+
+## AGE Initialization Script
+
+`init-age.sql`:
+
+```sql
+-- Enable AGE extension
+CREATE EXTENSION IF NOT EXISTS age;
+
+-- Load AGE into search path
+LOAD 'age';
+SET search_path = ag_catalog, "$user", public;
+
+-- Create the graph
+SELECT create_graph('medical_literature_graph');
+
+-- Create indexes on commonly queried properties
+-- (AGE stores graph data in ag_catalog tables)
+```
+
+## Updated requirements.txt
+
+```txt
+torch>=2.1.0
+transformers>=4.36.0
+pandas>=2.0.3
+scikit-learn>=1.3.0
+lxml>=4.9.3
+psycopg2-binary>=2.9.9  # PostgreSQL driver
+apache-age-python>=0.0.6  # AGE Python client
+```
+
+## Revised Pipeline Architecture
+
+```python
+# pmc_ner_pipeline.py
+from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
+import pandas as pd
+from lxml import etree
+from pathlib import Path
+import sqlite3
+from datetime import datetime
+import psycopg2
+import age
+
+# ------------------------------
+# Setup NER pipeline (unchanged)
+# ------------------------------
+model_name = "dmis-lab/biobert-base-cased-v1.2"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForTokenClassification.from_pretrained(model_name)
+ner_pipeline = pipeline(
+    "ner", model=model, tokenizer=tokenizer, aggregation_strategy="simple"
+)
+
+# ------------------------------
+# SQLite: Canonical Entity Store
+# ------------------------------
+sqlite_conn = sqlite3.connect("entities.db")
+sqlite_conn.execute("PRAGMA foreign_keys = ON;")
+
+# Existing entity tables (unchanged)
+sqlite_conn.execute("""
+CREATE TABLE IF NOT EXISTS entities (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    canonical_name TEXT UNIQUE,
+    type TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME
+);
+""")
+sqlite_conn.execute("""
+CREATE TABLE IF NOT EXISTS aliases (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    entity_id INTEGER REFERENCES entities(id) ON DELETE CASCADE,
+    name TEXT UNIQUE,
+    source TEXT,
+    confidence REAL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+""")
+sqlite_conn.commit()
+
+def get_or_create_entity(name, entity_type="GENERIC", source=None, confidence=None):
+    """Returns canonical entity_id - stores in SQLite only"""
+    cursor = sqlite_conn.execute("SELECT entity_id FROM aliases WHERE name=?", (name,))
+    row = cursor.fetchone()
+    if row:
+        return row[0]
+
+    cursor = sqlite_conn.execute(
+        "INSERT OR IGNORE INTO entities (canonical_name, type) VALUES (?, ?)",
+        (name, entity_type)
+    )
+    entity_id = cursor.lastrowid
+    if entity_id == 0:
+        cursor = sqlite_conn.execute("SELECT id FROM entities WHERE canonical_name=?", (name,))
+        entity_id = cursor.fetchone()[0]
+
+    sqlite_conn.execute(
+        "INSERT OR IGNORE INTO aliases (entity_id, name, source, confidence) VALUES (?, ?, ?, ?)",
+        (entity_id, name, source, confidence)
+    )
+    sqlite_conn.commit()
+    return entity_id
+
+# ------------------------------
+# PostgreSQL + AGE: Graph Store
+# ------------------------------
+import os
+
+PG_CONFIG = {
+    'host': os.getenv('POSTGRES_HOST', 'localhost'),
+    'port': os.getenv('POSTGRES_PORT', '5432'),
+    'user': os.getenv('POSTGRES_USER', 'medgraph'),
+    'password': os.getenv('POSTGRES_PASSWORD', 'medgraph'),
+    'database': os.getenv('POSTGRES_DB', 'medical_literature')
+}
+
+def get_pg_connection():
+    conn = psycopg2.connect(**PG_CONFIG)
+    return conn
+
+def create_extraction_node(pg_conn, pmc_id, entity_id, entity_name, entity_type, confidence):
+    """
+    Create a node in the extraction layer of the graph.
+    Links to canonical entity via entity_id.
+    """
+    with pg_conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT * FROM cypher('medical_literature_graph', $$
+                CREATE (e:Extraction {
+                    pmc_id: $pmc_id,
+                    entity_id: $entity_id,
+                    entity_name: $entity_name,
+                    entity_type: $entity_type,
+                    confidence: $confidence,
+                    extracted_at: timestamp()
+                })
+                RETURN e
+            $$) as (extraction agtype);
+        """, {
+            'pmc_id': pmc_id,
+            'entity_id': entity_id,
+            'entity_name': entity_name,
+            'entity_type': entity_type,
+            'confidence': confidence
+        })
+        pg_conn.commit()
+
+def create_cooccurrence_edge(pg_conn, pmc_id, entity_id_1, entity_id_2):
+    """
+    Create a co-occurrence edge in the extraction layer.
+    """
+    with pg_conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT * FROM cypher('medical_literature_graph', $$
+                MATCH (e1:Extraction {pmc_id: $pmc_id, entity_id: $entity_id_1})
+                MATCH (e2:Extraction {pmc_id: $pmc_id, entity_id: $entity_id_2})
+                MERGE (e1)-[r:CO_OCCURS_WITH {pmc_id: $pmc_id}]->(e2)
+                RETURN r
+            $$) as (edge agtype);
+        """, {
+            'pmc_id': pmc_id,
+            'entity_id_1': entity_id_1,
+            'entity_id_2': entity_id_2
+        })
+        pg_conn.commit()
+
+# ------------------------------
+# Process PMC XMLs
+# ------------------------------
+input_dir = Path("./pmc_xmls")
+pg_conn = get_pg_connection()
+
+for xml_file in input_dir.glob("PMC*.xml"):
+    pmc_id = xml_file.stem
+    tree = etree.parse(str(xml_file))
+    root = tree.getroot()
+
+    # Extract text
+    text_chunks = [p.text for p in root.findall(".//abstract//p") if p.text]
+    if not text_chunks:
+        text_chunks = [p.text for p in root.findall(".//body//p") if p.text]
+    if not text_chunks:
+        continue
+    full_text = " ".join(text_chunks)
+
+    # Run NER
+    entities = ner_pipeline(full_text)
+    entity_ids_in_paper = []
+
+    for ent in entities:
+        name = ent["word"]
+        label = ent.get("entity_group", "GENERIC")
+        confidence = ent.get("score", None)
+
+        # Step 1: Get canonical entity_id from SQLite
+        entity_id = get_or_create_entity(
+            name=name,
+            entity_type=label,
+            source=pmc_id,
+            confidence=confidence
+        )
+
+        # Step 2: Create extraction node in graph (PostgreSQL+AGE)
+        create_extraction_node(
+            pg_conn, pmc_id, entity_id, name, label, confidence
+        )
+
+        entity_ids_in_paper.append(entity_id)
+
+    # Step 3: Create co-occurrence edges in graph
+    for i in range(len(entity_ids_in_paper)):
+        for j in range(i + 1, len(entity_ids_in_paper)):
+            create_cooccurrence_edge(
+                pg_conn,
+                pmc_id,
+                entity_ids_in_paper[i],
+                entity_ids_in_paper[j]
+            )
+
+    print(f"Processed {pmc_id}: {len(entity_ids_in_paper)} entities")
+
+pg_conn.close()
+sqlite_conn.close()
+
+print(f"Processed {len(list(input_dir.glob('PMC*.xml')))} XML files.")
+```
+
+## Key Design Patterns
+
+### 1. Entity Resolution Workflow
+```
+Extract "HTLV-III" → SQLite lookup → Get entity_id=42 
+                                   ↓
+                   Create Extraction node with entity_id=42 in AGE
+```
+
+### 2. Layer Separation in the Graph
+```cypher
+// Extraction layer - what BioBERT said
+(:Extraction {pmc_id, entity_id, confidence})
+
+// Claim layer - what paper asserts (add later)
+(:Claim {pmc_id, subject_id, predicate, object_id})
+
+// Evidence layer - what supports claims (add later)
+(:Evidence {claim_id, type, strength})
+```
+
+### 3. Querying Across Both Stores
+
+```python
+# Get canonical name from SQLite
+cursor = sqlite_conn.execute(
+    "SELECT canonical_name FROM entities WHERE id=?", (entity_id,)
+)
+canonical_name = cursor.fetchone()[0]
+
+# Query graph in AGE
+with pg_conn.cursor() as cursor:
+    cursor.execute("""
+        SELECT * FROM cypher('medical_literature_graph', $$
+            MATCH (e:Extraction {entity_id: $entity_id})
+            RETURN e.pmc_id, e.confidence
+        $$) as (pmc_id agtype, confidence agtype);
+    """, {'entity_id': entity_id})
+```
+
+## Testing the Layer Boundary
+
+```python
+def test_extraction_layer_uses_canonical_ids():
+    """Extraction nodes must reference canonical entity IDs from SQLite."""
+    # Get an extraction node
+    with pg_conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT * FROM cypher('medical_literature_graph', $$
+                MATCH (e:Extraction)
+                RETURN e.entity_id
+                LIMIT 1
+            $$) as (entity_id agtype);
+        """)
+        entity_id = cursor.fetchone()[0]
+    
+    # Verify it exists in SQLite
+    cursor = sqlite_conn.execute(
+        "SELECT id FROM entities WHERE id=?", (entity_id,)
+    )
+    assert cursor.fetchone() is not None, \
+        "Extraction references non-existent canonical entity"
+```
+
+## Next Steps
+
+1. **Get it running**: Use docker-compose to stand up both databases
+2. **Add claim extraction**: Later, add logic to create `:Claim` nodes
+3. **Add evidence layer**: Create `:Evidence` nodes that link to claims
+
+Want me to help you:
+- Debug the AGE connection?
+- Write the claim extraction logic?
+- Design the Cypher queries for multi-hop traversal?
+
+This architecture gives you the best of both worlds: fast local entity resolution + powerful graph queries.

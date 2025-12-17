@@ -40,19 +40,29 @@ import sqlite3
 from datetime import datetime
 
 # ------------------------------
-# Setup PubMedBERT NER pipeline
+# Setup NER pipeline
 # ------------------------------
-model_name = "dmis-lab/biobert-base-cased-v1.2"
+# Use a model with clear NER capabilities
+model_name = "ugaray96/biobert_ncbi_disease_ner"  # Well-documented, NCBI disease NER
+# For diseases specifically (best for HIV/AIDS focus)
+# model_name = "alvaroalon2/biobert_diseases_ner"  # BC5CDR + NCBI diseases
+# model_name = "d4data/biomedical-ner-all"  # Multi-corpus trained
+# model_name = "raynardj/ner-disease-ncbi-bionlp-bc5cdr-pubmed"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForTokenClassification.from_pretrained(model_name)
 ner_pipeline = pipeline(
-    "ner", model=model, tokenizer=tokenizer, aggregation_strategy="simple"
+    "ner", 
+    model=model, 
+    tokenizer=tokenizer, 
+    aggregation_strategy="simple"  # Groups subwords into entities
 )
 
 # ------------------------------
 # Setup SQLite canonical entity DB
 # ------------------------------
-db_path = "entities.db"
+import os
+os.makedirs("/app/output", exist_ok=True)
+db_path = "/app/output/entities.db"
 conn = sqlite3.connect(db_path)
 conn.execute("PRAGMA foreign_keys = ON;")
 
@@ -109,6 +119,7 @@ def get_or_create_entity(name, entity_type="GENERIC", source=None, confidence=No
 input_dir = Path("./pmc_xmls")
 nodes = []
 edges_dict = {}  # {(subject_id, object_id): count}
+processed_count = 0
 
 for xml_file in input_dir.glob("PMC*.xml"):
     pmc_id = xml_file.stem
@@ -127,8 +138,21 @@ for xml_file in input_dir.glob("PMC*.xml"):
     entities = ner_pipeline(full_text)
     entity_ids_in_text = []
 
+
     for ent in entities:
-        name = ent["word"]
+        # Skip if it's not actually an entity label
+        label = ent.get("entity_group", ent.get("entity", "O"))
+        if label == "O" or label == "0" or not label.startswith(("B-", "I-", "DISEASE", "CHEMICAL")):
+            continue
+
+        name = ent["word"].strip()
+
+        # Skip obvious garbage
+        if len(name) < 2 or name in ["(", ")", ",", ".", "-"]:
+            continue
+        if name.startswith("##"):
+            continue
+
         label = ent.get("entity_group", "GENERIC")
         confidence = ent.get("score", None)
 
@@ -154,6 +178,7 @@ for xml_file in input_dir.glob("PMC*.xml"):
         for j in range(i + 1, len(entity_ids_in_text)):
             key = tuple(sorted((entity_ids_in_text[i], entity_ids_in_text[j])))
             edges_dict[key] = edges_dict.get(key, 0) + 1
+    processed_count += 1
 
 # ------------------------------
 # Convert nodes and edges to DataFrames
@@ -165,8 +190,8 @@ edges_df = pd.DataFrame([
 ])
 
 # Write CSVs for Neo4j
-nodes_df.to_csv("nodes.csv", index=False)
-edges_df.to_csv("edges.csv", index=False)
+nodes_df.to_csv("/app/output/nodes.csv", index=False)
+edges_df.to_csv("/app/output/edges.csv", index=False)
 
-print(f"Processed {len(input_dir.glob('PMC*.xml'))} XML files.")
+print(f"Processed {processed_count} XML files.")
 print(f"Nodes: {len(nodes_df)}, Edges: {len(edges_df)}")
