@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.11-slim AS base
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -33,7 +33,15 @@ RUN chmod +x *.sh
 # Create output directory
 RUN mkdir -p /app/output
 
-# This is just a placeholder for docs - we override with docker-compose
-EXPOSE 8000
+##############
+
+FROM base AS pipeline
 
 CMD ["./run_pipeline.sh", "1"]
+
+##############
+
+FROM base AS apiserver
+
+EXPOSE 8000
+CMD ["uvicorn", "query_api:app", "--host", "0.0.0.0", "--port", "8000"]

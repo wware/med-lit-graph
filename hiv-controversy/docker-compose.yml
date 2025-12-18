@@ -1,6 +1,8 @@
 services:
   pipeline:
-    build: .
+    build:
+      context: .
+      target: pipeline
     depends_on:
       age-db:
         condition: service_healthy
@@ -18,6 +20,27 @@ services:
     # Override CMD to accept arguments: docker-compose run pipeline 1-5
     entrypoint: ["./run_pipeline.sh"]
     command: ["1"]  # Default to stage 1 if no args provided
+
+  apiserver:
+    build:
+      context: .
+      target: apiserver
+    depends_on:
+      age-db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./pmc_xmls:/app/pmc_xmls:ro
+      - ./output:/app/output
+    environment:
+      - TOKENIZERS_PARALLELISM=false
+      - PYTHONUNBUFFERED=1
+      - AGE_HOST=age-db
+      - AGE_PORT=5432
+      - AGE_DB=age
+      - AGE_USER=age
+      - AGE_PASSWORD=agepassword
 
   age-db:
     image: apache/age:latest

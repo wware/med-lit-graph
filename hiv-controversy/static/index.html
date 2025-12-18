@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HIV Controversy Knowledge Graph - Query Interface</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <!-- Prism.js for syntax highlighting -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🧬 HIV Controversy Knowledge Graph</h1>
+            <p class="subtitle">Interactive Cypher Query Interface</p>
+        </header>
+
+        <section class="info-section">
+            <h2>About This Graph Database</h2>
+            <p>
+                This is a <strong>provenance-first knowledge graph</strong> built from PMC literature
+                about the HIV/AIDS controversy. The graph is stored in PostgreSQL with the Apache AGE
+                graph extension, allowing powerful Cypher queries to explore relationships between
+                papers, claims, entities, and evidence.
+            </p>
+            <p>
+                This interface allows you to:
+            </p>
+            <ul>
+                <li>Select from pre-built Cypher query examples</li>
+                <li>Edit and customize queries to explore the data</li>
+                <li>View formatted JSON responses with syntax highlighting</li>
+                <li>Trace claims back to their source papers and evidence</li>
+            </ul>
+            <div class="endpoints-info">
+                <strong>Graph Schema:</strong>
+                <ul>
+                    <li><strong>Nodes:</strong> Paper, Entity, Paragraph, Claim, Evidence</li>
+                    <li><strong>Edges:</strong> CONTAINS, MAKES_CLAIM, CONTAINS_CLAIM, SUPPORTS, HAS_SUBJECT, HAS_OBJECT</li>
+                    <li><strong>Query Language:</strong> Cypher (via Apache AGE)</li>
+                </ul>
+            </div>
+        </section>
+
+        <section class="query-section">
+            <h2>Try a Cypher Query</h2>
+
+            <div class="form-group">
+                <label for="example-select">Select an Example Query:</label>
+                <select id="example-select" class="select-input">
+                    <option value="">-- Choose an example --</option>
+                </select>
+                <small class="help-text" id="example-description"></small>
+            </div>
+
+            <div class="form-group">
+                <label for="query-input">Cypher Query:</label>
+                <div class="editor-container">
+                    <textarea id="query-input" class="code-input" rows="12" placeholder="Select an example or write your own Cypher query here...
+
+Example:
+MATCH (c:Claim)
+WHERE c.confidence >= 0.8
+RETURN c.predicate, c.text
+LIMIT 10"></textarea>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button id="submit-button" class="btn btn-primary">
+                    <span class="btn-text">Execute Query</span>
+                    <span class="btn-spinner" style="display: none;">⏳</span>
+                </button>
+                <button id="clear-button" class="btn btn-secondary">Clear</button>
+                <button id="stats-button" class="btn btn-secondary">Show Stats</button>
+            </div>
+        </section>
+
+        <section class="response-section" id="response-section" style="display: none;">
+            <h2>Query Results</h2>
+            <div class="response-header">
+                <span id="response-status" class="status-badge"></span>
+                <span id="response-count" class="count-badge"></span>
+                <span id="response-time" class="time-badge"></span>
+            </div>
+            <div class="response-container">
+                <pre><code id="response-output" class="language-json"></code></pre>
+            </div>
+        </section>
+
+        <section class="error-section" id="error-section" style="display: none;">
+            <h2>Error</h2>
+            <div class="error-container">
+                <pre><code id="error-output"></code></pre>
+            </div>
+        </section>
+    </div>
+
+    <footer>
+        <p>
+            HIV Controversy Knowledge Graph |
+            <a href="/docs" target="_blank">API Docs</a> |
+            <a href="https://github.com/wware/med-lit-graph" target="_blank">GitHub</a>
+        </p>
+    </footer>
+
+    <!-- Prism.js for syntax highlighting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    <script src="/static/app.js"></script>
+</body>
+</html>
