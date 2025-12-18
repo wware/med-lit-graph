@@ -23,7 +23,7 @@ RUN python -c "from transformers import AutoTokenizer, AutoModelForTokenClassifi
     AutoModelForTokenClassification.from_pretrained(model_name)"
 
 # Now copy application code
-COPY pmc_ner_pipeline.py .
+COPY *.py ./
 
 # Create output directory
 RUN mkdir -p /app/output

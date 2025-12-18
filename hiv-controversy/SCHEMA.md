@@ -7,27 +7,62 @@ This document describes the database schemas for all pipeline stages.
 Current implementation: **Stage 1 only (entities.db)**
 Planned: Stages 2-6
 
+**Key Design Principles:**
+- **Pydantic models** as source of truth (type safety, validation)
+- **SQLite** for canonical entity storage and staging
+- **PostgreSQL/AGE** for graph queries and visualization
+- **Full provenance tracking** for reproducibility
+
 ---
 
 ## Stage 1: Entity Extraction
 
 **Database**: `entities.db` (SQLite)
 **Purpose**: Canonical entity storage with alias mappings
+**Implementation**: `pmc_ner_pipeline.py` + `db_serialization.py`
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Python Layer                            │
+│  (Pydantic Models - Source of Truth)                        │
+│                                                             │
+│  - base.py: EntityType, EntityReference, Edges              │
+│  - entity.py: Disease, Gene, Drug, etc.                     │
+│  - relationship.py: Treats, Causes, etc.                    │
+└──────────────┬─────────────────────────┬────────────────────┘
+               │                         │
+               │ serialize               │ serialize
+               │                         │
+    ┌──────────▼──────────┐   ┌─────────▼────────────┐
+    │   SQLite Store      │   │  PostgreSQL/AGE      │
+    │ (Canonical Entities)│   │  (Graph Store)       │
+    │                     │   │                      │
+    │ - entities table    │   │ - Cypher queries     │
+    │ - aliases table     │   │ - Vertices/Edges     │
+    │ - JSON storage      │   │ - Graph traversal    │
+    └─────────────────────┘   └──────────────────────┘
+```
 
 ### Tables
 
 ```sql
+-- Stores full Pydantic models as JSON
 CREATE TABLE entities (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    canonical_name TEXT UNIQUE,
-    type TEXT,
+    entity_id TEXT UNIQUE,           -- "DISEASE:hiv" (from Pydantic model)
+    canonical_name TEXT,             -- "HIV"
+    type TEXT,                       -- "disease" (lowercase EntityType)
+    entity_json TEXT,                -- Full JSON of Disease/Gene/Drug model
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME
 );
 
+-- Aliases for entity resolution
 CREATE TABLE aliases (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    entity_id INTEGER REFERENCES entities(id) ON DELETE CASCADE,
+    entity_db_id INTEGER REFERENCES entities(id) ON DELETE CASCADE,
     name TEXT UNIQUE,
     source TEXT,  -- PMC ID where this alias was found
     confidence REAL,  -- NER confidence score
@@ -35,26 +70,203 @@ CREATE TABLE aliases (
 );
 ```
 
+### Pydantic Models
+
+**Entity Types** (from `entity.py`):
+
+```python
+from pydantic import BaseModel, Field
+from typing import Optional, List
+
+class Disease(BaseModel):
+    """Disease entity with UMLS/ICD-10 codes."""
+    entity_id: str  # e.g., "DISEASE:hiv" or "C0019693" (UMLS)
+    name: str
+    umls_id: Optional[str] = None
+    icd10_codes: List[str] = Field(default_factory=list)
+    synonyms: List[str] = Field(default_factory=list)
+    abbreviations: List[str] = Field(default_factory=list)
+    source: str = "extracted"  # or "umls", "manual"
+
+class Gene(BaseModel):
+    """Gene entity with NCBI/HGNC codes."""
+    entity_id: str  # e.g., "GENE:tp53"
+    name: str
+    ncbi_id: Optional[str] = None
+    hgnc_id: Optional[str] = None
+    synonyms: List[str] = Field(default_factory=list)
+
+class Drug(BaseModel):
+    """Drug entity with RxNorm codes."""
+    entity_id: str  # e.g., "DRUG:metformin"
+    name: str
+    rxnorm_id: Optional[str] = None
+    synonyms: List[str] = Field(default_factory=list)
+```
+
+### Serialization Helpers
+
+**From `db_serialization.py`**:
+
+```python
+# Store Pydantic model in SQLite
+def serialize_entity_to_sqlite(entity: Disease | Gene | Drug) -> dict:
+    """Converts Pydantic model to dict for SQLite INSERT."""
+    return {
+        "entity_id": entity.entity_id,
+        "canonical_name": entity.name,
+        "type": entity.__class__.__name__.lower(),
+        "entity_json": entity.model_dump_json(),
+        "created_at": datetime.now(),
+        "updated_at": datetime.now()
+    }
+
+# Load Pydantic model from SQLite
+def deserialize_entity_from_sqlite(row: dict, entity_type: EntityType) -> Disease | Gene | Drug:
+    """Reconstructs Pydantic model from SQLite row."""
+    entity_json = json.loads(row["entity_json"])
+    if entity_type == EntityType.DISEASE:
+        return Disease(**entity_json)
+    elif entity_type == EntityType.GENE:
+        return Gene(**entity_json)
+    # ... etc
+```
+
 ### Example Data
 
-```sql
--- Canonical entity
-INSERT INTO entities (id, canonical_name, type) VALUES (15, 'HIV', 'Disease');
+```python
+# Create validated entity
+disease = Disease(
+    entity_id="DISEASE:hiv",
+    name="HIV",
+    umls_id="C0019693",
+    synonyms=["Human Immunodeficiency Virus", "AIDS virus"],
+    abbreviations=["HIV-1", "HTLV-III", "LAV"],
+    source="extracted"
+)
 
--- Multiple aliases map to same canonical entity
-INSERT INTO aliases (entity_id, name, source, confidence) 
-VALUES 
-    (15, 'HIV', 'PMC2545367', 0.98),
-    (15, 'HTLV-III', 'PMC322947', 0.95),
-    (15, 'LAV', 'PMC268988', 0.92);
+# Store in SQLite
+row = serialize_entity_to_sqlite(disease)
+conn.execute("""
+    INSERT INTO entities (entity_id, canonical_name, type, entity_json, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?)
+""", (row["entity_id"], row["canonical_name"], row["type"], row["entity_json"],
+      row["created_at"], row["updated_at"]))
+
+# Create aliases
+for alias in disease.abbreviations:
+    conn.execute("""
+        INSERT INTO aliases (entity_db_id, name, source, confidence)
+        VALUES (?, ?, ?, ?)
+    """, (entity_db_id, alias, "PMC322947", 0.95))
 ```
 
 ### Indexes
 
 ```sql
-CREATE INDEX idx_aliases_entity_id ON aliases(entity_id);
+CREATE INDEX idx_entities_entity_id ON entities(entity_id);
+CREATE INDEX idx_entities_canonical_name ON entities(canonical_name);
+CREATE INDEX idx_entities_type ON entities(type);
+CREATE INDEX idx_aliases_entity_db_id ON aliases(entity_db_id);
 CREATE INDEX idx_aliases_name ON aliases(name);
+
+-- JSON query support
+CREATE INDEX idx_entities_umls ON entities(json_extract(entity_json, '$.umls_id'));
 ```
+
+### Three-Layer Edge Architecture
+
+The schema supports three distinct edge types (from ChatGPT recommendations):
+
+#### 1. ExtractionEdge (What the model said)
+```python
+ExtractionEdge(
+    subject=EntityReference(id="DRUG:metformin", name="Metformin", type=EntityType.DRUG),
+    object=EntityReference(id="DISEASE:diabetes", name="Type 2 Diabetes", type=EntityType.DISEASE),
+    extractor=ModelInfo(name="biobert", version="1.0", ...),
+    confidence=0.92
+)
+```
+- Raw output from NER/extraction models
+- Disposable (can regenerate with better models)
+- Includes model version for reproducibility
+
+#### 2. ClaimEdge (What the paper claims)
+```python
+ClaimEdge(
+    subject=drug_ref,
+    object=disease_ref,
+    predicate=ClaimPredicate.TREATS,
+    asserted_by="PMC123456",
+    polarity=Polarity.SUPPORTS
+)
+```
+- Paper-level assertions
+- Citable and versioned
+- Can contradict each other
+
+#### 3. EvidenceEdge (Empirical evidence)
+```python
+EvidenceEdge(
+    subject=drug_ref,
+    object=disease_ref,
+    evidence_type=EvidenceType.CLINICAL_TRIAL,
+    strength=0.95,
+    sample_size=500
+)
+```
+- Fine-grained evidence from experiments
+- Multi-modal (text, stats, figures)
+- Reusable across claims
+
+### Provenance Tracking
+
+Every extraction includes complete provenance metadata:
+
+```python
+ExtractionProvenance(
+    extraction_pipeline=ExtractionPipelineInfo(
+        name="pmc_ner_pipeline",
+        version="1.0.0",
+        git_commit="abc123...",
+        git_branch="main"
+    ),
+    models={"ner": ModelInfo(name="biobert_ncbi_disease_ner", version="1.0")},
+    prompt=PromptInfo(version="v1", template="ner_biobert_ncbi_disease"),
+    execution=ExecutionInfo(
+        timestamp="2025-12-18T12:00:00Z",
+        hostname="server-01",
+        duration_seconds=45.3
+    ),
+    entity_resolution=EntityResolutionInfo(
+        canonical_entities_matched=150,
+        new_entities_created=50
+    )
+)
+```
+
+**Saved to**: `/app/output/extraction_provenance.json`
+
+### Output Files
+
+After running `pmc_ner_pipeline.py`:
+
+1. **`entities.db`** (SQLite)
+   - Canonical entities with full Pydantic models as JSON
+   - Aliases for entity resolution
+
+2. **`extraction_edges.jsonl`** (JSONL)
+   - One ExtractionEdge object per line
+   - Ready for AGE import
+   - Full provenance in each edge
+
+3. **`extraction_provenance.json`** (JSON)
+   - Complete extraction metadata
+   - Pipeline version, git commit, models used
+
+4. **`nodes.csv`, `edges.csv`** (Legacy CSV)
+   - Simple format for inspection/debugging
+   - Kept for backward compatibility
 
 ---
 
@@ -319,12 +531,55 @@ INSERT INTO evidence_metrics VALUES (
 ## Stage 6: PostgreSQL + Apache AGE
 
 **Purpose**: Graph database for complex queries and visualization
+**Integration**: Imports from SQLite databases and JSONL files
+
+### Cypher Generation Helpers
+
+**From `db_serialization.py`**:
+
+```python
+# Create entity vertex from Pydantic model
+def cypher_create_vertex(entity: Disease | Gene | Drug) -> str:
+    """Generates Cypher CREATE statement for entity vertex."""
+    entity_type = entity.__class__.__name__.lower()
+    properties = entity.model_dump_json()
+    return f"""
+    CREATE (n:{entity_type} {{
+        entity_id: '{entity.entity_id}',
+        properties: '{properties}'
+    }})
+    """
+
+# Create extraction edge
+def cypher_create_edge(edge: ExtractionEdge) -> str:
+    """Generates Cypher for ExtractionEdge."""
+    return f"""
+    MATCH (s {{entity_id: '{edge.subject.id}'}})
+    MATCH (o {{entity_id: '{edge.object.id}'}})
+    CREATE (s)-[r:EXTRACTION_EDGE {{
+        confidence: {edge.confidence},
+        extractor: '{edge.extractor.name}',
+        extractor_version: '{edge.extractor.version}'
+    }}]->(o)
+    """
+
+# Create medical relationship
+def cypher_create_relationship(rel: Treats | Causes) -> str:
+    """Generates Cypher for medical relationship edge."""
+    rel_type = rel.__class__.__name__.upper()
+    properties = rel.model_dump_json()
+    return f"""
+    MATCH (s {{entity_id: '{rel.subject_id}'}})
+    MATCH (o {{entity_id: '{rel.object_id}'}})
+    CREATE (s)-[r:{rel_type} {{properties: '{properties}'}}]->(o)
+    """
+```
 
 ### Node Types
 
 ```cypher
 // Paper nodes
-CREATE (:Paper {
+CREATE (:paper {
     pmc_id: 'PMC322947',
     title: '...',
     pub_date: date('1986-02-01'),
@@ -332,16 +587,19 @@ CREATE (:Paper {
     journal: 'Proc Natl Acad Sci U S A'
 })
 
-// Entity nodes (from entities.db)
-CREATE (:Entity {
-    id: 15,
-    canonical_name: 'HIV',
-    type: 'Disease',
-    aliases: ['HIV', 'HTLV-III', 'LAV']
+// Entity nodes (from entities.db via Pydantic models)
+CREATE (:disease {
+    entity_id: 'DISEASE:hiv',
+    properties: '{"entity_id": "DISEASE:hiv", "name": "HIV", "umls_id": "C0019693", ...}'
+})
+
+CREATE (:drug {
+    entity_id: 'DRUG:metformin',
+    properties: '{"entity_id": "DRUG:metformin", "name": "Metformin", "rxnorm_id": "6809", ...}'
 })
 
 // Claim nodes
-CREATE (:Claim {
+CREATE (:claim {
     claim_id: 'PMC322947_claim_1',
     predicate: 'INFECTS',
     extracted_text: '...',
@@ -349,7 +607,7 @@ CREATE (:Claim {
 })
 
 // Evidence nodes
-CREATE (:Evidence {
+CREATE (:evidence {
     evidence_id: 'PMC322947_ev_1',
     type: 'in_situ_hybridization',
     strength: 'high'
@@ -359,22 +617,65 @@ CREATE (:Evidence {
 ### Edge Types
 
 ```cypher
+// ExtractionEdge - what the NER model found
+(e1:entity)-[:EXTRACTION_EDGE {
+    confidence: 0.92,
+    extractor: 'biobert',
+    extractor_version: '1.0'
+}]->(e2:entity)
+
+// ClaimEdge - what the paper asserts
+(e1:entity)-[:CLAIM_EDGE {
+    predicate: 'TREATS',
+    asserted_by: 'PMC123456',
+    polarity: 'supports'
+}]->(e2:entity)
+
+// EvidenceEdge - empirical support
+(e1:entity)-[:EVIDENCE_EDGE {
+    evidence_type: 'clinical_trial',
+    strength: 0.95,
+    sample_size: 500
+}]->(e2:entity)
+
+// Medical relationships (derived from ClaimEdges)
+(drug:drug)-[:TREATS {
+    response_rate: 0.75,
+    source_papers: ['PMC123']
+}]->(disease:disease)
+
+(virus:disease)-[:CAUSES {
+    mechanism: 'infection',
+    source_papers: ['PMC456']
+}]->(syndrome:disease)
+
 // Paper published claim
-(p:Paper)-[:PUBLISHED]->(c:Claim)
+(p:paper)-[:PUBLISHED]->(c:claim)
 
 // Claim involves entities
-(c:Claim)-[:SUBJECT]->(e1:Entity)
-(c:Claim)-[:OBJECT]->(e2:Entity)
+(c:claim)-[:SUBJECT]->(e1:entity)
+(c:claim)-[:OBJECT]->(e2:entity)
 
 // Evidence supports/refutes claim
-(ev:Evidence)-[:SUPPORTS {weight: 0.9}]->(c:Claim)
-(ev:Evidence)-[:REFUTES {weight: 0.1}]->(c:Claim)
+(ev:evidence)-[:SUPPORTS {weight: 0.9}]->(c:claim)
+(ev:evidence)-[:REFUTES {weight: 0.1}]->(c:claim)
 
 // Paper cites other paper
-(p1:Paper)-[:CITES {context: '...'}]->(p2:Paper)
+(p1:paper)-[:CITES {context: '...'}]->(p2:paper)
 
 // Claim contradicts other claim (derived)
-(c1:Claim)-[:CONTRADICTS]->(c2:Claim)
+(c1:claim)-[:CONTRADICTS]->(c2:claim)
+```
+
+### Bulk Import from JSONL
+
+```python
+from db_serialization import batch_insert_edges_to_age
+
+# Import extraction edges from pmc_ner_pipeline.py output
+with open('/app/output/extraction_edges.jsonl') as f:
+    edges = [ExtractionEdge(**json.loads(line)) for line in f]
+    batch_insert_edges_to_age(cursor, edges, batch_size=1000)
 ```
 
 ### Indexes
@@ -397,89 +698,125 @@ CREATE INDEX evidence_claim_idx ON evidence(claim_id);
 
 ---
 
-## Query Examples
-
-### Find all claims about HIV causing AIDS
-
-```sql
--- SQLite (Stage 4)
-SELECT 
-    c.claim_id,
-    c.extracted_text,
-    p.title,
-    p.pub_date,
-    e1.canonical_name as subject,
-    e2.canonical_name as object
-FROM claims c
-JOIN papers p ON c.paper_id = p.pmc_id
-JOIN entities e1 ON c.subject_entity_id = e1.id
-JOIN entities e2 ON c.object_entity_id = e2.id
-WHERE c.predicate = 'CAUSES'
-  AND e1.canonical_name = 'HIV'
-  AND e2.canonical_name = 'AIDS'
-ORDER BY p.pub_date;
-```
-
-```cypher
--- Cypher (Stage 6 - Apache AGE)
-MATCH (p:Paper)-[:PUBLISHED]->(c:Claim)-[:SUBJECT]->(hiv:Entity {canonical_name: 'HIV'})
-MATCH (c)-[:OBJECT]->(aids:Entity {canonical_name: 'AIDS'})
-WHERE c.predicate = 'CAUSES'
-RETURN p.title, p.pub_date, c.extracted_text, c.confidence
-ORDER BY p.pub_date;
-```
-
-### Find contradictory claims
-
-```cypher
-MATCH (c1:Claim)-[:SUBJECT]->(e1:Entity),
-      (c2:Claim)-[:SUBJECT]->(e1),
-      (c1)-[:OBJECT]->(e2:Entity),
-      (c2)-[:OBJECT]->(e2)
-WHERE c1.claim_id < c2.claim_id  -- Avoid duplicates
-  AND c1.predicate != c2.predicate
-  AND (
-    (c1.predicate = 'CAUSES' AND c2.predicate = 'UNRELATED_TO')
-    OR
-    (c1.predicate = 'TREATS' AND c2.predicate = 'INEFFECTIVE')
-  )
-RETURN c1, c2;
-```
-
-### Find evidence supporting a claim
-
-```sql
--- SQLite
-SELECT 
-    e.evidence_id,
-    e.type,
-    e.strength,
-    em.sample_size,
-    em.detection_rate,
-    p.text as evidence_text
-FROM evidence e
-JOIN evidence_metrics em ON e.evidence_id = em.evidence_id
-JOIN paragraphs p ON e.paragraph_id = p.paragraph_id
-WHERE e.claim_id = 'PMC322947_claim_1'
-  AND e.supports = TRUE;
-```
-
----
-
 ## Migration Strategy
 
 ### Phase 1: Extract to SQLite (Stages 1-5)
 - Fast, local processing
 - Easy to debug and inspect
 - Can rebuild anytime from JSON
+- **Pydantic models** stored as JSON in SQLite
+- Full validation and type safety
 
 ### Phase 2: Bulk import to PostgreSQL/AGE (Stage 6)
 - Disable indexes
-- Use COPY instead of INSERT
+- Use COPY or batch INSERT
 - Process papers in parallel
 - Rebuild indexes after import
+- Use `db_serialization.py` helpers for Cypher generation
 
 ### Phase 3: Incremental updates
 - New papers → extract to JSON → import to graph
 - Maintain SQLite as staging area
 - PostgreSQL as queryable production DB
+
+---
+
+## Integration Notes
+
+### Benefits of Combined Approach
+
+1. **Type Safety**: Pydantic validates at creation time
+2. **No Data Loss**: Full models stored in SQLite JSON
+3. **Database Independence**: Same models work with SQLite and AGE
+4. **Provenance**: Complete audit trail for reproducibility
+5. **Three Layers**: Proper separation of extraction/claims/evidence
+6. **Query Flexibility**: Can query by extracted fields OR deserialize full model
+
+### Query Examples
+
+**SQLite: Find all diseases mentioning "diabetes"**
+```python
+cursor = conn.execute(
+    "SELECT * FROM entities WHERE canonical_name LIKE ?",
+    ("%diabetes%",)
+)
+for row in cursor:
+    disease = deserialize_entity_from_sqlite(row, EntityType.DISEASE)
+    print(disease.name, disease.umls_id, disease.synonyms)
+```
+
+**SQLite: Query JSON fields directly**
+```sql
+SELECT
+    entity_id,
+    canonical_name,
+    json_extract(entity_json, '$.umls_id') as umls_id,
+    json_extract(entity_json, '$.synonyms') as synonyms
+FROM entities
+WHERE type = 'disease'
+  AND json_extract(entity_json, '$.umls_id') IS NOT NULL;
+```
+
+**AGE: Find all drugs treating diabetes**
+```cypher
+MATCH (d:drug)-[r:TREATS]->(di:disease {entity_id: 'DISEASE:diabetes'})
+RETURN d, r, di
+```
+
+**AGE: Find extraction edges with high confidence**
+```cypher
+MATCH (s)-[r:EXTRACTION_EDGE]->(o)
+WHERE r.confidence > 0.9
+RETURN s, r, o
+```
+
+**AGE: Find contradictory claims about HIV**
+```cypher
+MATCH (c1:claim)-[:SUBJECT]->(hiv:disease {entity_id: 'DISEASE:hiv'}),
+      (c2:claim)-[:SUBJECT]->(hiv)
+WHERE c1.claim_id < c2.claim_id
+  AND c1.predicate != c2.predicate
+  AND (
+    (c1.predicate = 'CAUSES' AND c2.predicate = 'UNRELATED_TO')
+    OR
+    (c1.polarity = 'supports' AND c2.polarity = 'refutes')
+  )
+RETURN c1, c2;
+```
+
+### Backward Compatibility
+
+**For New Code:**
+- Use Pydantic models directly
+- Use `db_serialization.py` helpers for database operations
+- Create ExtractionEdge/ClaimEdge/EvidenceEdge as appropriate
+
+**For Existing Code:**
+- SQLite schema is backward compatible (columns added, not removed)
+- Legacy CSV files still generated
+- Can gradually migrate to new format
+
+### Common Pitfalls
+
+**Q: Can I still use my existing SQLite queries?**
+A: Yes! The schema is backward compatible. New columns added, old columns preserved.
+
+**Q: Do I have to use Cypher?**
+A: No! The serialization helpers generate Cypher, but you can use the dicts directly.
+
+**Q: What if I need a new entity type?**
+A: Add it to `entity.py` following the Disease/Gene/Drug pattern. Update `db_serialization.py` mapping.
+
+**Q: Can I query the JSON in SQLite?**
+A: Yes! SQLite has JSON functions: `SELECT json_extract(entity_json, '$.umls_id') FROM entities`
+
+**Q: How do I bulk load into AGE?**
+A: Use `batch_insert_edges_to_age()` from `db_serialization.py` for efficient batching.
+
+### Next Steps
+
+1. **Define Provenance class** in base.py (placeholder exists)
+2. **Add more entity types** as needed (Protein, CellType, Tissue)
+3. **Create ClaimEdge pipeline** (Stage 4) for semantic relationships
+4. **Add embedding generation** (Stage 3) for entity resolution
+5. **Build AGE import pipeline** to load extraction_edges.jsonl
