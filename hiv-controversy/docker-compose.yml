@@ -15,6 +15,9 @@ services:
       - AGE_DB=age
       - AGE_USER=age
       - AGE_PASSWORD=agepassword
+    # Override CMD to accept arguments: docker-compose run pipeline 1-5
+    entrypoint: ["./run_pipeline.sh"]
+    command: ["1"]  # Default to stage 1 if no args provided
 
   age-db:
     image: apache/age:latest

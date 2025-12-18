@@ -24,6 +24,11 @@ RUN python -c "from transformers import AutoTokenizer, AutoModelForTokenClassifi
 
 # Now copy application code
 COPY *.py ./
+COPY *.sh ./
+COPY static/ ./static/
+
+# Make shell scripts executable
+RUN chmod +x *.sh
 
 # Create output directory
 RUN mkdir -p /app/output
@@ -31,4 +36,4 @@ RUN mkdir -p /app/output
 # This is just a placeholder for docs - we override with docker-compose
 EXPOSE 8000
 
-CMD ["python", "pmc_ner_pipeline.py"]
+CMD ["./run_pipeline.sh", "1"]
