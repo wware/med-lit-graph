@@ -24,10 +24,9 @@ Available queries:
 import argparse
 import os
 import sys
-from typing import Any, Optional
+from typing import Any
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-import json
 
 
 # ============================================================================
@@ -190,7 +189,6 @@ def query_paper_claims(conn: psycopg2.extensions.connection) -> None:
         print("No paper-claim relationships found.")
         return
 
-    current_paper = None
     for row in results:
         result_str = format_result(row[0])
         # Try to parse paper_id from the result

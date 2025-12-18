@@ -183,7 +183,7 @@ def parse_agtype(value: str) -> Any:
 
         # Try to parse as JSON
         return json.loads(value)
-    except:
+    except Exception:
         return value
 
 
@@ -268,14 +268,14 @@ async def get_stats():
         query = f"MATCH (n:{node_type}) RETURN count(n)"
         results, error = execute_cypher(query)
         if not error and results:
-            count = results[0] if results else 0
+            count = results[0][0] if results else 0
             setattr(stats, field_name, count)
 
     # Count total edges
     query = "MATCH ()-[r]->() RETURN count(r)"
     results, error = execute_cypher(query)
     if not error and results:
-        stats.total_edges = results[0] if results else 0
+        stats.total_edges = results[0][0] if results else 0
 
     # Count edges by type
     edge_types = ["CONTAINS", "MAKES_CLAIM", "CONTAINS_CLAIM", "SUPPORTS", "HAS_SUBJECT", "HAS_OBJECT"]
@@ -283,7 +283,7 @@ async def get_stats():
         query = f"MATCH ()-[r:{edge_type}]->() RETURN count(r)"
         results, error = execute_cypher(query)
         if not error and results:
-            count = results[0] if results else 0
+            count = results[0][0] if results else 0
             if count > 0:
                 stats.edge_types[edge_type] = count
 

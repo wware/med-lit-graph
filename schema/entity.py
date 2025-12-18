@@ -28,12 +28,11 @@ All medical entities (Disease, Gene, Drug, Protein, etc.) share these base prope
 
 import json
 from datetime import datetime
-from enum import Enum
 from typing import Literal, cast, List, Optional, Dict, Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from tqdm import tqdm
 
-from base import EntityType, EntityReference, ModelInfo
+from base import EntityType, EntityReference, ModelInfo, PredicateType
 
 
 class BaseMedicalEntity(BaseModel):

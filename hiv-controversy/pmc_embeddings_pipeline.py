@@ -23,9 +23,7 @@ Usage:
 import argparse
 import sqlite3
 from pathlib import Path
-from typing import Optional
 import numpy as np
-from datetime import datetime
 
 from pydantic import BaseModel, Field
 from sentence_transformers import SentenceTransformer
@@ -492,7 +490,7 @@ def main():
 
     # Print summary
     print("=" * 60)
-    print(f"Embeddings generation complete!")
+    print("Embeddings generation complete!")
     print(f"Total embeddings created: {total_embeddings}")
     print("=" * 60)
 

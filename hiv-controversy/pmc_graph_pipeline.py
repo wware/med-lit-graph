@@ -29,10 +29,9 @@ import argparse
 import os
 import sqlite3
 from pathlib import Path
-from typing import Optional, Any
+from typing import Optional
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-import numpy as np
 
 from pydantic import BaseModel, Field
 
@@ -375,7 +374,7 @@ def load_claims(age_conn: psycopg2.extensions.connection, claims_db_path: Path) 
             """
             try:
                 execute_cypher(age_conn, query)
-            except Exception as e:
+            except Exception:
                 # Entity might not exist - this is OK
                 pass
 
@@ -387,7 +386,7 @@ def load_claims(age_conn: psycopg2.extensions.connection, claims_db_path: Path) 
             """
             try:
                 execute_cypher(age_conn, query)
-            except Exception as e:
+            except Exception:
                 # Entity might not exist - this is OK
                 pass
 
@@ -517,7 +516,7 @@ def main():
     for name, path in required_dbs.items():
         if not path.exists():
             print(f"Error: {name} not found at {path}")
-            print(f"Please run previous stages first")
+            print("Please run previous stages first")
             return 1
 
     print("=" * 60)
@@ -528,8 +527,8 @@ def main():
     # Connect to AGE
     print(f"Connecting to PostgreSQL/AGE at {AGE_HOST}:{AGE_PORT}...")
     age_conn = get_age_connection()
-    print(f"Connected to PostgreSQL successfully")
-    print(f"AGE session will be initialized for each query")
+    print("Connected to PostgreSQL successfully")
+    print("AGE session will be initialized for each query")
     print()
 
     # Clear existing data if requested
