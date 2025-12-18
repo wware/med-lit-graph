@@ -27,7 +27,6 @@ import sqlite3
 from pathlib import Path
 from typing import Optional
 import numpy as np
-from datetime import datetime
 
 from pydantic import BaseModel, Field
 from sentence_transformers import SentenceTransformer
@@ -419,7 +418,7 @@ def main():
 
     # Print summary
     print("=" * 60)
-    print(f"Claims extraction complete!")
+    print("Claims extraction complete!")
     print(f"Total claims: {total_claims}")
     print(f"Database: {claims_db_path}")
     print("=" * 60)

@@ -22,7 +22,6 @@ import json
 import sqlite3
 from pathlib import Path
 from typing import Optional
-from datetime import datetime
 import xml.etree.ElementTree as ET
 
 from pydantic import BaseModel, Field
@@ -560,7 +559,7 @@ def process_xml_file(xml_path: Path, conn: sqlite3.Connection) -> bool:
     # Parse paper metadata
     paper = parse_pmc_xml(xml_path)
     if paper is None:
-        print(f"  Failed to parse paper metadata")
+        print("  Failed to parse paper metadata")
         return False
 
     print(f"  PMC ID: {paper.pmc_id}")
@@ -621,7 +620,7 @@ def main():
 
     # Print summary
     print("=" * 60)
-    print(f"Provenance extraction complete!")
+    print("Provenance extraction complete!")
     print(f"Successfully processed: {success_count}/{len(xml_files)} files")
     print(f"Database: {db_path}")
     print("=" * 60)

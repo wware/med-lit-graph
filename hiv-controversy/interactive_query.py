@@ -20,7 +20,6 @@ Or enter any Cypher query directly.
 
 import os
 import sys
-import readline  # For command history
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from typing import Any, Optional
@@ -100,7 +99,7 @@ def parse_agtype(value: str) -> Any:
 
         # Try to parse as JSON
         return json.loads(value)
-    except:
+    except Exception:
         # If parsing fails, return as string
         return value
 

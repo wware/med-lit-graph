@@ -28,7 +28,6 @@ import re
 import sqlite3
 from pathlib import Path
 from typing import Optional
-from datetime import datetime
 
 from pydantic import BaseModel, Field
 
@@ -522,7 +521,7 @@ def main():
 
     # Print summary
     print("=" * 60)
-    print(f"Evidence aggregation complete!")
+    print("Evidence aggregation complete!")
     print(f"Total evidence items: {total_evidence}")
     print(f"Database: {evidence_db_path}")
     print("=" * 60)

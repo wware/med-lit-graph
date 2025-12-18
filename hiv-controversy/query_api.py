@@ -183,7 +183,7 @@ def parse_agtype(value: str) -> Any:
 
         # Try to parse as JSON
         return json.loads(value)
-    except:
+    except Exception:
         return value
 
 
