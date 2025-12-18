@@ -1,0 +1,33 @@
+version: '3.8'
+services:
+  ollama:
+    build:
+      context: .
+      dockerfile: Dockerfile.ollama
+    #ports:
+    #- "11434:11434"
+    environment:
+      - LANGUAGE_MODEL=${LANGUAGE_MODEL:-llama3.1:70b}
+    volumes:
+      # Use a host directory to persist Ollama models
+      - ~/ollama_data:/root/.ollama
+      # This line is optional. You can use it to mount pre-downloaded models.
+      # - ${OLLAMA_MODELS:-./models}:/models
+
+  ingest:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      # The ingest script needs to know where the Ollama API is.
+      # 'ollama' is the service name in this docker-compose file.
+      - OLLAMA_HOST=http://ollama:11434
+    depends_on:
+      - ollama
+    # 'command' is overridden by the command line arguments you provide.
+    # This default is just for documentation.
+    command: >
+      python ingest_papers.py
+      --query "search terms"
+      --limit 10
+      --model "llama3.1:70b"
