@@ -489,7 +489,39 @@ Services:
 
 ### Cloud Deployment
 
+**GPU-Accelerated Ingestion**: See [cloud/README.md](cloud/README.md) for Lambda Labs and AWS EC2 setup.
 
+---
+
+## Current Status
+
+### ✅ Working Components
+- **Ingestion Pipeline**: Successfully processing papers with GPU acceleration (50-100x faster than CPU)
+- **Entity Extraction**: LLM-based extraction with defensive parsing for robustness
+- **Entity Deduplication**: Exact name matching + strict similarity thresholds (0.01)
+- **Relationship Extraction**: Flexible parsing handles multiple LLM output formats
+- **PostgreSQL Storage**: Papers, entities, relationships with full provenance
+- **Vector Embeddings**: pgvector integration for semantic search
+
+### 📊 Data Ingested
+- **25+ papers** successfully processed and stored
+- Entities extracted with unique canonical IDs
+- Relationships with full evidence trails
+
+### 🚧 In Progress
+- Scaling to larger batches (100s-1000s of papers)
+- Query API implementation
+- Client libraries (Python, TypeScript)
+- MCP server for LLM integration
+
+### 🎯 Next Steps
+1. Process larger paper corpus (targeting 1000+ papers)
+2. Implement graph query API
+3. Add vector search integration
+4. Build client libraries
+5. Deploy demo server
+
+---
 
 ---
 

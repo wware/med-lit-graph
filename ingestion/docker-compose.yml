@@ -6,7 +6,7 @@ services:
     #ports:
     #- "11434:11434"
     environment:
-      - LANGUAGE_MODEL=${LANGUAGE_MODEL:-llama3.1:70b}
+      - LANGUAGE_MODEL=${LANGUAGE_MODEL:-llama3.1:8b}
     volumes:
       # Use a host directory to persist Ollama models
       - ~/ollama_data:/root/.ollama
@@ -32,11 +32,14 @@ services:
     environment:
       # The ingest script needs to know where the Ollama API is.
       # 'ollama' is the service name in this docker-compose file.
-      - OLLAMA_HOST=http://ollama:11434
+      # Override with: export OLLAMA_HOST=http://<remote-ip>:11434
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://ollama:11434}
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/medgraph
     depends_on:
-      - ollama
+      # - ollama
       - postgres
+    volumes:
+      - ./data/huggingface:/root/.cache/huggingface
     # 'command' is overridden by the command line arguments you provide.
     # This default is just for documentation.
     command: >

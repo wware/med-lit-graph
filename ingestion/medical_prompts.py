@@ -105,40 +105,40 @@ If processing only abstract: use "abstract" for all
 
 Return ONLY valid JSON in this exact structure. No markdown formatting, no explanations, just the JSON:
 
-{
+{{
   "entities": [
-    {
+    {{
       "name": "exact entity name as it appears in text",
       "type": "drug|disease|gene|protein|biomarker",
       "aliases": ["list", "of", "alternative", "names", "mentioned", "in", "paper"],
       "canonical_id": "RxNorm:123456 or UMLS:C123456 or leave blank",
       "context": "brief context from paper (1 sentence max)"
-    }
+    }}
   ],
   "relationships": [
-    {
+    {{
       "subject": "entity name (MUST exactly match an entity in entities list)",
       "predicate": "TREATS|CAUSES|PREVENTS|ACTIVATES|INHIBITS|UPREGULATES|DOWNREGULATES|BINDS_TO|ASSOCIATED_WITH",
       "object": "entity name (MUST exactly match an entity in entities list)",
       "confidence": 0.85,
       "evidence": "direct quote from paper, ideally 1-2 sentences, showing this relationship",
       "section": "abstract|methods|results|discussion",
-      "metadata": {
+      "metadata": {{
         "study_type": "if relationship comes from specific study type",
         "measurement": "quantitative data if available (e.g., 'HR=0.75, p<0.01')",
         "temporal": "timing information if relevant (e.g., 'after 6 months')"
-      }
-    }
+      }}
+    }}
   ],
-  "metadata": {
+  "metadata": {{
     "study_type": "rct|cohort|case_control|meta_analysis|systematic_review|in_vitro|in_vivo|case_report|review",
     "sample_size": 123,
     "study_population": "brief description if specified (e.g., 'postmenopausal women', 'adults >65')",
     "primary_outcome": "main outcome measured",
     "publication_date": "YYYY-MM-DD if available in text",
     "clinical_phase": "Phase I|II|III|IV if applicable"
-  }
-}
+  }}
+}}
 
 # QUALITY CHECKLIST
 
@@ -190,75 +190,75 @@ Title: Metformin Improves Glycemic Control via AMPK Activation
 Abstract: Metformin, a first-line therapy for type 2 diabetes, activates AMP-activated protein kinase (AMPK), leading to decreased hepatic glucose production and improved insulin sensitivity. In this randomized controlled trial of 450 patients, metformin (1500mg daily) reduced HbA1c by 1.2% compared to placebo (p<0.001).
 
 Expected Output:
-{
+{{
   "entities": [
-    {
+    {{
       "name": "Metformin",
       "type": "drug",
       "aliases": ["metformin"],
       "canonical_id": "RxNorm:860975",
       "context": "first-line therapy for type 2 diabetes"
-    },
-    {
+    }},
+    {{
       "name": "Type 2 Diabetes",
       "type": "disease",
       "aliases": ["T2DM"],
       "canonical_id": "UMLS:C0011860",
       "context": "condition being treated"
-    },
-    {
+    }},
+    {{
       "name": "AMPK",
       "type": "protein",
       "aliases": ["AMP-activated protein kinase"],
       "canonical_id": "NCBI:Gene:5562",
       "context": "activated by metformin"
-    },
-    {
+    }},
+    {{
       "name": "HbA1c",
       "type": "biomarker",
       "aliases": ["glycated hemoglobin"],
       "canonical_id": "LOINC:4548-4",
       "context": "glycemic control biomarker"
-    }
+    }}
   ],
   "relationships": [
-    {
+    {{
       "subject": "Metformin",
       "predicate": "TREATS",
       "object": "Type 2 Diabetes",
       "confidence": 0.95,
       "evidence": "Metformin, a first-line therapy for type 2 diabetes",
       "section": "abstract"
-    },
-    {
+    }},
+    {{
       "subject": "Metformin",
       "predicate": "ACTIVATES",
       "object": "AMPK",
       "confidence": 0.92,
       "evidence": "Metformin...activates AMP-activated protein kinase (AMPK), leading to decreased hepatic glucose production",
       "section": "abstract",
-      "metadata": {
+      "metadata": {{
         "mechanism": "direct activation"
-      }
-    },
-    {
+      }}
+    }},
+    {{
       "subject": "Metformin",
       "predicate": "DOWNREGULATES",
       "object": "HbA1c",
       "confidence": 0.93,
       "evidence": "metformin (1500mg daily) reduced HbA1c by 1.2% compared to placebo (p<0.001)",
       "section": "abstract",
-      "metadata": {
+      "metadata": {{
         "study_type": "rct",
         "measurement": "HbA1c reduction: 1.2%, p<0.001"
-      }
-    }
+      }}
+    }}
   ],
-  "metadata": {
+  "metadata": {{
     "study_type": "rct",
     "sample_size": 450
-  }
-}
+  }}
+}}
 
 ## EXAMPLE 2
 

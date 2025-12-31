@@ -137,7 +137,12 @@ class EntityDatabase:
         )
 
         # Initialize vector store
-        self.db = Chroma(collection_name="medical_entities", embedding_function=self.embeddings, persist_directory=str(persist_dir))
+        # Initialize vector store
+        from chromadb.config import Settings
+
+        self.db = Chroma(
+            collection_name="medical_entities", embedding_function=self.embeddings, persist_directory=str(persist_dir), client_settings=Settings(anonymized_telemetry=False, is_persistent=True)
+        )
 
         # In-memory canonical entity mapping
         self.canonical_entities = self._load_canonical_entities()
@@ -163,16 +168,31 @@ class EntityDatabase:
         entity_name = entity["name"]
         entity_type = entity["type"]
 
-        # Search for similar entities
+        # First, check for EXACT name match in our canonical entities
+        # This prevents false positives from similarity search
+        for canonical_id, canonical_entity in self.canonical_entities.items():
+            if canonical_entity["name"].lower() == entity_name.lower() and canonical_entity["type"] == entity_type:
+                print(f"  Found existing: {entity_name} -> {canonical_id}")
+                return canonical_id
+
+        # Search for similar entities (only if no exact match)
         search_text = f"{entity_type}: {entity_name}"
         results = self.db.similarity_search_with_score(search_text, k=3)
 
-        # Check if we have a very close match (score < 0.3 is very similar)
-        if results and results[0][1] < 0.3:
+        # Check if we have a VERY close match (almost identical)
+        # - Score < 0.01 means nearly identical (very strict)
+        # - Must also match entity type
+        # - Must also have similar name length (prevents "Alzheimer's" matching "Parkinson's")
+        if results and results[0][1] < 0.01:
             existing_doc = results[0][0]
-            canonical_id = existing_doc.metadata.get("canonical_id")
-            print(f"  Found existing: {entity_name} -> {canonical_id}")
-            return canonical_id
+            existing_type = existing_doc.metadata.get("type")
+            existing_name = existing_doc.metadata.get("name")
+
+            # Only match if types are the same AND names are very similar in length
+            if existing_type == entity_type and abs(len(existing_name) - len(entity_name)) <= 3:
+                canonical_id = existing_doc.metadata.get("canonical_id")
+                print(f"  Found existing: {entity_name} -> {canonical_id}")
+                return canonical_id
 
         # Create new canonical entity
         canonical_id = entity.get("canonical_id") or self._generate_canonical_id(entity)
@@ -309,7 +329,7 @@ class OllamaPaperPipeline:
         prompt_version: str = "v1_detailed",
         database_url: Optional[str] = None,
     ):
-        self.llm = OllamaLLM(model=model_name, base_url="http://localhost:11434", temperature=0.1)  # Low temp for more consistent extraction
+        self.llm = OllamaLLM(model=model_name, base_url=os.getenv("OLLAMA_HOST", "http://localhost:11434"), temperature=0.1)  # Low temp for more consistent extraction
 
         self.output_dir = output_dir
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -429,20 +449,36 @@ class OllamaPaperPipeline:
         # Update relationships with canonical IDs
         resolved_relationships = []
         for rel in relationships:
-            subject_name = rel["subject"]
-            object_name = rel["object"]
+            # Defensive parsing - handle multiple LLM output formats
+            # Some LLMs use: subject/predicate/object (correct)
+            # Others use: entity1/relationship/entity2 (incorrect but common)
+
+            # Normalize to expected format
+            subject_name = rel.get("subject") or rel.get("entity1")
+            object_name = rel.get("object") or rel.get("entity2")
+            predicate = rel.get("predicate") or rel.get("relationship")
+
+            if not subject_name or not object_name or not predicate:
+                print(f"  Warning: Skipping malformed relationship: {rel}")
+                continue
 
             if subject_name in name_to_canonical and object_name in name_to_canonical:
                 resolved_relationships.append(
                     {
                         "subject_id": name_to_canonical[subject_name],
-                        "predicate": rel["predicate"].lower(),
+                        "predicate": predicate.lower().replace(" ", "_"),  # Normalize predicate
                         "object_id": name_to_canonical[object_name],
                         "confidence": rel.get("confidence", 0.8),
                         "evidence": rel.get("evidence", ""),
                         "section": rel.get("section", "unknown"),
                     }
                 )
+            else:
+                # Entity name mismatch - log for debugging
+                if subject_name not in name_to_canonical:
+                    print(f"  Warning: Subject '{subject_name}' not found in entities")
+                if object_name not in name_to_canonical:
+                    print(f"  Warning: Object '{object_name}' not found in entities")
 
         extracted_data["entities"] = resolved_entities
         extracted_data["relationships"] = resolved_relationships
@@ -556,7 +592,7 @@ def main():
     parser = argparse.ArgumentParser(description="Ingest papers with Ollama + LangChain")
     parser.add_argument("--query", required=True, help="PubMed search query")
     parser.add_argument("--limit", type=int, default=50, help="Max papers")
-    parser.add_argument("--model", default="llama3.1:70b", help="Ollama model name")
+    parser.add_argument("--model", default="llama3.1:8b", help="Ollama model name (e.g. llama3.1:8b, llama3.1:70b)")
     parser.add_argument("--embedding-model", default="microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext", help="HuggingFace embedding model for entity matching")
     parser.add_argument("--output-dir", type=Path, default=Path("./data/papers"))
     parser.add_argument("--entity-db-dir", type=Path, default=Path("./data/entity_db"))
