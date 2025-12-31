@@ -162,7 +162,7 @@ def generate_relationships() -> List[Dict]:
         {
             "id": "rel_tam_bc",
             "subject_id": "RxNorm:10324",  # Tamoxifen
-            "predicate": "TREATS",
+            "predicate": "treats",
             "object_id": "UMLS:C0006142",  # Breast Cancer
             "confidence": 0.89,
             "evidence_count": 456,  # total_evidence
@@ -177,7 +177,7 @@ def generate_relationships() -> List[Dict]:
         {
             "id": "rel_tras_bc",
             "subject_id": "RxNorm:224905",  # Trastuzumab
-            "predicate": "TREATS",
+            "predicate": "treats",
             "object_id": "UMLS:C0006142",  # Breast Cancer
             "confidence": 0.92,
             "evidence_count": 312,  # total_evidence
@@ -191,7 +191,7 @@ def generate_relationships() -> List[Dict]:
         {
             "id": "rel_001",
             "subject_id": "RxNorm:1187832",  # Olaparib
-            "predicate": "TREATS",
+            "predicate": "treats",
             "object_id": "UMLS:C0006142",  # Breast Cancer
             "confidence": 0.92,
             "evidence_count": 1,
@@ -205,7 +205,7 @@ def generate_relationships() -> List[Dict]:
         {
             "id": "rel_002",
             "subject_id": "RxNorm:860975",  # Metformin
-            "predicate": "ACTIVATES",
+            "predicate": "activates",
             "object_id": "NCBI:Gene:5562",  # AMPK
             "confidence": 0.90,
             "evidence_count": 1,
@@ -219,7 +219,7 @@ def generate_relationships() -> List[Dict]:
         {
             "id": "rel_003",
             "subject_id": "NCBI:Gene:5562",  # AMPK
-            "predicate": "DOWNREGULATES",
+            "predicate": "downregulates",
             "object_id": "LOINC:4548-4",  # HbA1c
             "confidence": 0.88,
             "evidence_count": 1,
@@ -233,7 +233,7 @@ def generate_relationships() -> List[Dict]:
         {
             "id": "rel_004",
             "subject_id": "RxNorm:860975",  # Metformin
-            "predicate": "TREATS",
+            "predicate": "treats",
             "object_id": "UMLS:C0011860",  # Type 2 Diabetes
             "confidence": 0.95,
             "evidence_count": 3,
@@ -247,7 +247,7 @@ def generate_relationships() -> List[Dict]:
         {
             "id": "rel_005",
             "subject_id": "RxNorm:1191",  # Aspirin
-            "predicate": "PREVENTS",
+            "predicate": "prevents",
             "object_id": "UMLS:C0027051",  # MI
             "confidence": 0.82,
             "evidence_count": 2,
@@ -261,7 +261,7 @@ def generate_relationships() -> List[Dict]:
         {
             "id": "rel_006",
             "subject_id": "HYPOTHESIS:amyloid_cascade_alzheimers",
-            "predicate": "TESTED_BY",
+            "predicate": "tested_by",
             "object_id": "PMC9876543",
             "confidence": 0.95,
             "evidence_count": 1,

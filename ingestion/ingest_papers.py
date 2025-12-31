@@ -38,8 +38,13 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
 from langchain_ollama import OllamaLLM
-from medical_prompts import PROMPT_VERSIONS
-from provenance import create_paper_output, get_tracker
+
+try:
+    from medical_prompts import PROMPT_VERSIONS
+    from provenance import create_paper_output, get_tracker
+except ImportError:
+    from ingestion.medical_prompts import PROMPT_VERSIONS
+    from ingestion.provenance import create_paper_output, get_tracker
 
 
 def get_git_info() -> Dict[str, str]:
@@ -255,13 +260,14 @@ class PostgresDatabase:
                 for entity in entities:
                     cur.execute(
                         """
-                        INSERT INTO entities (id, entity_type, name, canonical_id, mentions)
-                        VALUES (%s, %s, %s, %s, 1)
+                        INSERT INTO entities (id, entity_type, name, canonical_id, mentions, embedding)
+                        VALUES (%s, %s, %s, %s, 1, %s)
                         ON CONFLICT (id) DO UPDATE SET
                             mentions = entities.mentions + 1,
+                            embedding = EXCLUDED.embedding,
                             updated_at = CURRENT_TIMESTAMP
                     """,
-                        (entity["id"], entity["type"], entity["name"], entity["canonical_id"]),
+                        (entity["id"], entity["type"], entity["name"], entity["canonical_id"], entity.get("embedding")),
                     )
 
                 # 3. Upsert Relationships and Evidence
@@ -430,7 +436,7 @@ class OllamaPaperPipeline:
                 resolved_relationships.append(
                     {
                         "subject_id": name_to_canonical[subject_name],
-                        "predicate": rel["predicate"],
+                        "predicate": rel["predicate"].lower(),
                         "object_id": name_to_canonical[object_name],
                         "confidence": rel.get("confidence", 0.8),
                         "evidence": rel.get("evidence", ""),
@@ -468,6 +474,14 @@ class OllamaPaperPipeline:
 
             if extracted:
                 end_time = datetime.now()
+
+                # Generate embeddings for entities for Postgres
+                if self.db:
+                    for entity in extracted.get("entities", []):
+                        # Use the same embedding model as the entity_db
+                        search_text = f"{entity['type']}: {entity['name']}"
+                        embedding = self.entity_db.embeddings.embed_query(search_text)
+                        entity["embedding"] = embedding
 
                 # Create provenance record
                 provenance = self.tracker.create_provenance_record(

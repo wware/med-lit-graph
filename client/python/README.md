@@ -66,6 +66,7 @@ results = client.execute(query)
 ### `QueryBuilder`
 
 See [QUERY_LANGUAGE.md](../QUERY_LANGUAGE.md) for a full specification of the query language capabilities.
+For more detailed examples, see [EXAMPLES.md](EXAMPLES.md).
 
 ## Requirements
 

@@ -315,6 +315,37 @@ class MedicalGraphClient:
         response.raise_for_status()
         return response.json()
 
+    def batch(self, queries: list[dict[str, Any]]) -> dict[str, Any]:
+        """
+        Execute multiple queries in a batch.
+
+        Args:
+            queries: List of dicts, each containing 'id' (str) and 'query' (GraphQuery or dict)
+                     Example: [{"id": "q1", "query": q1}, {"id": "q2", "query": q2}]
+
+        Returns:
+            Dictionary mapping query IDs to their results.
+        """
+        formatted_queries = []
+        for item in queries:
+            q = item["query"]
+            if isinstance(q, GraphQuery):
+                q_dict = q.model_dump(exclude_none=True)
+            elif isinstance(q, dict):
+                q_dict = q
+            else:
+                # Handle cases where user might pass a QueryBuilder directly
+                if hasattr(q, "build"):
+                    q_dict = q.build().model_dump(exclude_none=True)
+                else:
+                    raise ValueError(f"Invalid query type for id {item['id']}: {type(q)}")
+
+            formatted_queries.append({"id": item["id"], "query": q_dict})
+
+        response = self.session.post(f"{self.base_url}/api/v1/batch", json={"queries": formatted_queries}, timeout=self.timeout)
+        response.raise_for_status()
+        return response.json()
+
     # Convenience methods for common queries
 
     def find_treatments(self, disease: str, min_confidence: float = 0.6, limit: int = 20) -> dict[str, Any]:

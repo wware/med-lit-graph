@@ -29,6 +29,20 @@ import re
 from typing import Any, Dict, List
 
 import psycopg2
+from langchain_community.embeddings import HuggingFaceEmbeddings
+
+# Initialize embeddings model (lazy loaded)
+_embeddings_model = None
+
+
+def get_embeddings_model():
+    global _embeddings_model
+    if _embeddings_model is None:
+        _embeddings_model = HuggingFaceEmbeddings(
+            model_name="microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext", model_kwargs={"device": "cpu"}, encode_kwargs={"normalize_embeddings": True}
+        )
+    return _embeddings_model
+
 
 logger = logging.getLogger(__name__)
 
@@ -60,9 +74,102 @@ def execute_query(query: Dict[str, Any], entities: Dict[str, Dict], relationship
         return execute_edge_query(query, entities, relationships)
     elif find_type == "paths":
         return execute_path_query(query, entities, relationships)
+
+    # Check for vector search
+    if "vector_search" in query:
+        return execute_vector_search_query(query)
+
     else:
         # Default to node query
         return execute_node_query(query, entities, relationships)
+
+
+def execute_vector_search_query(query: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Execute a semantic vector search query using pgvector.
+
+    Query format:
+    {
+        "vector_search": {
+            "text": "query text",
+            "top_k": 10,
+            "min_similarity": 0.5 (optional)
+        },
+        "return_fields": ["name", "entity_type", "similarity"] (optional)
+    }
+    """
+    vector_params = query.get("vector_search", {})
+    query_text = vector_params.get("text")
+    top_k = vector_params.get("top_k", 10)
+    min_similarity = vector_params.get("min_similarity", 0.0)
+    return_fields = query.get("return_fields", ["name", "entity_type", "similarity"])
+
+    if not query_text:
+        return {"results": []}
+
+    # Generate embedding for query text
+    try:
+        model = get_embeddings_model()
+        query_embedding = model.embed_query(query_text)
+    except Exception as e:
+        logger.error(f"Failed to generate embedding: {e}")
+        return {"error": str(e)}
+
+    # Connect to DB and execute vector search
+    results = []
+    try:
+        # Note: This requires the DATABASE_URL env var to be set
+        import os
+
+        db_url = os.getenv("DATABASE_URL")
+        if not db_url:
+            return {"error": "DATABASE_URL not set"}
+
+        with psycopg2.connect(db_url) as conn:
+            with conn.cursor() as cur:
+                # Cosine similarity is 1 - cosine distance (<=>)
+                sql = """
+                    SELECT 
+                        id, 
+                        name, 
+                        entity_type, 
+                        properties, 
+                        1 - (embedding <=> %s::vector) as similarity
+                    FROM entities
+                    WHERE 1 - (embedding <=> %s::vector) > %s
+                    ORDER BY similarity DESC
+                    LIMIT %s
+                """
+                cur.execute(sql, (query_embedding, query_embedding, min_similarity, top_k))
+
+                rows = cur.fetchall()
+                for row in rows:
+                    # Map to result dict
+                    entity = {"id": row[0], "name": row[1], "type": row[2], "properties": row[3], "similarity": float(row[4])}
+
+                    # Filter fields if requested
+                    if return_fields:
+                        filtered = {}
+                        for field in return_fields:
+                            # Handle similarity specifically or standard fields
+                            if field == "similarity":
+                                filtered[field] = entity["similarity"]
+                            elif field == "node_type":
+                                filtered[field] = entity["type"]
+                            elif field in entity:
+                                filtered[field] = entity[field]
+                            elif field.startswith("properties."):
+                                prop_name = field.split(".", 1)[1]
+                                filtered[field] = entity["properties"].get(prop_name)
+                        results.append(filtered)
+                    else:
+                        results.append(entity)
+
+    except Exception as e:
+        logger.error(f"Vector search failed: {e}")
+        return {"error": str(e), "results": []}
+
+    return {"results": results}
 
 
 def execute_node_query(query: Dict[str, Any], entities: Dict[str, Dict], relationships: List[Dict]) -> Dict[str, Any]:
@@ -999,6 +1106,24 @@ class SQLQueryExecutor:
             where_clauses.append(f"LOWER({var_name}.name) = LOWER(%s)")
             params.append(node_pattern["name"])
 
+        # Vector similarity search (pgvector)
+        if node_pattern.get("vector_search"):
+            vector = node_pattern["vector_search"]
+            # pgvector uses <=> for cosine distance
+            # Similarity = 1 - Distance
+            select_clause += f", (1 - ({var_name}.embedding <=> %s)) as similarity"
+            params.append(str(vector))
+
+            threshold = node_pattern.get("similarity_threshold")
+            if threshold:
+                where_clauses.append(f"({var_name}.embedding <=> %s) <= %s")
+                params.append(str(vector))
+                params.append(1.0 - threshold)
+
+            # If no other order_by is specified, order by similarity
+            if not order_by:
+                order_by = [["similarity", "desc"]]
+
         # Edge pattern filters (requires JOIN)
         if edge_pattern:
             from_clause += f" JOIN relationships rel ON {var_name}.id = rel.subject_id"
@@ -1089,42 +1214,86 @@ class SQLQueryExecutor:
         return {"results": results}
 
     def execute_path_query(self, query: Dict[str, Any]) -> Dict[str, Any]:
-        """Translate and execute a multi-hop path query using recursive CTE."""
+        """Translate and execute a multi-hop path query using sequential JOINs."""
         path_pattern = query.get("path_pattern", {})
         if not path_pattern:
             return {"results": []}
 
-        # start_spec = path_pattern.get("start", {})
-        # edge_specs = path_pattern.get("edges", [])
-        # max_hops = path_pattern.get("max_hops", len(edge_specs))
+        start_spec = path_pattern.get("start", {})
+        edge_specs = path_pattern.get("edges", [])
+        return_fields = query.get("return_fields")
+        limit = query.get("limit")
 
-        # Build recursive CTE for path traversal
-        # sql_template = f"""
-        #     WITH RECURSIVE graph_path AS (
-        #         -- Anchor member: start nodes
-        #         SELECT
-        #             id as node_id,
-        #             ARRAY[id] as path_ids,
-        #             1 as hop_count,
-        #             ARRAY[]::jsonb[] as edge_metadata
-        #         FROM entities
-        #         WHERE 1=1
-        #         {" AND entity_type = %s" if start_spec.get("node_type") else ""}
-        #         {" AND LOWER(name) = LOWER(%s)" if start_spec.get("name") else ""}
+        # Start building the SQL
+        start_var = start_spec.get("var", "node")
+        from_clause = f"FROM entities {start_var}"
+        where_clauses = []
+        params = []
 
-        #         UNION ALL
+        if start_spec.get("node_type"):
+            where_clauses.append(f"{start_var}.entity_type = %s")
+            params.append(start_spec["node_type"])
+        if start_spec.get("name"):
+            where_clauses.append(f"LOWER({start_var}.name) = LOWER(%s)")
+            params.append(start_spec["name"])
+        elif start_spec.get("name_pattern"):
+            where_clauses.append(f"{start_var}.name ~* %s")
+            params.append(start_spec["name_pattern"])
 
-        #         -- Recursive member: follow relationships
-        #         SELECT
-        #             r.object_id,
-        #             gp.path_ids || r.object_id,
-        #             gp.hop_count + 1,
-        #             gp.edge_metadata || jsonb_build_object('predicate', r.predicate, 'confidence', r.confidence)
-        #         FROM graph_path gp
-        #         JOIN relationships r ON gp.node_id = r.subject_id
-        #         WHERE gp.hop_count < %s
-        #         AND NOT (r.object_id = ANY(gp.path_ids)) -- avoid cycles
-        #     )
+        # Loop through edges and nodes for joins
+        prev_node_var = start_var
+        for i, hop in enumerate(edge_specs):
+            edge_pattern = hop.get("edge", {})
+            node_pattern = hop.get("node", {})
+
+            edge_var = edge_pattern.get("var", f"rel_{i}")
+            node_var = node_pattern.get("var", f"node_{i}")
+
+            from_clause += f" JOIN relationships {edge_var} ON {prev_node_var}.id = {edge_var}.subject_id"
+            from_clause += f" JOIN entities {node_var} ON {edge_var}.object_id = {node_var}.id"
+
+            if edge_pattern.get("relation_type"):
+                where_clauses.append(f"{edge_var}.predicate = %s")
+                params.append(edge_pattern["relation_type"])
+            elif edge_pattern.get("relation_types"):
+                where_clauses.append(f"{edge_var}.predicate = ANY(%s)")
+                params.append(edge_pattern["relation_types"])
+            if edge_pattern.get("min_confidence"):
+                where_clauses.append(f"{edge_var}.confidence >= %s")
+                params.append(edge_pattern["min_confidence"])
+
+            if node_pattern.get("node_type"):
+                where_clauses.append(f"{node_var}.entity_type = %s")
+                params.append(node_pattern["node_type"])
+            elif node_pattern.get("node_types"):
+                where_clauses.append(f"{node_var}.entity_type = ANY(%s)")
+                params.append(node_pattern["node_types"])
+
+            prev_node_var = node_var
+
+        # Build SELECT clause
+        if return_fields:
+            select_parts = []
+            for rf in return_fields:
+                select_parts.append(f'{self._translate_field(rf, start_var)} as "{rf}"')
+            select_clause = "SELECT " + ", ".join(select_parts)
+        else:
+            # Default: return names of all nodes in path
+            select_parts = [f'{start_var}.name as "{start_var}.name"']
+            for i, hop in enumerate(edge_specs):
+                node_var = hop.get("node", {}).get("var", f"node_{i}")
+                select_parts.append(f'{node_var}.name as "{node_var}.name"')
+            select_clause = "SELECT " + ", ".join(select_parts)
+
+        sql = f"{select_clause} {from_clause}"
+        if where_clauses:
+            sql += " WHERE " + " AND ".join(where_clauses)
+
+        if limit:
+            sql += f" LIMIT {int(limit)}"
+
+        results = self._run_sql(sql, params)
+        return {"results": results}
         #     SELECT * FROM graph_path WHERE hop_count = %s
         # """
         # params = []

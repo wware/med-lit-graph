@@ -4,6 +4,9 @@
 -- Enable UUID extension for primary keys if not already available
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- Enable pgvector for semantic search
+CREATE EXTENSION IF NOT EXISTS vector;
+
 -- 1. Entities table: Nodes in the graph (genes, drugs, diseases, etc.)
 CREATE TABLE IF NOT EXISTS entities (
     id TEXT PRIMARY KEY,               -- Canonical ID (e.g., 'RxNorm:1187832')
@@ -11,6 +14,7 @@ CREATE TABLE IF NOT EXISTS entities (
     name TEXT NOT NULL,                -- Preferred/canonical name
     canonical_id TEXT,                 -- Duplicate of ID for easy access or external ref
     properties JSONB DEFAULT '{}',     -- Dynamic properties (icd10, fda_approved, etc.)
+    embedding vector(768),             -- Biomedical embeddings (e.g., PubMedBERT)
     mentions INT DEFAULT 0,            -- Aggregate mention count
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -18,6 +22,8 @@ CREATE TABLE IF NOT EXISTS entities (
 
 CREATE INDEX IF NOT EXISTS idx_entities_type ON entities(entity_type);
 CREATE INDEX IF NOT EXISTS idx_entities_name ON entities(name);
+-- Vector index for fast similarity search (HNSW)
+CREATE INDEX IF NOT EXISTS idx_entities_embedding ON entities USING hnsw (embedding vector_cosine_ops);
 
 -- 2. Papers table: Source documents
 CREATE TABLE IF NOT EXISTS papers (
