@@ -14,6 +14,7 @@ Usage:
     # API docs at http://localhost:8000/docs
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -24,17 +25,17 @@ if str(SCRIPT_DIR) not in sys.path:
 
 # ruff: noqa: E402
 # Imports after sys.path modification to allow local module imports
-from datetime import datetime  # noqa: E402
-from typing import Any, Dict, List, Optional  # noqa: E402
 import json  # noqa: E402
 import logging  # noqa: E402
 import time  # noqa: E402
-import uvicorn  # noqa: E402
+from datetime import datetime  # noqa: E402
+from typing import Any, Dict, List, Optional  # noqa: E402
 
+import uvicorn  # noqa: E402
 from fastapi import APIRouter, FastAPI, HTTPException, Query  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
-from fastapi.staticfiles import StaticFiles  # noqa: E402
 from fastapi.responses import FileResponse  # noqa: E402
+from fastapi.staticfiles import StaticFiles  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
 # Import query executor at module level for better performance
@@ -191,23 +192,29 @@ async def query_endpoint(query: Dict[str, Any]):
     """
     try:
         logger.info(f"Query received: {query}")
-        logger.info(f"ENTITIES count: {len(ENTITIES)}, RELATIONSHIPS count: {len(RELATIONSHIPS)}")
 
-        logger.info("query_executor already imported at module level")
-
+        database_url = os.getenv("DATABASE_URL")
         start_time = time.time()
-        result = execute_query(query, ENTITIES, RELATIONSHIPS)
-        execution_time_ms = int((time.time() - start_time) * 1000)
 
-        logger.info(f"Query executed successfully, results: {len(result['results'])} rows")
+        if database_url:
+            from query_executor import SQLQueryExecutor
+
+            executor = SQLQueryExecutor(database_url)
+            result = executor.execute(query)
+        else:
+            logger.info(f"ENTITIES count: {len(ENTITIES)}, RELATIONSHIPS count: {len(RELATIONSHIPS)}")
+            result = execute_query(query, ENTITIES, RELATIONSHIPS)
+
+        execution_time_ms = int((time.time() - start_time) * 1000)
+        logger.info(f"Query executed successfully, results: {len(result.get('results', []))} rows")
 
         return {
             "status": "success",
             "query": query,
-            "results": result["results"],
-            "total_results": len(result["results"]),
+            "results": result.get("results", []),
+            "total_results": len(result.get("results", [])),
             "execution_time_ms": execution_time_ms,
-            "metadata": create_response_metadata(len(result["results"]), execution_time_ms),
+            "metadata": create_response_metadata(len(result.get("results", [])), execution_time_ms),
         }
     except Exception as e:
         logger.error(f"Query execution failed: {e}", exc_info=True)

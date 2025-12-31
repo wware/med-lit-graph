@@ -28,48 +28,11 @@ All medical entities (Disease, Gene, Drug, Protein, etc.) share these base prope
 
 import json
 from datetime import datetime
-from enum import Enum
 from typing import Literal, cast, List, Optional, Dict, Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from tqdm import tqdm
 
-# ============================================================================
-# Entity Type Enumeration
-# ============================================================================
-
-
-class EntityType(str, Enum):
-    """
-    All possible entity types in the knowledge graph.
-
-    This enum provides type safety for entity categorization and enables
-    validation of entity-relationship compatibility.
-    """
-
-    # Core medical entities
-    DISEASE = "disease"
-    SYMPTOM = "symptom"
-    DRUG = "drug"
-    GENE = "gene"
-    MUTATION = "mutation"
-    PROTEIN = "protein"
-    PATHWAY = "pathway"
-    ANATOMICAL_STRUCTURE = "anatomical_structure"
-    PROCEDURE = "procedure"
-    TEST = "test"
-    BIOMARKER = "biomarker"
-
-    # Research metadata
-    PAPER = "paper"
-    AUTHOR = "author"
-    INSTITUTION = "institution"
-    CLINICAL_TRIAL = "clinical_trial"
-
-    # Scientific method entities (ontology-based)
-    HYPOTHESIS = "hypothesis"  # IAO:0000018
-    STUDY_DESIGN = "study_design"  # OBI study designs
-    STATISTICAL_METHOD = "statistical_method"  # STATO methods
-    EVIDENCE_LINE = "evidence_line"  # SEPIO evidence structures
+from base import EntityType, EntityReference, ModelInfo, PredicateType
 
 
 class BaseMedicalEntity(BaseModel):
@@ -318,19 +281,6 @@ class ExtractionPipelineInfo(BaseModel):
     repo_url: str = Field(..., description="Repository URL")
 
 
-class ModelInfo(BaseModel):
-    """
-    Information about a model used in extraction.
-
-    Allows comparing extraction quality across different LLMs and versions.
-    """
-
-    name: str = Field(..., description="Model name/identifier")
-    provider: str = Field(..., description="Model provider (e.g., 'ollama', 'anthropic')")
-    temperature: Optional[float] = Field(None, description="Temperature parameter if applicable")
-    version: Optional[str] = Field(None, description="Model version if known")
-
-
 class PromptInfo(BaseModel):
     """
     Information about the prompt used.
@@ -398,20 +348,6 @@ class ExtractionProvenance(BaseModel):
 # ============================================================================
 # Entity and Relationship Classes
 # ============================================================================
-
-
-class EntityReference(BaseModel):
-    """
-    Reference to an entity in the knowledge graph.
-
-    Lightweight pointer to a canonical entity (Disease, Drug, Gene, etc.)
-    with the name as it appeared in this specific paper.
-    """
-
-    id: str = Field(..., description="Canonical entity ID")
-    name: str = Field(..., description="Entity name as mentioned in paper")
-    type: EntityType = Field(..., description="Entity type (drug, disease, gene, protein, etc.)")
-    canonical_id: Optional[str] = Field(None, description="External ID (UMLS, RxNorm, etc.)")
 
 
 class AssertedRelationship(BaseModel):
@@ -1082,60 +1018,6 @@ class EntityMention(BaseModel):
     mention_count: int  # How many times mentioned
     mentions: list[str]  # ["T2DM", "type 2 diabetes", ...]
     chunk_ids: list[str]  # Which chunks mention this entity
-
-
-class PredicateType(str, Enum):
-    """
-    All possible relationship types in the knowledge graph.
-
-    Provides type safety and enables validation of relationship usage.
-    Organized by category for clarity.
-    """
-
-    # Causal relationships
-    CAUSES = "causes"
-    PREVENTS = "prevents"
-    INCREASES_RISK = "increases_risk"
-    DECREASES_RISK = "decreases_risk"
-
-    # Treatment relationships
-    TREATS = "treats"
-    MANAGES = "manages"
-    CONTRAINDICATED_FOR = "contraindicated_for"
-    SIDE_EFFECT = "side_effect"
-
-    # Biological/Molecular relationships
-    BINDS_TO = "binds_to"
-    INHIBITS = "inhibits"
-    ACTIVATES = "activates"
-    UPREGULATES = "upregulates"
-    DOWNREGULATES = "downregulates"
-    ENCODES = "encodes"
-    METABOLIZES = "metabolizes"
-    PARTICIPATES_IN = "participates_in"
-
-    # Clinical/Diagnostic relationships
-    DIAGNOSES = "diagnoses"
-    DIAGNOSED_BY = "diagnosed_by"
-    INDICATES = "indicates"
-    PRECEDES = "precedes"
-    CO_OCCURS_WITH = "co_occurs_with"
-    ASSOCIATED_WITH = "associated_with"
-
-    # Drug interactions
-    INTERACTS_WITH = "interacts_with"
-
-    # Location relationships
-    LOCATED_IN = "located_in"
-    AFFECTS = "affects"
-
-    # Provenance relationships
-    AUTHORED_BY = "authored_by"
-    CITES = "cites"
-    CITED_BY = "cited_by"
-    CONTRADICTS = "contradicts"
-
-    # Recommendation: Allow free-text predicates only as a fallback with validation warnings - how do I do that?
 
 
 class Relationship(BaseModel):

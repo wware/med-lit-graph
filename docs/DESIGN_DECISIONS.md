@@ -10,8 +10,8 @@ This document explains the key architectural and design decisions made for the M
 4. [Evidence Quality Weighting](#evidence-quality-weighting)
 5. [Hybrid Graph RAG Architecture](#hybrid-graph-rag-architecture)
 6. [Per-Paper JSON vs Centralized Database](#per-paper-json-vs-centralized-database)
-7. [AWS Neptune vs Neo4j](#aws-neptune-vs-neo4j)
-8. [OpenSearch vs PostgreSQL](#opensearch-vs-postgresql)
+7. [PostgreSQL vs Graph Databases](#postgresql-vs-graph-databases)
+8. [OpenSearch vs PostgreSQL for Vector Search](#opensearch-vs-postgresql-for-vector-search)
 9. [MCP Integration](#mcp-integration)
 10. [Pydantic for Schema Validation](#pydantic-for-schema-validation)
 
@@ -209,15 +209,15 @@ def regenerate_graph(since: datetime):
 ## 3. JSON Query Language vs Native Graph QLs
 
 ### Decision
-**Use a vendor-neutral JSON query language that translates to Neptune (openCypher/Gremlin), not direct Cypher/Gremlin.**
+**Use a vendor-neutral JSON query language that translates to SQL (PostgreSQL), not direct SQL or complex Graph QLs.**
 
 ### Rationale
 
 **Problem we're solving:**
-- Different graph databases use different query languages
+- GraphQL and Graph QLs (Cypher/Gremlin) can be complex for standard relational tasks
 - Switching databases = rewrite all queries
-- LLMs struggle with Cypher/Gremlin syntax
-- Hard to programmatically compose queries
+- LLMs are excellent at JSON but can sometimes hallucinate complex SQL joins
+- A JSON abstraction allows us to optimize the underlying SQL generation
 - Users can't easily learn yet another query language
 
 **Our approach:**
@@ -230,20 +230,17 @@ def regenerate_graph(since: datetime):
 }
 ```
 
-This translates to:
-- **openCypher** (Neptune): `MATCH (drug:drug)-[r:treats]->(disease) WHERE disease.name = 'diabetes' RETURN drug`
-- **Gremlin** (Neptune alt): `g.V().hasLabel('disease').has('name','diabetes').inE('treats').outV().hasLabel('drug')`
-- **Cypher** (Neo4j): Same as openCypher
+This translates to an optimized PostgreSQL SQL query involving joins between `entities`, `relationships`, and `evidence` tables.
 
 ### Trade-offs
 
 **Pros:**
-- ✅ Database-agnostic (switch Neptune ↔ Neo4j ↔ ArangoDB)
+- ✅ Database-agnostic (could switch back to Graph DB if needed)
 - ✅ LLM-friendly (JSON is natural for AI to generate)
-- ✅ Programmatic composition (build queries in code)
+- ✅ SQL Optimization (translator handles complex JOIN logic)
 - ✅ Human-readable (no learning curve)
 - ✅ Type-safe (Pydantic validation)
-- ✅ Consistent interface across databases
+- ✅ Consistent interface across deployments
 
 **Cons:**
 - ⚠️ Translation layer overhead (~10-20ms per query)
@@ -258,7 +255,7 @@ This translates to:
 
 ### Alternative Approaches Considered
 
-**1. Direct Cypher/Gremlin**
+**1. Direct SQL Queries**
 **Rejected because:**
 - Vendor lock-in
 - Hard for LLMs
@@ -279,15 +276,15 @@ This translates to:
 ### Performance Considerations
 
 **Query translation time:**
-- Simple query: ~5-10ms
-- Complex path query: ~15-25ms
-- **Negligible compared to 100-500ms execution**
+- Simple query: ~2-5ms
+- Complex path query (Recursive CTE): ~10-15ms
+- **Negligible compared to query execution**
 
 **Caching strategy:**
 ```python
 @lru_cache(maxsize=1000)
-def translate_to_cypher(query: GraphQuery) -> str:
-    return CypherTranslator().translate(query)
+def translate_to_sql(query: GraphQuery) -> str:
+    return SQLQueryExecutor().translate(query)
 ```
 
 Common queries cached in-memory.
@@ -459,41 +456,31 @@ See [Decision #2](#2-immutable-source-of-truth-json-files) for full details.
 
 ---
 
-## 7. AWS Neptune vs Neo4j
+## 7. PostgreSQL vs Graph Databases (Neptune/Neo4j)
 
 ### Decision
-**Use AWS Neptune for production, but keep Neo4j as an option.**
+**Use PostgreSQL with a relational schema optimized for graph-like queries.**
 
 ### Rationale
 
-**Why Neptune:**
-- ✅ Fully managed (no ops burden)
-- ✅ Automatic backups
-- ✅ Multi-AZ availability
-- ✅ IAM integration
-- ✅ Supports both Gremlin and openCypher
+**Why PostgreSQL:**
+- ✅ Mature, reliable, and widely available
+- ✅ Strong consistency and ACID compliance
+- ✅ Excellent performance for 1-2 hop relationships with proper indexing
+- ✅ Recursive CTEs support multi-hop path queries
+- ✅ Lower operational complexity than managed graph services like Neptune
 
-**Why not Neo4j:**
-- ⚠️ Must self-host or use Neo4j Aura (expensive)
-- ⚠️ More ops burden
-- ⚠️ No native AWS integration
-
-**But we keep Neo4j compatible because:**
-- Our JSON query language translates to both
-- Some users may prefer self-hosting
-- Neo4j has better visualization tools
+**Why not Neptune/Neo4j (initially considered):**
+- ⚠️ Higher cost for managed instances (Neptune)
+- ⚠️ Niche query languages (Gremlin/Cypher) that are harder to integrate with standard toolchains
+- ⚠️ "Graph-first" performance only really shines at 4+ hops, which is rare in our current use cases
 
 ### Trade-offs
 
-**Managed Graph Database (e.g., Neptune):**
-- Pros: Managed, reliable, cloud-native
-- Cons: Vendor lock-in, higher cost
+- Pros: Low cost, high reliability, standard SQL skills, powerful CTEs.
+- Cons: Slightly more complex SQL for deeply nested relationships compared to Cypher.
 
-**Self-Hosted Graph Database (e.g., Neo4j):**
-- Pros: Mature, great tools, self-host option
-- Cons: Ops burden, licensing costs
-
-**Decision**: Use managed services for cloud deployments, maintain compatibility with self-hosted options.
+**Decision**: PostgreSQL is the primary store for entities, relationships, and evidence.
 
 ---
 
@@ -528,6 +515,9 @@ See [Decision #2](#2-immutable-source-of-truth-json-files) for full details.
 - Cons: Slower, less scalable
 
 **Decision**: OpenSearch for production. pgvector for tiny deployments.
+
+> [!NOTE]
+> For local development and entity deduplication in the ingestion pipeline, **ChromaDB** is used as a lightweight, persistent vector store.
 
 ---
 
@@ -639,7 +629,7 @@ Impossible to create invalid data.
 | **JSON query language** | Vendor neutrality | Translation overhead |
 | **Evidence weighting** | Objectivity | Classification accuracy |
 | **Hybrid RAG** | Comprehensive results | Infrastructure cost |
-| **Neptune** | Managed service | Vendor lock-in |
+| **PostgreSQL** | Mature & Reliable | SQL Complexity for deep hops |
 | **OpenSearch** | Purpose-built search | Separate database |
 | **MCP integration** | LLM-native | Young standard |
 | **Pydantic validation** | Data quality | Runtime cost |

@@ -89,7 +89,8 @@ This isn't about replacing doctors—it's about giving them **superpowers for th
 **Python**:
 ```python
 import os
-from medgraph import MedicalGraphClient
+# The client is available in the client/python directory.
+from client.python.client import MedicalGraphClient
 
 # The client will use the MEDGRAPH_SERVER environment variable.
 client = MedicalGraphClient(os.getenv("MEDGRAPH_SERVER"))
@@ -335,7 +336,6 @@ class MedicalRelationship:
 }
 ```
 
-<!-- TODO these links need to be replaced -->
 ** [Query language specification →](client/QUERY_LANGUAGE.md) | [More examples →](client/curl/EXAMPLES.md)
 
 ---
@@ -348,8 +348,8 @@ pip install medgraph-client
 ```
 
 ```python
-import os
-from medgraph import MedicalGraphClient, QueryBuilder
+# The client is available in the client/python directory.
+from client.python.client import MedicalGraphClient, QueryBuilder
 
 # The client will use the MEDGRAPH_SERVER environment variable.
 client = MedicalGraphClient(os.getenv("MEDGRAPH_SERVER"))
@@ -371,7 +371,7 @@ query = (QueryBuilder()
 results = client.execute(query)
 ```
 
-<!-- TODO files don't exist: [Python docs →](client/python/) | [API reference →](client/python/api.md) -->
+[Python Client →](client/python/)
 
 ### TypeScript/JavaScript
 ```bash
@@ -379,7 +379,7 @@ npm install @medgraph/client
 ```
 
 ```typescript
-import { MedicalGraphClient, QueryBuilder, EntityType, PredicateType } from '@medgraph/client';
+import { MedicalGraphClient, QueryBuilder, EntityType, PredicateType } from './client/ts/medical-graph-client';
 
 const client = new MedicalGraphClient();
 
@@ -394,7 +394,7 @@ const query = new QueryBuilder()
 const results = await client.execute(query);
 ```
 
-<!-- TODO files don't exist: [TypeScript docs →](client/typescript/) | [API reference →](client/typescript/api.md) -->
+[TypeScript Examples →](client/ts/typescript-examples.md)
 
 ### MCP Server (for LLMs)
 
@@ -424,7 +424,7 @@ Now ask Claude:
 
 Claude will query the graph and cite specific papers.
 
-<!-- TODO directory name is wrong: [MCP server docs →](mcp/) -->
+[MCP server docs →](mcp/server.py)
 
 ---
 
@@ -469,7 +469,7 @@ genes = client.find_disease_genes("breast cancer", min_confidence=0.8)
 interactions = client.find_drug_interactions("warfarin", severity=["major"])
 ```
 
-<!-- TODO file doesn't exist: [More use cases →](docs/use-cases.md) -->
+
 
 ---
 
@@ -479,7 +479,7 @@ interactions = client.find_drug_interactions("warfarin", severity=["major"])
 ```bash
 git clone https://github.com/yourusername/medical-knowledge-graph.git
 cd medical-knowledge-graph
-docker-compose up -d
+docker-compose -f ingestion/docker-compose.yml up -d
 ```
 
 Services:
@@ -489,9 +489,7 @@ Services:
 
 ### Cloud Deployment
 
-See the `infrastructure/` directory for deployment options and configurations.
 
-<!-- TODO file doesn't exist: [Deployment guide →](docs/deployment.md) -->
 
 ---
 
@@ -510,7 +508,7 @@ We need help from:
 3. Make your changes with tests
 4. Open a Pull Request
 
-<!-- TODO files don't exist: [Contributing guide →](CONTRIBUTING.md) | [Code of conduct →](CODE_OF_CONDUCT.md) -->
+
 
 ---
 

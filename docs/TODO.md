@@ -34,7 +34,8 @@ This file tracks implementation status and next steps for the medical knowledge 
 
 ### Multi-hop Path Queries
 - [x] Parse `path_pattern` with start node and edges array
-- [x] Traverse relationships to build paths
+- [x] Translate to Recursive CTEs in PostgreSQL
+- [/] Support complex multi-hop path structures [/]
 - [x] Support `max_hops` parameter
 - [x] Support `avoid_cycles`
 - [x] Return path structures with nodes and edges

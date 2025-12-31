@@ -40,11 +40,19 @@ export enum EntityType {
   PROCEDURE = 'procedure',
   TEST = 'test',
   BIOMARKER = 'biomarker',
+  MUTATION = 'mutation',
+  PATHWAY = 'pathway',
   PAPER = 'paper',
   AUTHOR = 'author',
   INSTITUTION = 'institution',
   CLINICAL_TRIAL = 'clinical_trial',
-  MEASUREMENT = 'measurement'
+  MEASUREMENT = 'measurement',
+
+  // Scientific method entities (ontology-based)
+  HYPOTHESIS = 'hypothesis',
+  STUDY_DESIGN = 'study_design',
+  STATISTICAL_METHOD = 'statistical_method',
+  EVIDENCE_LINE = 'evidence_line'
 }
 
 export enum PredicateType {
@@ -67,9 +75,11 @@ export enum PredicateType {
   DOWNREGULATES = 'downregulates',
   ENCODES = 'encodes',
   METABOLIZES = 'metabolizes',
+  PARTICIPATES_IN = 'participates_in',
 
   // Clinical
   DIAGNOSES = 'diagnoses',
+  DIAGNOSED_BY = 'diagnosed_by',
   INDICATES = 'indicates',
   PRECEDES = 'precedes',
   CO_OCCURS_WITH = 'co_occurs_with',
@@ -82,8 +92,15 @@ export enum PredicateType {
   // Provenance
   AUTHORED_BY = 'authored_by',
   CITES = 'cites',
+  CITED_BY = 'cited_by',
   CONTRADICTS = 'contradicts',
-  SUPPORTS = 'supports'
+  SUPPORTS = 'supports',
+
+  // Hypothesis and evidence relationships
+  PREDICTS = 'predicts',
+  REFUTES = 'refutes',
+  TESTED_BY = 'tested_by',
+  GENERATES = 'generates'
 }
 
 export type FilterOperator =
@@ -426,8 +443,8 @@ export class MedicalGraphClient {
 
   constructor(config?: ClientConfig | string) {
     const baseUrl = typeof config === 'string'
-        ? config
-        : (config?.baseUrl || process.env.MEDGRAPH_SERVER || '');
+      ? config
+      : (config?.baseUrl || ((globalThis as any).process?.env?.['MEDGRAPH_SERVER']) || '');
 
     if (!baseUrl) {
       throw new Error("MedicalGraphClient: baseUrl is required. Provide it in the constructor or set the MEDGRAPH_SERVER environment variable.");
@@ -680,7 +697,7 @@ export class MedicalGraphClient {
       },
       filters: [
         {
-          field: "incoming_edges[relation_type='symptom_of'].source.name",
+          field: "incoming_edges[relation_type='causes'].source.name",
           operator: 'in',
           value: symptoms
         }
@@ -688,7 +705,7 @@ export class MedicalGraphClient {
       aggregate: {
         group_by: ['disease.name'],
         aggregations: {
-          symptom_match_count: ['count', "incoming_edges[relation_type='symptom_of']"],
+          symptom_match_count: ['count', "incoming_edges[relation_type='causes']"],
           total_papers: ['count', 'incoming_edges.evidence.paper_id']
         }
       },
@@ -697,7 +714,15 @@ export class MedicalGraphClient {
         ['total_papers', 'desc']
       ],
       limit: 10
-    };
+    } as any;
+
+    if (options.minSymptomMatches) {
+      (query as any).filters.push({
+        field: 'symptom_match_count',
+        operator: 'gte',
+        value: options.minSymptomMatches
+      });
+    }
 
     return this.executeRaw(query);
   }
@@ -772,8 +797,3 @@ export class MedicalGraphClient {
 
 export default MedicalGraphClient;
 
-// Also export everything for named imports
-export {
-  MedicalGraphClient,
-  QueryBuilder
-};

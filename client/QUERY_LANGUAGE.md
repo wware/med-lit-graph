@@ -6,7 +6,7 @@ This document describes the JSON-based graph query language used to query the me
 
 - **Declarative**: Describe what you want, not how to get it
 - **JSON-based**: Easy to generate programmatically and use with LLMs
-- **Database-agnostic**: Translates to openCypher (Neptune), Cypher (Neo4j), or Gremlin
+- **Database-agnostic**: Translates to PostgreSQL SQL (via Recursive CTEs for paths)
 - **Evidence-aware**: First-class support for provenance and confidence scoring
 - **Composable**: Build complex queries from simple patterns
 

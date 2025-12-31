@@ -17,15 +17,12 @@ Query medical research papers, drug-disease relationships, gene associations, an
 ## Installation
 
 ```bash
-npm install @medgraph/client
-```
+# To install dependencies:
+cd client/ts
+npm install
 
-Or with your preferred package manager:
-
-```bash
-yarn add @medgraph/client
-pnpm add @medgraph/client
-bun add @medgraph/client
+# To use as a local package:
+npm link
 ```
 
 ## Quick Start
@@ -93,7 +90,7 @@ const contradictions = await client.findContradictoryEvidence(
 Build custom queries with the fluent API:
 
 ```typescript
-import { QueryBuilder, EntityType, PredicateType } from '@medgraph/client';
+import { MedicalGraphClient, QueryBuilder, EntityType, PredicateType } from '@medgraph/client';
 
 const query = new QueryBuilder()
   .findNodes(EntityType.GENE)
@@ -484,5 +481,5 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Related Projects
 
-- [@medgraph/python](https://pypi.org/project/medgraph-client/) - Python client
-- [@medgraph/server](https://github.com/yourusername/medgraph-server) - MCP server implementation
+- [Python Client](../python/README.md)
+- [MCP Server](../../mcp/server.py)
