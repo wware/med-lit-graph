@@ -24,8 +24,13 @@ Phase 2 (Current Implementation):
 Phase 3 features are documented in QUERY_EXECUTOR_ROADMAP.md
 """
 
+import logging
 import re
 from typing import Any, Dict, List
+
+import psycopg2
+
+logger = logging.getLogger(__name__)
 
 # Configuration constants
 MAX_REGEX_PATTERN_LENGTH = 200  # Maximum length for regex patterns to prevent ReDoS
@@ -938,3 +943,254 @@ def project_fields(results: List[Dict], return_fields: List[str]) -> List[Dict]:
         projected.append(projected_result)
 
     return projected
+
+
+class SQLQueryExecutor:
+    """
+    Translates JSON graph queries into PostgreSQL SQL and executes them.
+    """
+
+    def __init__(self, database_url: str):
+        self.database_url = database_url
+
+    def get_connection(self):
+        return psycopg2.connect(self.database_url)
+
+    def execute(self, query: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute a query against PostgreSQL."""
+        find_type = query.get("find", "nodes")
+
+        if find_type in ["edges", "relationships"]:
+            return self.execute_edge_query(query)
+        elif find_type == "paths":
+            return self.execute_path_query(query)
+        else:
+            return self.execute_node_query(query)
+
+    def execute_node_query(self, query: Dict[str, Any]) -> Dict[str, Any]:
+        """Translate and execute a node query."""
+        node_pattern = query.get("node_pattern", {})
+        edge_pattern = query.get("edge_pattern", {})
+        filters = query.get("filters", [])
+        aggregate = query.get("aggregate", {})
+        order_by = query.get("order_by", [])
+        limit = query.get("limit")
+        return_fields = query.get("return_fields")
+
+        var_name = node_pattern.get("var", "node")
+
+        # Build SQL parts
+        if return_fields:
+            select_cols = []
+            for rf in return_fields:
+                select_cols.append(f'{self._translate_field(rf, var_name)} as "{rf}"')
+            select_clause = "SELECT " + ", ".join(select_cols)
+        else:
+            select_clause = f'SELECT {var_name}.name as "{var_name}.name", {var_name}.id as "{var_name}.id"'
+        from_clause = "FROM entities " + var_name
+        where_clauses = []
+        params = []
+
+        # Node pattern filters
+        if node_pattern.get("node_type"):
+            where_clauses.append(f"{var_name}.entity_type = %s")
+            params.append(node_pattern["node_type"])
+        if node_pattern.get("name"):
+            where_clauses.append(f"LOWER({var_name}.name) = LOWER(%s)")
+            params.append(node_pattern["name"])
+
+        # Edge pattern filters (requires JOIN)
+        if edge_pattern:
+            from_clause += f" JOIN relationships rel ON {var_name}.id = rel.subject_id"
+            from_clause += " JOIN entities target ON rel.object_id = target.id"
+
+            if edge_pattern.get("relation_type"):
+                where_clauses.append("rel.predicate = %s")
+                params.append(edge_pattern["relation_type"])
+            if edge_pattern.get("min_confidence"):
+                where_clauses.append("rel.confidence >= %s")
+                params.append(edge_pattern["min_confidence"])
+
+        # Additional filters
+        for f in filters:
+            sql, p = self._translate_filter(f, var_name)
+            if sql:
+                where_clauses.append(sql)
+                params.extend(p)
+
+        # Aggregations
+        if aggregate:
+            group_by = aggregate.get("group_by", [])
+            aggregations = aggregate.get("aggregations", {})
+
+            agg_selects = []
+            for field in group_by:
+                agg_selects.append(self._translate_field(field, var_name))
+
+            for agg_name, agg_spec in aggregations.items():
+                func, field = agg_spec[0], agg_spec[1]
+                sql_func = self._map_agg_func(func)
+                field_sql = self._translate_field(field, var_name)
+                agg_selects.append(f"{sql_func}({field_sql}) as {agg_name}")
+
+            select_clause = "SELECT " + ", ".join(agg_selects)
+
+        sql = select_clause + " " + from_clause
+        if where_clauses:
+            sql += " WHERE " + " AND ".join(where_clauses)
+
+        if aggregate and aggregate.get("group_by"):
+            sql += " GROUP BY " + ", ".join([self._translate_field(f, var_name) for f in aggregate["group_by"]])
+
+        # Order by
+        if order_by:
+            order_parts = []
+            for spec in order_by:
+                field = spec[0]
+                direction = "DESC" if len(spec) > 1 and spec[1].lower() == "desc" else "ASC"
+                order_parts.append(f"{self._translate_field(field, var_name)} {direction}")
+            sql += " ORDER BY " + ", ".join(order_parts)
+
+        if limit:
+            sql += f" LIMIT {int(limit)}"
+
+        results = self._run_sql(sql, params)
+        return {"results": results}
+
+    def execute_edge_query(self, query: Dict[str, Any]) -> Dict[str, Any]:
+        """Translate and execute an edge query."""
+        # Simple implementation for now
+        sql = """
+            SELECT 
+                s.name as "subject.name", s.id as "subject.id", s.entity_type as "subject.type",
+                r.predicate as "predicate",
+                o.name as "object.name", o.id as "object.id", o.entity_type as "object.type",
+                r.confidence as "confidence"
+            FROM relationships r
+            JOIN entities s ON r.subject_id = s.id
+            JOIN entities o ON r.object_id = o.id
+        """
+        params = []
+        where_clauses = []
+
+        edge_pattern = query.get("edge_pattern", {})
+        if edge_pattern.get("relation_type"):
+            where_clauses.append("r.predicate = %s")
+            params.append(edge_pattern["relation_type"])
+
+        if where_clauses:
+            sql += " WHERE " + " AND ".join(where_clauses)
+
+        limit = query.get("limit")
+        if limit:
+            sql += f" LIMIT {int(limit)}"
+
+        results = self._run_sql(sql, params)
+        return {"results": results}
+
+    def execute_path_query(self, query: Dict[str, Any]) -> Dict[str, Any]:
+        """Translate and execute a multi-hop path query using recursive CTE."""
+        path_pattern = query.get("path_pattern", {})
+        if not path_pattern:
+            return {"results": []}
+
+        # start_spec = path_pattern.get("start", {})
+        # edge_specs = path_pattern.get("edges", [])
+        # max_hops = path_pattern.get("max_hops", len(edge_specs))
+
+        # Build recursive CTE for path traversal
+        # sql_template = f"""
+        #     WITH RECURSIVE graph_path AS (
+        #         -- Anchor member: start nodes
+        #         SELECT
+        #             id as node_id,
+        #             ARRAY[id] as path_ids,
+        #             1 as hop_count,
+        #             ARRAY[]::jsonb[] as edge_metadata
+        #         FROM entities
+        #         WHERE 1=1
+        #         {" AND entity_type = %s" if start_spec.get("node_type") else ""}
+        #         {" AND LOWER(name) = LOWER(%s)" if start_spec.get("name") else ""}
+
+        #         UNION ALL
+
+        #         -- Recursive member: follow relationships
+        #         SELECT
+        #             r.object_id,
+        #             gp.path_ids || r.object_id,
+        #             gp.hop_count + 1,
+        #             gp.edge_metadata || jsonb_build_object('predicate', r.predicate, 'confidence', r.confidence)
+        #         FROM graph_path gp
+        #         JOIN relationships r ON gp.node_id = r.subject_id
+        #         WHERE gp.hop_count < %s
+        #         AND NOT (r.object_id = ANY(gp.path_ids)) -- avoid cycles
+        #     )
+        #     SELECT * FROM graph_path WHERE hop_count = %s
+        # """
+        # params = []
+        # if start_spec.get("node_type"):
+        #     params.append(start_spec["node_type"])
+        # if start_spec.get("name"):
+        #     params.append(start_spec["name"])
+        # params.append(max_hops + 1)  # hop_count is 1-based start
+        # params.append(max_hops + 1)
+
+        # Note: This is a simplified path query. Real implementation would be more complex
+        # to match specific edge types at each hop.
+
+        # results = self._run_sql(sql_template, params)
+        # return {"results": results}
+        return {"results": [], "error": "Path queries not fully implemented in SQL yet"}
+
+    def _translate_filter(self, filter_spec: Dict, var_name: str) -> tuple:
+        field = filter_spec.get("field", "")
+        operator = filter_spec.get("operator", "eq")
+        value = filter_spec.get("value")
+
+        field_sql = self._translate_field(field, var_name)
+
+        if operator == "eq":
+            return f"{field_sql} = %s", [value]
+        elif operator == "ne":
+            return f"{field_sql} != %s", [value]
+        elif operator == "in":
+            return f"{field_sql} = ANY(%s)", [value]
+        elif operator == "gt":
+            return f"{field_sql} > %s", [value]
+        elif operator == "contains":
+            return f"{field_sql} ILIKE %s", [f"%{value}%"]
+
+        return None, []
+
+    def _translate_field(self, field_ref: str, default_var: str) -> str:
+        if "." not in field_ref:
+            return f"{default_var}.{field_ref}"
+
+        parts = field_ref.split(".", 1)
+        var = parts[0]
+        field = parts[1]
+
+        if var == "node":
+            var = default_var
+        if field == "node_type":
+            field = "entity_type"
+
+        return f"{var}.{field}"
+
+    def _map_agg_func(self, func: str) -> str:
+        mapping = {"count": "COUNT", "avg": "AVG", "sum": "SUM", "min": "MIN", "max": "MAX"}
+        return mapping.get(func, "COUNT")
+
+    def _run_sql(self, sql: str, params: list) -> List[Dict]:
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(sql, params)
+                    colnames = [desc[0] for desc in cur.description]
+                    rows = cur.fetchall()
+                    return [dict(zip(colnames, row)) for row in rows]
+        except Exception as e:
+            logger.error(f"SQL error: {e}")
+            logger.error(f"SQL: {sql}")
+            logger.error(f"Params: {params}")
+            raise

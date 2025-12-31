@@ -2,7 +2,7 @@
 Medical Knowledge Graph Query Client
 
 Python client library for querying the medical knowledge graph using the JSON-based
-graph query language that translates to Neptune (Gremlin/openCypher).
+graph query language that translates to PostgreSQL SQL.
 
 Usage:
     from medical_graph_client import MedicalGraphClient, QueryBuilder
@@ -23,16 +23,18 @@ Usage:
     results = client.execute(query)
 """
 
-from typing import Any, Literal, Optional
-from pydantic import BaseModel, ConfigDict
-import requests
-from enum import Enum
 import os
+from enum import Enum
+from typing import Any, Literal, Optional
+
+import requests
+from pydantic import BaseModel, ConfigDict
 
 
 class EntityType(str, Enum):
     """Medical entity types"""
 
+    # Core medical entities
     DISEASE = "disease"
     SYMPTOM = "symptom"
     DRUG = "drug"
@@ -42,8 +44,23 @@ class EntityType(str, Enum):
     PROCEDURE = "procedure"
     TEST = "test"
     BIOMARKER = "biomarker"
+    MUTATION = "mutation"
+    PATHWAY = "pathway"
+
+    # Meta entities
     PAPER = "paper"
     AUTHOR = "author"
+    INSTITUTION = "institution"
+    CLINICAL_TRIAL = "clinical_trial"
+
+    # Measurement/observation entities
+    MEASUREMENT = "measurement"
+
+    # Scientific method entities (ontology-based)
+    HYPOTHESIS = "hypothesis"
+    STUDY_DESIGN = "study_design"
+    STATISTICAL_METHOD = "statistical_method"
+    EVIDENCE_LINE = "evidence_line"
 
 
 class PredicateType(str, Enum):
@@ -59,6 +76,7 @@ class PredicateType(str, Enum):
     TREATS = "treats"
     MANAGES = "manages"
     CONTRAINDICATES = "contraindicates"
+    SIDE_EFFECT = "side_effect"
 
     # Biological
     BINDS_TO = "binds_to"
@@ -67,14 +85,31 @@ class PredicateType(str, Enum):
     UPREGULATES = "upregulates"
     DOWNREGULATES = "downregulates"
     ENCODES = "encodes"
+    METABOLIZES = "metabolizes"
+    PARTICIPATES_IN = "participates_in"
 
     # Clinical
     DIAGNOSES = "diagnoses"
     INDICATES = "indicates"
+    PRECEDES = "precedes"
+    CO_OCCURS_WITH = "co_occurs_with"
     ASSOCIATED_WITH = "associated_with"
 
-    # Provenance
+    # Location relationships
+    LOCATED_IN = "located_in"
+    AFFECTS = "affects"
+
+    # Authorship/provenance
+    AUTHORED_BY = "authored_by"
     CITES = "cites"
+    CONTRADICTS = "contradicts"
+    SUPPORTS = "supports"
+
+    # Hypothesis and evidence relationships
+    PREDICTS = "predicts"
+    REFUTES = "refutes"
+    TESTED_BY = "tested_by"
+    GENERATES = "generates"
 
 
 class PropertyFilter(BaseModel):
@@ -406,10 +441,10 @@ class MedicalGraphClient:
         raw_query = {
             "find": "nodes",
             "node_pattern": {"node_type": "disease", "var": "disease"},
-            "filters": [{"field": "incoming_edges[relation_type='symptom_of'].source.name", "operator": "in", "value": symptoms}],
+            "filters": [{"field": "incoming_edges[relation_type='causes'].source.name", "operator": "in", "value": symptoms}],
             "aggregate": {
                 "group_by": ["disease.name"],
-                "aggregations": {"symptom_match_count": ("count", "incoming_edges[relation_type='symptom_of']"), "total_papers": ("count", "incoming_edges.evidence.paper_id")},
+                "aggregations": {"symptom_match_count": ("count", "incoming_edges[relation_type='causes']"), "total_papers": ("count", "incoming_edges.evidence.paper_id")},
             },
             "order_by": [["symptom_match_count", "desc"], ["total_papers", "desc"]],
             "limit": 10,

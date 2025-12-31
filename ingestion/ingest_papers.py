@@ -28,19 +28,18 @@ import json
 import os
 import subprocess
 import time
-from pathlib import Path
-from typing import List, Dict, Any, Optional
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import psycopg2
 import requests
-
-from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_ollama import OllamaLLM
+from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
-
-
+from langchain_ollama import OllamaLLM
 from medical_prompts import PROMPT_VERSIONS
-from provenance import get_tracker, create_paper_output
+from provenance import create_paper_output, get_tracker
 
 
 def get_git_info() -> Dict[str, str]:
@@ -217,6 +216,81 @@ class EntityDatabase:
         return canonical_id
 
 
+class PostgresDatabase:
+    """
+    SQL database for persisting the medical knowledge graph.
+    """
+
+    def __init__(self, database_url: str):
+        self.database_url = database_url
+
+    def get_connection(self):
+        return psycopg2.connect(self.database_url)
+
+    def save_paper_results(self, output: Dict[str, Any]):
+        """Save paper, entities, relationships, and evidence to PostgreSQL."""
+        paper_id = output["paper_id"]
+        title = output["title"]
+        abstract = output["abstract"]
+        entities = output["entities"]
+        relationships = output["relationships"]
+
+        with self.get_connection() as conn:
+            with conn.cursor() as cur:
+                # 1. Upsert Paper
+                cur.execute(
+                    """
+                    INSERT INTO papers (id, title, abstract, entity_count, relationship_count)
+                    VALUES (%s, %s, %s, %s, %s)
+                    ON CONFLICT (id) DO UPDATE SET
+                        title = EXCLUDED.title,
+                        abstract = EXCLUDED.abstract,
+                        entity_count = EXCLUDED.entity_count,
+                        relationship_count = EXCLUDED.relationship_count
+                """,
+                    (paper_id, title, abstract, len(entities), len(relationships)),
+                )
+
+                # 2. Upsert Entities
+                for entity in entities:
+                    cur.execute(
+                        """
+                        INSERT INTO entities (id, entity_type, name, canonical_id, mentions)
+                        VALUES (%s, %s, %s, %s, 1)
+                        ON CONFLICT (id) DO UPDATE SET
+                            mentions = entities.mentions + 1,
+                            updated_at = CURRENT_TIMESTAMP
+                    """,
+                        (entity["id"], entity["type"], entity["name"], entity["canonical_id"]),
+                    )
+
+                # 3. Upsert Relationships and Evidence
+                for rel in relationships:
+                    # Upsert Relationship
+                    cur.execute(
+                        """
+                        INSERT INTO relationships (subject_id, object_id, predicate, confidence)
+                        VALUES (%s, %s, %s, %s)
+                        ON CONFLICT (subject_id, object_id, predicate) DO UPDATE SET
+                            confidence = (relationships.confidence + EXCLUDED.confidence) / 2.0
+                        RETURNING id
+                    """,
+                        (rel["subject_id"], rel["object_id"], rel["predicate"], rel["confidence"]),
+                    )
+                    rel_id = cur.fetchone()[0]
+
+                    # Insert Evidence
+                    cur.execute(
+                        """
+                        INSERT INTO evidence (relationship_id, paper_id, section, text_span, confidence)
+                        VALUES (%s, %s, %s, %s, %s)
+                    """,
+                        (rel_id, paper_id, rel.get("section", "unknown"), rel.get("evidence", ""), rel["confidence"]),
+                    )
+
+            conn.commit()
+
+
 class OllamaPaperPipeline:
     """Paper ingestion pipeline using local Ollama models."""
 
@@ -227,6 +301,7 @@ class OllamaPaperPipeline:
         entity_db_dir: Path = Path("./data/entity_db"),
         embedding_model: str = "microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext",
         prompt_version: str = "v1_detailed",
+        database_url: Optional[str] = None,
     ):
         self.llm = OllamaLLM(model=model_name, base_url="http://localhost:11434", temperature=0.1)  # Low temp for more consistent extraction
 
@@ -234,6 +309,16 @@ class OllamaPaperPipeline:
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         self.entity_db = EntityDatabase(persist_dir=entity_db_dir, embedding_model=embedding_model)
+
+        # SQL Database
+        self.db = None
+        if database_url:
+            print(f"Connecting to PostgreSQL: {database_url}")
+            self.db = PostgresDatabase(database_url)
+        elif os.getenv("DATABASE_URL"):
+            db_url = os.getenv("DATABASE_URL")
+            print(f"Connecting to PostgreSQL via ENV: {db_url}")
+            self.db = PostgresDatabase(db_url)
 
         # Store prompt template for provenance
         self.prompt_template = PROMPT_VERSIONS[prompt_version]
@@ -409,6 +494,14 @@ class OllamaPaperPipeline:
                 # Save result
                 output_file.write_text(json.dumps(output, indent=2))
 
+                # Save to PostgreSQL if available
+                if self.db:
+                    try:
+                        self.db.save_paper_results(output)
+                        print("  ✓ Persisted to PostgreSQL")
+                    except Exception as pg_e:
+                        print(f"  × PostgreSQL error: {pg_e}")
+
                 print(f"  ✓ Extracted {len(output['entities'])} entities, " f"{len(output['relationships'])} relationships")
                 print(f"  ✓ Pipeline ID: {self.tracker.generate_pipeline_id(provenance)}")
 
@@ -458,7 +551,8 @@ def main():
     args = parser.parse_args()
 
     # Create pipeline
-    pipeline = OllamaPaperPipeline(model_name=args.model, output_dir=args.output_dir, entity_db_dir=args.entity_db_dir, embedding_model=args.embedding_model)
+    db_url = os.getenv("DATABASE_URL")
+    pipeline = OllamaPaperPipeline(model_name=args.model, output_dir=args.output_dir, entity_db_dir=args.entity_db_dir, embedding_model=args.embedding_model, database_url=db_url)
 
     # Search and process
     pmc_ids = pipeline.search_pubmed(args.query, max_results=args.limit)

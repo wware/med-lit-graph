@@ -8,3 +8,4 @@ chromadb>=0.4.0
 sentence-transformers>=2.2.0  # For HuggingFace embeddings
 requests>=2.31.0
 langchain-ollama
+psycopg2-binary

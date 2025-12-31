@@ -953,7 +953,6 @@ class TreatmentPredicateType(PredicateType):
     SIDE_EFFECT = "side_effect"
 
 
-
 class BiologicalPredicateType(PredicateType):
     BINDS_TO = "binds_to"
     INHIBITS = "inhibits"
