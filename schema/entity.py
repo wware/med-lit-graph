@@ -1,6 +1,10 @@
 """
 ## Overview
 
+This schema defines the **Domain Models** for the knowledge graph.
+These are the Pydantic classes used by application code, pipelines, and the API.
+For database storage, these are mapped to the Persistence Models in `schema/entity_sqlmodel.py`.
+
 This schema is designed to support clinical decision-making by representing medical knowledge
 extracted from research papers. The graph enables multi-hop reasoning, contradiction detection,
 and evidence-based inference. It uses strongly-typed entity classes (Disease, Gene, Drug,
@@ -28,11 +32,12 @@ All medical entities (Disease, Gene, Drug, Protein, etc.) share these base prope
 
 import json
 from datetime import datetime
-from typing import Literal, cast, List, Optional, Dict, Any
+from typing import Any, Dict, List, Literal, Optional, cast
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from tqdm import tqdm
 
-from base import EntityType, EntityReference, ModelInfo, PredicateType
+from .base import EntityReference, EntityType, ModelInfo, PredicateType
 
 
 class BaseMedicalEntity(BaseModel):

@@ -60,6 +60,29 @@ All data models use **Pydantic v2** for runtime validation, ensuring it's imposs
 - Type hints for IDE support
 - Medical data **must** be validated—errors could be dangerous
 
+## Architecture: Separate Domain & Persistence Models
+
+The schema uses a clean separation between **Domain Models** (for application logic) and **Persistence Models** (for database storage).
+
+### 1. Domain Models (`schema/entity.py`)
+- **Purpose**: "How the code thinks about entities."
+- **Class Structure**: Rich hierarchy (`Disease`, `Gene`, `Drug` inherit from `BaseMedicalEntity`).
+- **Use Case**: Ingestion pipelines, API responses, complex business logic.
+- **Technology**: Pure Pydantic v2.
+- **Why**: Allows for Pythonic OO programming, flexible validation, and clean code without ORM baggage.
+
+### 2. Persistence Models (`schema/entity_sqlmodel.py`)
+- **Purpose**: "How the database stores entities."
+- **Class Structure**: Single flattened `Entity` class (Single-Table Inheritance).
+- **Use Case**: Saving to/loading from PostgreSQL.
+- **Technology**: SQLModel (SQLAlchemy + Pydantic).
+- **Why**: 
+    - **Single Table**: Optimizes performance (no joins to query "all entities").
+    - **Robustness**: Flattened structure is easier to migrate and index.
+    - **JSON Fields**: Complex fields (`synonyms`, `embeddings`) are serialized for storage efficiency.
+
+**The Workflow:** Data enters as Domain Objects → Mapper converts to Persistence Objects → Saved to DB.
+
 ## Module Structure
 
 ### `entity.py`

@@ -2,6 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .base import BiologicalPredicateType, CausalPredicateType, DiagnosticPredicateType, DrugInteractionPredicateType, LocationPredicateType, ProvenancePredicateType, TreatmentPredicateType
 from .entity import EvidenceItem, Measurement, PredicateType
 
 # ============================================================================
@@ -20,7 +21,7 @@ class BaseRelationship(BaseModel):
         directed: Whether this relationship is directional
     """
 
-    model_config = ConfigDict(use_enum_values=True)
+    model_config = ConfigDict(use_enum_values=True, table_name="relationships")
 
     subject_id: str
     predicate: PredicateType
@@ -122,7 +123,7 @@ class Causes(BaseMedicalRelationship):
         ... )
     """
 
-    predicate: Literal[PredicateType.CAUSES] = PredicateType.CAUSES
+    predicate: Literal[CausalPredicateType.CAUSES] = CausalPredicateType.CAUSES
     frequency: Literal["always", "often", "sometimes", "rarely"] | None = None
     onset: Literal["early", "late"] | None = None
     severity: Literal["mild", "moderate", "severe"] | None = None
@@ -154,7 +155,7 @@ class Treats(BaseMedicalRelationship):
         ... )
     """
 
-    predicate: Literal[PredicateType.TREATS] = PredicateType.TREATS
+    predicate: Literal[TreatmentPredicateType.TREATS] = TreatmentPredicateType.TREATS
     efficacy: str | None = None  # Effectiveness measure
     response_rate: float | None = Field(None, ge=0.0, le=1.0)  # Percentage of patients responding
     line_of_therapy: Literal["first-line", "second-line", "third-line", "maintenance", "salvage"] | None = None
@@ -187,7 +188,7 @@ class IncreasesRisk(BaseMedicalRelationship):
         ... )
     """
 
-    predicate: Literal[PredicateType.INCREASES_RISK] = PredicateType.INCREASES_RISK
+    predicate: Literal[CausalPredicateType.INCREASES_RISK] = CausalPredicateType.INCREASES_RISK
     risk_ratio: float | None = Field(None, gt=0.0)  # Numeric risk increase (e.g., 2.5x)
     penetrance: float | None = Field(None, ge=0.0, le=1.0)  # Percentage who develop condition
     age_of_onset: str | None = None  # Typical age
@@ -224,7 +225,7 @@ class AssociatedWith(BaseMedicalRelationship):
         ... )
     """
 
-    predicate: Literal[PredicateType.ASSOCIATED_WITH] = PredicateType.ASSOCIATED_WITH
+    predicate: Literal[DiagnosticPredicateType.ASSOCIATED_WITH] = DiagnosticPredicateType.ASSOCIATED_WITH
     association_type: Literal["positive", "negative", "neutral"] | None = None
     strength: Literal["strong", "moderate", "weak"] | None = None
     statistical_significance: float | None = Field(None, ge=0.0, le=1.0)  # p-value
@@ -256,7 +257,7 @@ class InteractsWith(BaseMedicalRelationship):
         ... )
     """
 
-    predicate: Literal[PredicateType.INTERACTS_WITH] = PredicateType.INTERACTS_WITH
+    predicate: Literal[DrugInteractionPredicateType.INTERACTS_WITH] = DrugInteractionPredicateType.INTERACTS_WITH
     directed: bool = False  # Bidirectional
     interaction_type: Literal["synergistic", "antagonistic", "additive"] | None = None
     severity: Literal["major", "moderate", "minor"] | None = None
@@ -269,7 +270,7 @@ class Encodes(BaseMedicalRelationship):
     Gene -[ENCODES]-> Protein
     """
 
-    predicate: Literal[PredicateType.ENCODES] = PredicateType.ENCODES
+    predicate: Literal[BiologicalPredicateType.ENCODES] = BiologicalPredicateType.ENCODES
     transcript_variants: int | None = None  # Number of variants
     tissue_specificity: str | None = None  # Where expressed
 
@@ -279,7 +280,7 @@ class ParticipatesIn(BaseMedicalRelationship):
     Gene/Protein -[PARTICIPATES_IN]-> Pathway
     """
 
-    predicate: Literal[PredicateType.PARTICIPATES_IN] = PredicateType.PARTICIPATES_IN
+    predicate: Literal[BiologicalPredicateType.PARTICIPATES_IN] = BiologicalPredicateType.PARTICIPATES_IN
     role: str | None = None  # Function in pathway
     regulatory_effect: Literal["activates", "inhibits", "modulates"] | None = None
 
@@ -289,7 +290,7 @@ class ContraindicatedFor(BaseMedicalRelationship):
     Drug -[CONTRAINDICATED_FOR]-> Disease/Condition
     """
 
-    predicate: Literal[PredicateType.CONTRAINDICATED_FOR] = PredicateType.CONTRAINDICATED_FOR
+    predicate: Literal[TreatmentPredicateType.CONTRAINDICATED_FOR] = TreatmentPredicateType.CONTRAINDICATED_FOR
     severity: Literal["absolute", "relative"] | None = None
     reason: str | None = None  # Why contraindicated
 
@@ -318,7 +319,7 @@ class DiagnosedBy(BaseMedicalRelationship):
         ... )
     """
 
-    predicate: Literal[PredicateType.DIAGNOSED_BY] = PredicateType.DIAGNOSED_BY
+    predicate: Literal[DiagnosticPredicateType.DIAGNOSED_BY] = DiagnosticPredicateType.DIAGNOSED_BY
     sensitivity: float | None = Field(None, ge=0.0, le=1.0)  # True positive rate
     specificity: float | None = Field(None, ge=0.0, le=1.0)  # True negative rate
     standard_of_care: bool = False  # Whether this is standard practice
@@ -348,7 +349,7 @@ class SideEffect(BaseMedicalRelationship):
         ... )
     """
 
-    predicate: Literal[PredicateType.SIDE_EFFECT] = PredicateType.SIDE_EFFECT
+    predicate: Literal[TreatmentPredicateType.SIDE_EFFECT] = TreatmentPredicateType.SIDE_EFFECT
     frequency: Literal["common", "uncommon", "rare"] | None = None
     severity: Literal["mild", "moderate", "severe"] | None = None
     reversible: bool = True  # Whether side effect is reversible
@@ -397,7 +398,7 @@ class Cites(ResearchRelationship):
         ... )
     """
 
-    predicate: Literal[PredicateType.CITES] = PredicateType.CITES
+    predicate: Literal[ProvenancePredicateType.CITES] = ProvenancePredicateType.CITES
     context: Literal["introduction", "methods", "results", "discussion"] | None = None
     sentiment: Literal["supports", "contradicts", "mentions"] | None = None
 
@@ -422,7 +423,7 @@ class StudiedIn(ResearchRelationship):
         ... )
     """
 
-    predicate: Literal[PredicateType.STUDIED_IN] = PredicateType.STUDIED_IN
+    predicate: Literal[ProvenancePredicateType.STUDIED_IN] = ProvenancePredicateType.STUDIED_IN
     role: Literal["primary_focus", "secondary_finding", "mentioned"] | None = None
     section: Literal["results", "methods", "discussion", "introduction"] | None = None
 
@@ -432,7 +433,7 @@ class AuthoredBy(ResearchRelationship):
     Paper -[AUTHORED_BY]-> Author
     """
 
-    predicate: Literal[PredicateType.AUTHORED_BY] = PredicateType.AUTHORED_BY
+    predicate: Literal[ProvenancePredicateType.AUTHORED_BY] = ProvenancePredicateType.AUTHORED_BY
     position: Literal["first", "last", "corresponding", "middle"] | None = None
 
 
@@ -441,7 +442,7 @@ class PartOf(ResearchRelationship):
     Paper -[PART_OF]-> ClinicalTrial
     """
 
-    predicate: Literal[PredicateType.PART_OF] = PredicateType.PART_OF
+    predicate: Literal[ProvenancePredicateType.PART_OF] = ProvenancePredicateType.PART_OF
     publication_type: Literal["protocol", "results", "analysis"] | None = None
 
 
@@ -472,7 +473,7 @@ class Predicts(BaseMedicalRelationship):
         ... )
     """
 
-    predicate: Literal[PredicateType.PREDICTS] = PredicateType.PREDICTS
+    predicate: Literal[ProvenancePredicateType.PREDICTS] = ProvenancePredicateType.PREDICTS
     prediction_type: Literal["positive", "negative", "conditional"] | None = None
     conditions: str | None = None  # Conditions under which prediction holds
     testable: bool = True  # Whether empirically testable
@@ -500,7 +501,7 @@ class Refutes(BaseMedicalRelationship):
         ... )
     """
 
-    predicate: Literal[PredicateType.REFUTES] = PredicateType.REFUTES
+    predicate: Literal[ProvenancePredicateType.REFUTES] = ProvenancePredicateType.REFUTES
     refutation_strength: Literal["strong", "moderate", "weak"] | None = None
     alternative_explanation: str | None = None
     limitations: str | None = None
@@ -530,7 +531,7 @@ class TestedBy(BaseMedicalRelationship):
         ... )
     """
 
-    predicate: Literal[PredicateType.TESTED_BY] = PredicateType.TESTED_BY
+    predicate: Literal[ProvenancePredicateType.TESTED_BY] = ProvenancePredicateType.TESTED_BY
     test_outcome: Literal["supported", "refuted", "inconclusive"] | None = None
     methodology: str | None = None
     study_design_id: str | None = None  # OBI study design ID
@@ -559,7 +560,7 @@ class Generates(BaseMedicalRelationship):
         ... )
     """
 
-    predicate: Literal[PredicateType.GENERATES] = PredicateType.GENERATES
+    predicate: Literal[ProvenancePredicateType.GENERATES] = ProvenancePredicateType.GENERATES
     evidence_type: str | None = None
     eco_type: str | None = None  # ECO evidence type ID
     quality_score: float | None = Field(None, ge=0.0, le=1.0)
