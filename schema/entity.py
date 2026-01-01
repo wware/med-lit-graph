@@ -34,9 +34,10 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from tqdm import tqdm
 
 from .base import EntityReference, EntityType, ModelInfo, PredicateType
+from .sql_mixin import SQLMixin
 
 
-class BaseMedicalEntity(BaseModel):
+class BaseMedicalEntity(BaseModel, SQLMixin):
     """
     Base class for all medical entities in the knowledge graph.
 
@@ -408,7 +409,7 @@ class PaperMetadata(BaseModel):
 # ============================================================================
 
 
-class Paper(BaseModel):
+class Paper(BaseModel, SQLMixin):
     """
     A research paper with extracted entities, relationships, and full provenance.
 
