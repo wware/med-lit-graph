@@ -3,17 +3,17 @@ FROM python:3.12-slim
 WORKDIR /app
 
 # Copy requirements and install dependencies
-COPY requirements.txt requirements.txt
+COPY ingestion/requirements.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install langchain langchain-community langchain-ollama
 
-# Copy all Python files and directories, maintaining structure
-COPY *.py /app/
-COPY utils/ /app/utils/
-COPY pipelines/ /app/pipelines/
+# Copy ingestion code (maintaining structure)
+COPY ingestion/*.py /app/
+COPY ingestion/utils/ /app/utils/
+COPY ingestion/pipelines/ /app/pipelines/
 
-# Also copy schema directory from parent (needed for imports)
-COPY ../schema/ /app/schema/
+# Copy schema from repo root (no duplication needed!)
+COPY schema/ /app/schema/
 
 EXPOSE 8000
 

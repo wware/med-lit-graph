@@ -23,8 +23,7 @@ from typing import Any, Dict, List
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from langchain_ollama import OllamaLLM
-
-from ingestion.utils import (
+from utils import (
     JSONLWriter,
     ModelInfo,
     PipelineInfo,
@@ -78,7 +77,14 @@ def extract_entities_from_text(text: str, llm: OllamaLLM, prompt_template: str, 
         if response.startswith("```"):
             # Extract JSON from markdown code block
             lines = response.split("\n")
-            response = "\n".join(lines[1:-1])
+            # Skip first line (```json or ```) and find last ```
+            start_idx = 1
+            end_idx = len(lines)
+            for i in range(len(lines) - 1, 0, -1):
+                if lines[i].strip() == "```":
+                    end_idx = i
+                    break
+            response = "\n".join(lines[start_idx:end_idx])
 
         entities = json.loads(response)
 

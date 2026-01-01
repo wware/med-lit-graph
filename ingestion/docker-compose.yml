@@ -27,8 +27,8 @@ services:
 
   ingest:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..  # Use repo root as build context
+      dockerfile: ingestion/Dockerfile
     environment:
       # The ingest script needs to know where the Ollama API is.
       # 'ollama' is the service name in this docker-compose file.
@@ -39,6 +39,7 @@ services:
       - ollama
       - postgres
     volumes:
+      - ./outputs:/app/outputs
       - ./data/huggingface:/root/.cache/huggingface
     # 'command' is overridden by the command line arguments you provide.
     # This default is just for documentation.
