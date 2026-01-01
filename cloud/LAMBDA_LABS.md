@@ -1,10 +1,12 @@
-# GPU-Accelerated Ingestion - Complete Setup & Fixes
+# GPU-Accelerated AI Tinkering
 
-## Summary
+Like me, you may get tired of paying subscription fees to use online LLMs. Especially when, later, you're told that you've reached the usage limit and you should "switch to another model" or some such nonsense. The tempation at that point is to run a model locally using Ollama, but your local machine probably doesn't have a GPU if you're not a gamer. Then you dream of picking up a cheap GPU box on eBay and running it locally, and that's not a bad idea but it takes time and money that you may not want to spend right now.
 
-Successfully set up GPU-accelerated paper ingestion using Lambda Labs, achieving **50-100x speedup** over CPU. Fixed three critical bugs discovered during testing.
+There is an alternative, services like Lambda Labs, RunPod, and others. Lambda Labs is what I got when I threw a dart at a dartboard, so I'll be using it here.
 
-## GPU Setup
+I'm using a LLM to translate medical papers into a graph database of entities and relationships. I set up GPU-accelerated paper ingestion using Lambda Labs, and got an **enormous speedup** over CPU-only. The quick turnaround made it practical to find and fix some bugs discovered during testing.
+
+## GPU Instance Setup
 
 ### Lambda Labs Instance
 - **Instance:** 1x A10 (24 GB PCIe) @ $0.75/hr
@@ -17,75 +19,72 @@ Successfully set up GPU-accelerated paper ingestion using Lambda Labs, achieving
 export OLLAMA_HOST=http://<LAMBDA_IP>:11434
 ```
 
-Updated [docker-compose.yml](file:///home/wware/med-lit-graph/ingestion/docker-compose.yml#L35) to read `OLLAMA_HOST` from environment.
+Update your `docker-compose.yml` if you're using one, to read `OLLAMA_HOST` from environment.
 
-## Bugs Fixed
+### Performance Metrics
 
-### 1. Entity Matching False Positives
+- **Embedding generation:** 50-100x faster
+- **LLM inference:** 10-30x faster  
+- **Overall throughput:** 5-10 papers/minute
+- **Cost for typical usage:** ~$1.50 (2 hours @ $0.75/hr)
 
-**Problem:** Different drugs were matching to the same canonical ID.
+## Launch and Setup
 
-**Root cause:** Similarity threshold of 0.1 was too permissive.
-
-**Fix:** Lowered to 0.05 in [ingest_papers.py:L178](file:///home/wware/med-lit-graph/ingestion/ingest_papers.py#L178)
-
-```python
-if results and results[0][1] < 0.05:  # Stricter threshold
-```
-
-**Result:** All entities now get unique IDs ✅
-
-### 2. Malformed Relationship Crashes
-
-**Problem:** LLM sometimes returns relationships missing required fields, causing `KeyError`.
-
-**Fix:** Added defensive parsing in [ingest_papers.py:L442-L449](file:///home/wware/med-lit-graph/ingestion/ingest_papers.py#L442-L449)
-
-```python
-if not subject_name or not object_name or not predicate:
-    print(f"  Warning: Skipping malformed relationship: {rel}")
-    continue
-```
-
-**Result:** Malformed relationships are skipped with warnings instead of crashing ✅
-
-### 3. LLM Schema Non-Compliance
-
-**Problem:** LLM returns `entity1/relationship/entity2` instead of `subject/predicate/object`.
-
-**Fix:** Added flexible parsing to handle both formats in [ingest_papers.py:L447-L450](file:///home/wware/med-lit-graph/ingestion/ingest_papers.py#L447-L450)
-
-```python
-# Normalize to expected format
-subject_name = rel.get("subject") or rel.get("entity1")
-object_name = rel.get("object") or rel.get("entity2")
-predicate = rel.get("predicate") or rel.get("relationship")
-```
-
-Also normalizes predicates: `"compared to"` → `"compared_to"`
-
-**Result:** Relationships are now extracted successfully regardless of LLM format ✅
-
-## Files Modified
-
-| File | Changes |
-|------|---------|
-| [ingest_papers.py](file:///home/wware/med-lit-graph/ingestion/ingest_papers.py) | Entity matching threshold, defensive parsing, flexible schema |
-| [docker-compose.yml](file:///home/wware/med-lit-graph/ingestion/docker-compose.yml) | Support for remote `OLLAMA_HOST` |
-| [cloud/README.md](file:///home/wware/med-lit-graph/cloud/README.md) | Lambda Labs setup guide |
-
-## Usage
+1. **Sign up:** https://lambdalabs.com/service/gpu-cloud
+2. **Launch:** 1x A10 (24 GB PCIe) instance
+3. **SSH in** and run setup:
 
 ```bash
-# Clear old entity DB (if you had buggy runs)
+# Update system
+sudo apt-get update
+
+# Install Docker
+curl -fsSL https://get.docker.com | sudo sh
+
+# Install NVIDIA Container Toolkit
+distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
+  sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list | \
+  sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+  sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+
+sudo apt-get update
+sudo apt-get install -y nvidia-container-toolkit
+sudo systemctl restart docker
+
+# Run Ollama with GPU support
+sudo docker run -d \
+  --gpus=all \
+  --name ollama \
+  -p 11434:11434 \
+  -v ollama:/root/.ollama \
+  --restart unless-stopped \
+  ollama/ollama
+
+# Pull models (takes a few minutes)
+sudo docker exec ollama ollama pull llama3.1:8b
+sudo docker exec ollama ollama pull nomic-embed-text
+
+# Verify GPU is working
+sudo docker exec ollama nvidia-smi
+```
+
+## Use from Your Laptop
+
+```bash
+# Set remote Ollama server
+export OLLAMA_HOST=http://<LAMBDA_IP>:11434
+
+# Test connection
+curl $OLLAMA_HOST/api/tags
+
+# Clear any existing entity DB (if you had buggy runs)
 rm -rf ./data/entity_db
 
-# Start postgres locally
+# Run ingestion with GPU acceleration!
 cd ingestion/
 docker compose up -d postgres
-
-# Run ingestion with remote GPU
-export OLLAMA_HOST=http://<LAMBDA_IP>:11434
 docker compose run ingest \
   python ingest_papers.py \
   --query "metformin diabetes" \
@@ -93,15 +92,8 @@ docker compose run ingest \
   --model llama3.1:8b
 ```
 
-## Performance Metrics
+The **A10 for $0.75/hr** is a sweet spot for hobby work - you won't need a second mortgage on your house if you forget to terminate it.
 
-- **Embedding generation:** 50-100x faster
-- **LLM inference:** 10-30x faster  
-- **Overall throughput:** 5-10 papers/minute
-- **Cost for 100 papers:** ~$1.50 (2 hours @ $0.75/hr)
+## Cleanup
 
-## Next Steps
-
-1. Process larger batches with GPU acceleration
-2. Consider using llama3.1:70b for better schema compliance (though 8b works with flexible parsing)
-3. Monitor Lambda Labs instance and terminate when done to avoid charges
+It's simplest to terminate the instance from the Lambda Labs dashboard.
