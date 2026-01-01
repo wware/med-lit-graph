@@ -36,7 +36,7 @@ services:
       - OLLAMA_HOST=${OLLAMA_HOST:-http://ollama:11434}
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/medgraph
     depends_on:
-      # - ollama
+      - ollama
       - postgres
     volumes:
       - ./data/huggingface:/root/.cache/huggingface
