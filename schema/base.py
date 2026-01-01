@@ -1,8 +1,8 @@
-from enum import Enum
-from pydantic import BaseModel, Field
-from typing import Optional
 import uuid
+from enum import Enum
+from typing import Optional
 
+from pydantic import BaseModel, Field
 
 """
 ChatGPT had some fantastic ideas, deep subtle ideas that I think can make this thing sing.
@@ -937,6 +937,12 @@ class ProvenancePredicateType(ExtractionPredicateType):
     CITES = "cites"
     CITED_BY = "cited_by"
     CONTRADICTS = "contradicts"
+    REFUTES = "refutes"
+    STUDIED_IN = "studied_in"
+    PREDICTS = "predicts"
+    TESTED_BY = "tested_by"
+    PART_OF = "part_of"
+    GENERATES = "generates"
 
 
 class CausalPredicateType(PredicateType):
