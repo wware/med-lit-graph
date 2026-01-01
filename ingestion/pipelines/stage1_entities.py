@@ -74,17 +74,29 @@ def extract_entities_from_text(text: str, llm: OllamaLLM, prompt_template: str, 
         # Try to parse JSON response
         # Handle both direct JSON and markdown code blocks
         response = response.strip()
-        if response.startswith("```"):
-            # Extract JSON from markdown code block
+
+        # If response contains markdown code blocks, extract the JSON
+        if "```" in response:
+            # Find the code block
             lines = response.split("\n")
-            # Skip first line (```json or ```) and find last ```
-            start_idx = 1
-            end_idx = len(lines)
-            for i in range(len(lines) - 1, 0, -1):
-                if lines[i].strip() == "```":
-                    end_idx = i
+            start_idx = None
+            end_idx = None
+
+            # Find start of code block
+            for i, line in enumerate(lines):
+                if line.strip().startswith("```"):
+                    start_idx = i + 1
                     break
-            response = "\n".join(lines[start_idx:end_idx])
+
+            # Find end of code block
+            if start_idx is not None:
+                for i in range(start_idx, len(lines)):
+                    if lines[i].strip() == "```":
+                        end_idx = i
+                        break
+
+            if start_idx is not None and end_idx is not None:
+                response = "\n".join(lines[start_idx:end_idx])
 
         entities = json.loads(response)
 
