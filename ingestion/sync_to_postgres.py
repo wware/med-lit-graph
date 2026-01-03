@@ -6,17 +6,15 @@ Sync tool to load existing paper JSON files into PostgreSQL with vector embeddin
 import argparse
 import json
 import os
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
 
-import psycopg2
 from langchain_community.embeddings import HuggingFaceEmbeddings
 
 try:
-    from ingestion.ingest_papers import EntityDatabase, PostgresDatabase
+    # ruff: noqa: F401
+    from ingestion.ingest_papers import EntityDatabase, PostgresDatabase  # noqa: F401
 except ImportError:
-    from ingest_papers import EntityDatabase, PostgresDatabase
+    from ingest_papers import PostgresDatabase
 
 
 def sync_papers(papers_dir: Path, db_url: str, embedding_model: str):

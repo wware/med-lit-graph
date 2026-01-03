@@ -5,7 +5,6 @@ Provides consistent reading/writing of JSONL files with validation.
 """
 
 import json
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional
 

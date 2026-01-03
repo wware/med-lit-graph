@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from .base import BiologicalPredicateType, CausalPredicateType, DiagnosticPredicateType, DrugInteractionPredicateType, LocationPredicateType, ProvenancePredicateType, TreatmentPredicateType
+from .base import BiologicalPredicateType, CausalPredicateType, DiagnosticPredicateType, DrugInteractionPredicateType, ProvenancePredicateType, TreatmentPredicateType
 from .entity import EvidenceItem, Measurement, PredicateType
 
 # ============================================================================

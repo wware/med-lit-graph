@@ -12,7 +12,6 @@ You can clean up duplicates later when you have GPU access.
 """
 
 import sys
-from pathlib import Path
 
 # Monkey-patch the EntityDatabase to skip deduplication
 import ingestion.ingest_papers as ingest_module
@@ -57,7 +56,8 @@ class FastEntityDatabase(OriginalEntityDatabase):
 ingest_module.EntityDatabase = FastEntityDatabase
 
 # Now import and run the main function
-from ingestion.ingest_papers import main
+# ruff: noqa: E402
+from ingestion.ingest_papers import main  # noqa: E402
 
 if __name__ == "__main__":
     print("=" * 60)

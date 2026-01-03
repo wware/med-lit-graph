@@ -14,7 +14,8 @@ script_dir = Path(__file__).parent.absolute()
 sys.path.insert(0, str(script_dir))
 
 # Import the stage module directly
-import pipelines.stage1_entities as stage1
+# ruff: noqa: E402
+import pipelines.stage1_entities as stage1  # noqa: E402
 
 if __name__ == "__main__":
     stage1.main()
