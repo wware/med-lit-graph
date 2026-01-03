@@ -3,7 +3,7 @@ from mcp.server import MCPServer
 
 
 def test_mcp_list_tools_and_formatting():
-    server = MCPServer(opensearch_host="localhost", opensearch_port=9200)
+    server = MCPServer(server_url="http://localhost:9200")
     # tools listing should be present
     tools = asyncio.run(server.handle_list_tools())
     assert "tools" in tools
@@ -23,7 +23,7 @@ def test_mcp_list_tools_and_formatting():
 
 
 def test_mcp_initialize_sets_client():
-    server = MCPServer(opensearch_host="localhost", opensearch_port=9200)
+    server = MCPServer(server_url="http://localhost:9200")
     ok = asyncio.run(server.initialize())
     # initialize simply constructs the MedicalGraphClient inside; it should return True on success
     assert ok is True

@@ -917,22 +917,6 @@ class EvidenceEdge(Edge):
 
 
 class PredicateType(str, Enum):
-    pass
-
-
-class ExtractionPredicateType(PredicateType):
-    pass
-
-
-class ClaimPredicateType(PredicateType):
-    pass
-
-
-class EvidencePredicateType(PredicateType):
-    pass
-
-
-class ProvenancePredicateType(ExtractionPredicateType):
     AUTHORED_BY = "authored_by"
     CITES = "cites"
     CITED_BY = "cited_by"
@@ -943,23 +927,14 @@ class ProvenancePredicateType(ExtractionPredicateType):
     TESTED_BY = "tested_by"
     PART_OF = "part_of"
     GENERATES = "generates"
-
-
-class CausalPredicateType(PredicateType):
     CAUSES = "causes"
     PREVENTS = "prevents"
     INCREASES_RISK = "increases_risk"
     DECREASES_RISK = "decreases_risk"
-
-
-class TreatmentPredicateType(PredicateType):
     TREATS = "treats"
     MANAGES = "manages"
     CONTRAINDICATED_FOR = "contraindicated_for"
     SIDE_EFFECT = "side_effect"
-
-
-class BiologicalPredicateType(PredicateType):
     BINDS_TO = "binds_to"
     INHIBITS = "inhibits"
     ACTIVATES = "activates"
@@ -968,21 +943,13 @@ class BiologicalPredicateType(PredicateType):
     ENCODES = "encodes"
     METABOLIZES = "metabolizes"
     PARTICIPATES_IN = "participates_in"
-
-
-class DiagnosticPredicateType(PredicateType):
     DIAGNOSES = "diagnoses"
     DIAGNOSED_BY = "diagnosed_by"
     INDICATES = "indicates"
     PRECEDES = "precedes"
     CO_OCCURS_WITH = "co_occurs_with"
     ASSOCIATED_WITH = "associated_with"
-
-
-class DrugInteractionPredicateType(PredicateType):
     INTERACTS_WITH = "interacts_with"
-
-
-class LocationPredicateType(PredicateType):
     LOCATED_IN = "located_in"
     AFFECTS = "affects"
+    SUPPORTS = "supports"

@@ -1112,7 +1112,6 @@ class SQLQueryExecutor:
             # pgvector uses <=> for cosine distance
             # Similarity = 1 - Distance
             select_clause += f", (1 - ({var_name}.embedding <=> %s)) as similarity"
-            params.append(str(vector))
 
             threshold = node_pattern.get("similarity_threshold")
             if threshold:
@@ -1123,6 +1122,7 @@ class SQLQueryExecutor:
             # If no other order_by is specified, order by similarity
             if not order_by:
                 order_by = [["similarity", "desc"]]
+            params.insert(0, str(vector))
 
         # Edge pattern filters (requires JOIN)
         if edge_pattern:
@@ -1333,6 +1333,8 @@ class SQLQueryExecutor:
 
     def _translate_field(self, field_ref: str, default_var: str) -> str:
         if "." not in field_ref:
+            if field_ref == "similarity":
+                return "similarity"
             return f"{default_var}.{field_ref}"
 
         parts = field_ref.split(".", 1)
