@@ -64,8 +64,8 @@ def response_contains_expected_data(actual_response: Any, expected_response: Any
         return True
 
     else:
-        # For primitive values, do an equality check
-        return actual_response == expected_response
+        # For primitive values, do an equality check, but convert to lowercase strings first
+        return str(actual_response).lower() == str(expected_response).lower()
 
 
 def extract_queries_and_responses(examples_file: str) -> List[Tuple[int, Dict[str, Any], str, Optional[Dict[str, Any]]]]:

@@ -118,21 +118,20 @@ Defines all entity types in the knowledge graph:
 - `EntityCollection` for efficient storage and retrieval
 
 ### `relationship.py`
-Defines all relationship types between entities:
+Defines all relationship types between entities.
 
-**Categories:**
-- **Causal:** `CAUSES`, `INCREASES_RISK`, `PREVENTS`
-- **Treatment:** `TREATS`, `MANAGES`, `CONTRAINDICATED_FOR`, `SIDE_EFFECT`
-- **Molecular:** `BINDS_TO`, `INHIBITS`, `ACTIVATES`, `ENCODES`
-- **Clinical:** `DIAGNOSED_BY`, `INDICATES`, `CO_OCCURS_WITH`, `ASSOCIATED_WITH`
-- **Drug Interactions:** `INTERACTS_WITH`
-- **Provenance:** `AUTHORED_BY`, `CITES`, `CONTRADICTS`, `SUPPORTS`
-- **Hypothesis and Evidence:** `PREDICTS`, `REFUTES`, `TESTED_BY`, `GENERATES`
-
-**Key Classes:**
-- `BaseRelationship` - Minimal triple (subject, predicate, object)
-- `BaseMedicalRelationship` - Adds evidence tracking and confidence scoring
-- Specialized classes (e.g., `Treats`, `Causes`) with domain-specific fields
+**Predicate Types (all part of `PredicateType` enum):**
+- `AUTHORED_BY`
+- `CITES`, `CITED_BY`
+- `CONTRADICTS`, `REFUTES`, `SUPPORTS`
+- `STUDIED_IN`
+- `PREDICTS`, `TESTED_BY`, `GENERATES`, `PART_OF`
+- `CAUSES`, `PREVENTS`, `INCREASES_RISK`, `DECREASES_RISK`
+- `TREATS`, `MANAGES`, `CONTRAINDICATED_FOR`, `SIDE_EFFECT`
+- `BINDS_TO`, `INHIBITS`, `ACTIVATES`, `UPREGULATES`, `DOWNREGULATES`, `ENCODES`, `METABOLIZES`, `PARTICIPATES_IN`
+- `DIAGNOSES`, `DIAGNOSED_BY`, `INDICATES`, `PRECEDES`, `CO_OCCURS_WITH`, `ASSOCIATED_WITH`
+- `INTERACTS_WITH`
+- `LOCATED_IN`, `AFFECTS`
 
 ### `__init__.py`
 Provides a clean public API with all entity and relationship classes exported.
