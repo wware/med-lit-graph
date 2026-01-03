@@ -38,9 +38,9 @@ def test_neurodegenerative_diseases():
 
         # Check that first and last match (exact duplicates)
         if canonical_ids[0] == canonical_ids[3]:
-            print(f"✓ Exact duplicate matched correctly")
+            print("✓ Exact duplicate matched correctly")
         else:
-            print(f"✗ Exact duplicate did NOT match")
+            print("✗ Exact duplicate did NOT match")
             return False
 
         # Check that different diseases don't match

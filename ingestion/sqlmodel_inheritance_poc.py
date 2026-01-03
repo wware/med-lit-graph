@@ -11,36 +11,36 @@ All edge types in one table with type-safe polymorphism.
 """
 
 from datetime import datetime
-from typing import List, Optional, Literal
+from typing import Optional
 from uuid import uuid4, UUID
 from enum import Enum
 
-from sqlmodel import (
-    SQLModel, Field, Relationship, Session,
-    create_engine, select, Column, CheckConstraint
-)
-from sqlalchemy import JSON
+from sqlmodel import SQLModel, Field, Session, create_engine, select, CheckConstraint
 
 
 # ============================================================================
 # Enums
 # ============================================================================
 
+
 class EntityType(str, Enum):
     DISEASE = "disease"
     DRUG = "drug"
     GENE = "gene"
+
 
 class PredicateType(str, Enum):
     TREATS = "treats"
     CAUSES = "causes"
     INCREASES_RISK = "increases_risk"
 
+
 class StudyType(str, Enum):
     RCT = "rct"
     OBSERVATIONAL = "observational"
     META_ANALYSIS = "meta_analysis"
     CASE_REPORT = "case_report"
+
 
 class Polarity(str, Enum):
     SUPPORTS = "supports"
@@ -52,8 +52,10 @@ class Polarity(str, Enum):
 # Entities (Simplified - no inheritance)
 # ============================================================================
 
+
 class Disease(SQLModel, table=True):
     """Diseases, disorders, and syndromes"""
+
     __tablename__ = "diseases"
 
     id: str = Field(primary_key=True)
@@ -64,6 +66,7 @@ class Disease(SQLModel, table=True):
 
 class Drug(SQLModel, table=True):
     """Medications and therapeutic substances"""
+
     __tablename__ = "drugs"
 
     id: str = Field(primary_key=True)
@@ -78,8 +81,10 @@ class Drug(SQLModel, table=True):
 # Papers
 # ============================================================================
 
+
 class Paper(SQLModel, table=True):
     """Research papers"""
+
     __tablename__ = "papers"
 
     paper_id: str = Field(primary_key=True)
@@ -102,6 +107,7 @@ class Paper(SQLModel, table=True):
 # Three-Layer Edge Architecture with Single Table
 # ============================================================================
 
+
 class Edge(SQLModel, table=True):
     """
     All edge types (Extraction/Claim/Evidence) stored in one table.
@@ -114,6 +120,7 @@ class Edge(SQLModel, table=True):
     Layer-specific fields are Optional, allowing flexibility.
     Use helper functions to create type-safe edges.
     """
+
     __tablename__ = "edges"
 
     # ===== Common Fields (all edge types) =====
@@ -132,43 +139,34 @@ class Edge(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     # ===== ExtractionEdge Fields (nullable) =====
-    extractor_name: Optional[str] = None          # e.g., "llama3.1:70b"
-    extractor_provider: Optional[str] = None      # e.g., "ollama", "anthropic"
-    extraction_confidence: Optional[float] = None # 0.0-1.0
+    extractor_name: Optional[str] = None  # e.g., "llama3.1:70b"
+    extractor_provider: Optional[str] = None  # e.g., "ollama", "anthropic"
+    extraction_confidence: Optional[float] = None  # 0.0-1.0
     extraction_paper_id: Optional[str] = Field(None, foreign_key="papers.paper_id")
 
     # ===== ClaimEdge Fields (nullable) =====
-    predicate: Optional[str] = None               # "TREATS", "CAUSES", etc.
+    predicate: Optional[str] = None  # "TREATS", "CAUSES", etc.
     asserted_by: Optional[str] = Field(None, foreign_key="papers.paper_id")
-    polarity: Optional[str] = None                # "supports", "refutes", "neutral"
-    claim_confidence: Optional[float] = None      # Based on evidence strength
+    polarity: Optional[str] = None  # "supports", "refutes", "neutral"
+    claim_confidence: Optional[float] = None  # Based on evidence strength
 
     # ===== EvidenceEdge Fields (nullable) =====
-    evidence_type: Optional[str] = None           # "rct_evidence", "observational", etc.
-    evidence_strength: Optional[float] = None     # 0.0-1.0
+    evidence_type: Optional[str] = None  # "rct_evidence", "observational", etc.
+    evidence_strength: Optional[float] = None  # 0.0-1.0
     evidence_paper_id: Optional[str] = Field(None, foreign_key="papers.paper_id")
-    evidence_section: Optional[str] = None        # "results", "discussion", etc.
-    evidence_text_span: Optional[str] = None      # The actual quote
-    study_type: Optional[str] = None              # "rct", "observational"
+    evidence_section: Optional[str] = None  # "results", "discussion", etc.
+    evidence_text_span: Optional[str] = None  # The actual quote
+    study_type: Optional[str] = None  # "rct", "observational"
     sample_size: Optional[int] = None
 
     # ===== Database Constraints =====
     __table_args__ = (
         # Ensure ExtractionEdge has required fields
-        CheckConstraint(
-            "(layer != 'extraction') OR (extractor_name IS NOT NULL AND extraction_confidence IS NOT NULL)",
-            name="extraction_must_have_extractor"
-        ),
+        CheckConstraint("(layer != 'extraction') OR (extractor_name IS NOT NULL AND extraction_confidence IS NOT NULL)", name="extraction_must_have_extractor"),
         # Ensure ClaimEdge has required fields
-        CheckConstraint(
-            "(layer != 'claim') OR (predicate IS NOT NULL AND asserted_by IS NOT NULL AND polarity IS NOT NULL)",
-            name="claim_must_have_predicate"
-        ),
+        CheckConstraint("(layer != 'claim') OR (predicate IS NOT NULL AND asserted_by IS NOT NULL AND polarity IS NOT NULL)", name="claim_must_have_predicate"),
         # Ensure EvidenceEdge has required fields
-        CheckConstraint(
-            "(layer != 'evidence') OR (evidence_type IS NOT NULL AND evidence_strength IS NOT NULL)",
-            name="evidence_must_have_type"
-        ),
+        CheckConstraint("(layer != 'evidence') OR (evidence_type IS NOT NULL AND evidence_strength IS NOT NULL)", name="evidence_must_have_type"),
     )
 
 
@@ -192,6 +190,7 @@ def create_evidence_edge(**kwargs) -> Edge:
 # Setup and Sample Data
 # ============================================================================
 
+
 def create_db_and_tables():
     """Create SQLite database and tables"""
     engine = create_engine("sqlite:///medical_kg_inheritance.db", echo=False)
@@ -202,24 +201,14 @@ def create_db_and_tables():
 def populate_sample_data(session: Session):
     """Add example data showing all three edge layers"""
 
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("POPULATING SAMPLE DATA")
-    print("="*70)
+    print("=" * 70)
 
     # ===== Create Entities =====
-    breast_cancer = Disease(
-        id="UMLS:C0006142",
-        name="Breast Cancer",
-        umls_id="C0006142"
-    )
+    breast_cancer = Disease(id="UMLS:C0006142", name="Breast Cancer", umls_id="C0006142")
 
-    olaparib = Drug(
-        id="RxNorm:1187832",
-        name="Olaparib",
-        rxnorm_id="1187832",
-        drug_class="PARP inhibitor",
-        mechanism="Inhibits poly ADP-ribose polymerase enzymes"
-    )
+    olaparib = Drug(id="RxNorm:1187832", name="Olaparib", rxnorm_id="1187832", drug_class="PARP inhibitor", mechanism="Inhibits poly ADP-ribose polymerase enzymes")
 
     session.add(breast_cancer)
     session.add(olaparib)
@@ -233,7 +222,7 @@ def populate_sample_data(session: Session):
         study_type=StudyType.RCT.value,
         sample_size=302,
         publication_date="2023-06-15",
-        extraction_model="llama3.1:70b"
+        extraction_model="llama3.1:70b",
     )
 
     paper2 = Paper(
@@ -243,7 +232,7 @@ def populate_sample_data(session: Session):
         study_type=StudyType.META_ANALYSIS.value,
         sample_size=1205,
         publication_date="2024-01-10",
-        extraction_model="llama3.1:70b"
+        extraction_model="llama3.1:70b",
     )
 
     session.add(paper1)
@@ -262,7 +251,7 @@ def populate_sample_data(session: Session):
         extractor_name="llama3.1:70b",
         extractor_provider="ollama",
         extraction_confidence=0.89,
-        extraction_paper_id=paper1.paper_id
+        extraction_paper_id=paper1.paper_id,
     )
     session.add(extraction)
     print("✓ Added ExtractionEdge: What LLM extracted from PMC999888")
@@ -279,7 +268,7 @@ def populate_sample_data(session: Session):
         predicate=PredicateType.TREATS.value,
         asserted_by=paper1.paper_id,
         polarity=Polarity.SUPPORTS.value,
-        claim_confidence=0.92
+        claim_confidence=0.92,
     )
     session.add(claim)
     print("✓ Added ClaimEdge: Paper asserts Olaparib TREATS Breast Cancer")
@@ -299,7 +288,7 @@ def populate_sample_data(session: Session):
         evidence_section="results",
         evidence_text_span="Olaparib significantly improved progression-free survival (HR=0.58, 95% CI: 0.43-0.80, p<0.001)",
         study_type=StudyType.RCT.value,
-        sample_size=302
+        sample_size=302,
     )
     session.add(evidence)
     print("✓ Added EvidenceEdge: RCT results supporting the claim")
@@ -313,7 +302,7 @@ def populate_sample_data(session: Session):
         study_type=StudyType.OBSERVATIONAL.value,
         sample_size=150,
         publication_date="2023-09-20",
-        extraction_model="llama3.1:70b"
+        extraction_model="llama3.1:70b",
     )
     session.add(paper3)
 
@@ -327,7 +316,7 @@ def populate_sample_data(session: Session):
         predicate=PredicateType.TREATS.value,
         asserted_by=paper3.paper_id,
         polarity=Polarity.NEUTRAL.value,  # Weak/no effect
-        claim_confidence=0.65
+        claim_confidence=0.65,
     )
     session.add(contradicting_claim)
     print("✓ Added contradicting ClaimEdge: Different paper shows limited benefit")
@@ -340,21 +329,18 @@ def populate_sample_data(session: Session):
 # Demo Queries
 # ============================================================================
 
+
 def demo_queries(session: Session):
     """Demonstrate the power of three-layer architecture"""
 
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("DEMO QUERIES - Three-Layer Edge Architecture")
-    print("="*70)
+    print("=" * 70)
 
     # ===== Query 1: Layer-Specific Query =====
     print("\n1. LAYER-SPECIFIC: What do papers CLAIM about Olaparib?")
     print("-" * 70)
-    claims = session.exec(
-        select(Edge)
-        .where(Edge.layer == "claim")
-        .where(Edge.subject_id == "RxNorm:1187832")
-    ).all()
+    claims = session.exec(select(Edge).where(Edge.layer == "claim").where(Edge.subject_id == "RxNorm:1187832")).all()
 
     for claim in claims:
         paper = session.get(Paper, claim.asserted_by)
@@ -367,12 +353,7 @@ def demo_queries(session: Session):
     # ===== Query 2: Cross-Layer Query =====
     print("\n\n2. CROSS-LAYER: Show me EVERYTHING about Olaparib → Breast Cancer")
     print("-" * 70)
-    all_edges = session.exec(
-        select(Edge)
-        .where(Edge.subject_id == "RxNorm:1187832")
-        .where(Edge.object_id == "UMLS:C0006142")
-        .order_by(Edge.created_at)
-    ).all()
+    all_edges = session.exec(select(Edge).where(Edge.subject_id == "RxNorm:1187832").where(Edge.object_id == "UMLS:C0006142").order_by(Edge.created_at)).all()
 
     print(f"\n   Found {len(all_edges)} edges across all layers:")
     for edge in all_edges:
@@ -396,17 +377,13 @@ def demo_queries(session: Session):
     print("\n\n3. HIGH-QUALITY EVIDENCE: Show me RCT evidence with strength > 0.9")
     print("-" * 70)
     strong_evidence = session.exec(
-        select(Edge, Paper)
-        .join(Paper, Edge.evidence_paper_id == Paper.paper_id)
-        .where(Edge.layer == "evidence")
-        .where(Edge.study_type == StudyType.RCT.value)
-        .where(Edge.evidence_strength > 0.9)
+        select(Edge, Paper).join(Paper, Edge.evidence_paper_id == Paper.paper_id).where(Edge.layer == "evidence").where(Edge.study_type == StudyType.RCT.value).where(Edge.evidence_strength > 0.9)
     ).all()
 
     for evidence, paper in strong_evidence:
         print(f"\n   Paper: {paper.title}")
         print(f"   Finding: {evidence.subject_name} → {evidence.object_name}")
-        print(f"   Evidence: \"{evidence.evidence_text_span}\"")
+        print(f'   Evidence: "{evidence.evidence_text_span}"')
         print(f"   Strength: {evidence.evidence_strength:.2f}")
         print(f"   Study: {evidence.study_type}, n={evidence.sample_size}")
 
@@ -416,9 +393,7 @@ def demo_queries(session: Session):
 
     # Group claims by subject-predicate-object, check for different polarities
     claims_by_relationship = {}
-    all_claims = session.exec(
-        select(Edge).where(Edge.layer == "claim")
-    ).all()
+    all_claims = session.exec(select(Edge).where(Edge.layer == "claim")).all()
 
     for claim in all_claims:
         key = (claim.subject_id, claim.predicate, claim.object_id)
@@ -429,9 +404,9 @@ def demo_queries(session: Session):
     for key, claims_list in claims_by_relationship.items():
         polarities = {c.polarity for c in claims_list}
         if len(polarities) > 1:
-            print(f"\n   ⚠️  CONTRADICTION DETECTED:")
+            print("\n   ⚠️  CONTRADICTION DETECTED:")
             print(f"   Relationship: {claims_list[0].subject_name} → {claims_list[0].object_name}")
-            print(f"   Different papers disagree:")
+            print("   Different papers disagree:")
             for claim in claims_list:
                 paper = session.get(Paper, claim.asserted_by)
                 print(f"      • {paper.title[:60]}...")
@@ -442,50 +417,33 @@ def demo_queries(session: Session):
     print("-" * 70)
 
     # Get one of each type for the same relationship
-    extraction_edge = session.exec(
-        select(Edge)
-        .where(Edge.layer == "extraction")
-        .where(Edge.subject_id == "RxNorm:1187832")
-    ).first()
+    extraction_edge = session.exec(select(Edge).where(Edge.layer == "extraction").where(Edge.subject_id == "RxNorm:1187832")).first()
 
-    claim_edge = session.exec(
-        select(Edge)
-        .where(Edge.layer == "claim")
-        .where(Edge.subject_id == "RxNorm:1187832")
-        .where(Edge.polarity == Polarity.SUPPORTS.value)
-    ).first()
+    claim_edge = session.exec(select(Edge).where(Edge.layer == "claim").where(Edge.subject_id == "RxNorm:1187832").where(Edge.polarity == Polarity.SUPPORTS.value)).first()
 
-    evidence_edge = session.exec(
-        select(Edge)
-        .where(Edge.layer == "evidence")
-        .where(Edge.subject_id == "RxNorm:1187832")
-    ).first()
+    evidence_edge = session.exec(select(Edge).where(Edge.layer == "evidence").where(Edge.subject_id == "RxNorm:1187832")).first()
 
     print(f"\n   Relationship: {claim_edge.subject_name} → {claim_edge.object_name}")
-    print(f"\n   [1. EXTRACTION LAYER]")
+    print("\n   [1. EXTRACTION LAYER]")
     print(f"      Model: {extraction_edge.extractor_name}")
     print(f"      Found in paper: {extraction_edge.extraction_paper_id}")
     print(f"      Confidence: {extraction_edge.extraction_confidence:.2f}")
 
-    print(f"\n   [2. CLAIM LAYER]")
+    print("\n   [2. CLAIM LAYER]")
     print(f"      Paper asserts: {claim_edge.predicate}")
     print(f"      Polarity: {claim_edge.polarity}")
     print(f"      Source: {claim_edge.asserted_by}")
 
-    print(f"\n   [3. EVIDENCE LAYER]")
+    print("\n   [3. EVIDENCE LAYER]")
     print(f"      Study type: {evidence_edge.study_type} (n={evidence_edge.sample_size})")
-    print(f"      Finding: \"{evidence_edge.evidence_text_span}\"")
+    print(f'      Finding: "{evidence_edge.evidence_text_span}"')
     print(f"      Strength: {evidence_edge.evidence_strength:.2f}")
 
     # ===== Query 6: Layer-Based Filtering Demo =====
     print("\n\n6. LAYER-BASED FILTERING: Query by layer type")
     print("-" * 70)
 
-    edges = session.exec(
-        select(Edge)
-        .where(Edge.subject_id == "RxNorm:1187832")
-        .limit(3)
-    ).all()
+    edges = session.exec(select(Edge).where(Edge.subject_id == "RxNorm:1187832").limit(3)).all()
 
     print(f"\n   Retrieved {len(edges)} edges:")
     for edge in edges:
@@ -503,10 +461,11 @@ def demo_queries(session: Session):
 # Main Demo
 # ============================================================================
 
+
 def main():
-    print("="*70)
+    print("=" * 70)
     print("SQLModel Three-Layer Edge Architecture - Proof of Concept")
-    print("="*70)
+    print("=" * 70)
     print("\nDemonstrating:")
     print("  • Single-table design with layer discriminator")
     print("  • Three distinct edge layers (Extraction/Claim/Evidence)")
@@ -526,9 +485,9 @@ def main():
     with Session(engine) as session:
         demo_queries(session)
 
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("Demo complete!")
-    print("="*70)
+    print("=" * 70)
     print("\nInspect the database:")
     print("  sqlite3 medical_kg_inheritance.db")
     print("  .schema edges")
@@ -539,7 +498,7 @@ def main():
     print("  ✓ Cross-layer queries work naturally")
     print("  ✓ Database constraints enforce layer-specific requirements")
     print("  ✓ Helper functions provide type-safe edge creation")
-    print("="*70)
+    print("=" * 70)
 
 
 if __name__ == "__main__":
