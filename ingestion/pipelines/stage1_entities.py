@@ -1,7 +1,3 @@
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 """
 Stage 1: Entity Extraction
 
@@ -18,9 +14,13 @@ Usage:
 
 import argparse
 import json
+import sys
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List
 
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from langchain_ollama import OllamaLLM
 from utils import (
@@ -47,7 +47,8 @@ For each entity, identify:
 Text: {text}
 
 Return JSON array of entities:
-[{'name': '...', 'type': '...', 'synonyms': [...]}]"""
+[{{"name": "...", "type": "...", "synonyms": [...]}}]
+"""
         }
     }
 
@@ -146,7 +147,7 @@ def main():
 
     args = parser.parse_args()
 
-    print("Stage 1: Entity Extraction")
+    print(f"Stage 1: Entity Extraction")
     print(f"  Query: {args.query}")
     print(f"  Limit: {args.limit}")
     print(f"  Model: {args.model}")
@@ -173,7 +174,7 @@ def main():
     )
 
     # Fetch papers
-    print("Fetching papers...")
+    print(f"Fetching papers...")
     papers = fetch_papers(args.query, args.limit)
     print(f"✓ Found {len(papers)} papers")
     print()
@@ -205,7 +206,7 @@ def main():
 
     print()
     print("=" * 70)
-    print("✅ Stage 1 Complete!")
+    print(f"✅ Stage 1 Complete!")
     print(f"  Papers processed: {len(papers)}")
     print(f"  Entities extracted: {len(all_entities)}")
     print(f"  Output: {output_path}")

@@ -934,6 +934,9 @@ class PredicateType(str, Enum):
     TESTED_BY = "tested_by"
     PART_OF = "part_of"
     GENERATES = "generates"
+
+
+class CausalPredicateType(PredicateType):
     CAUSES = "causes"
     PREVENTS = "prevents"
     INCREASES_RISK = "increases_risk"
