@@ -1,7 +1,7 @@
 services:
   ollama:
     build:
-      context: .
+      context: ./ingestion
       dockerfile: Dockerfile.ollama
     #ports:
     #- "11434:11434"
@@ -20,14 +20,14 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - ./data/postgres:/var/lib/postgresql/data
-      - ../schema/migration.sql:/docker-entrypoint-initdb.d/init.sql
+      - "${POSTGRES_DATA_DIR:-./data/postgres}:/var/lib/postgresql/data"
+      - ./schema/migration.sql:/docker-entrypoint-initdb.d/init.sql
 
   ingest:
     build:
-      context: ..  # Use repo root as build context
+      context: .  # Use repo root as build context
       dockerfile: ingestion/Dockerfile
     environment:
       # The ingest script needs to know where the Ollama API is.
@@ -39,8 +39,8 @@ services:
       - ollama
       - postgres
     volumes:
-      - ./outputs:/app/outputs
-      - ./data/huggingface:/root/.cache/huggingface
+      - ./ingestion/outputs:/app/outputs
+      - ./ingestion/data/huggingface:/root/.cache/huggingface
     # 'command' is overridden by the command line arguments you provide.
     # This default is just for documentation.
     command: >

@@ -1,47 +1,13 @@
-import os
-
-import psycopg2
 import pytest
 
-from ingestion.init_db import init_db
 from tests.mini_server.query_executor import SQLQueryExecutor
 
-# Use a test database if available, otherwise fallback to medgraph
-# Use a test database if available, otherwise fallback to medgraph
-DEFAULT_DB_URL = "postgresql://postgres:postgres@localhost:5432/postgres"
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/medgraph_test")
 
-
-@pytest.fixture(scope="module")
-def setup_database():
-    """Initializes the test database."""
-    # Override DATABASE_URL for init_db
-    os.environ["DATABASE_URL"] = DATABASE_URL
-
-    # Extract connection info for the admin database
-    parsed_url = DATABASE_URL.split("/")
-    base_url = "/".join(parsed_url[:-1]) + "/postgres"
-
-    try:
-        # Create database if it doesn't exist (might need superuser)
-        conn = psycopg2.connect(base_url)
-        conn.autocommit = True
-        with conn.cursor() as cur:
-            cur.execute("DROP DATABASE IF EXISTS medgraph_test")
-            cur.execute("CREATE DATABASE medgraph_test")
-        conn.close()
-    except Exception as e:
-        print(f"Warning: Could not recreate test database: {e}")
-        # Try to proceed if it already exists or if we should just use DEFAULT_DB_URL
-
-    init_db()
-    yield
-    # Cleanup: DROP DATABASE medgraph_test (optional)
-
-
-def test_sql_query_executor(setup_database):
+def test_sql_query_executor(postgres_container):
     """Tests the SQLQueryExecutor directly against the test database."""
-    executor = SQLQueryExecutor(DATABASE_URL)
+    # Use the ephemeral DB URL provided by the fixture
+    db_url = postgres_container
+    executor = SQLQueryExecutor(db_url)
 
     # 1. Manually insert some data
     with executor.get_connection() as conn:
@@ -64,9 +30,10 @@ def test_sql_query_executor(setup_database):
     assert result["results"][0]["drug.name"] == "Aspirin"
 
 
-def test_aggregation_query(setup_database):
+def test_aggregation_query(postgres_container):
     """Tests aggregation queries in SQL."""
-    executor = SQLQueryExecutor(DATABASE_URL)
+    db_url = postgres_container
+    executor = SQLQueryExecutor(db_url)
 
     query = {"find": "nodes", "node_pattern": {"node_type": "drug", "var": "drug"}, "aggregate": {"group_by": ["drug.entity_type"], "aggregations": {"drug_count": ["count", "drug.id"]}}}
 
@@ -75,10 +42,10 @@ def test_aggregation_query(setup_database):
     assert result["results"][0]["drug_count"] >= 1
 
 
-@pytest.mark.skipif(os.getenv("PGVECTOR_AVAILABLE") == "false", reason="pgvector extension not available")
-def test_vector_search(setup_database):
+def test_vector_search(postgres_container):
     """Tests semantic search using pgvector."""
-    executor = SQLQueryExecutor(DATABASE_URL)
+    db_url = postgres_container
+    executor = SQLQueryExecutor(db_url)
 
     # 1. Insert entities with embeddings
     # 768-dimensional unit vectors
@@ -89,13 +56,14 @@ def test_vector_search(setup_database):
 
     with executor.get_connection() as conn:
         with conn.cursor() as cur:
+            # Check if vector extension is enabled (should be by docker image)
             try:
                 cur.execute("INSERT INTO entities (id, entity_type, name, embedding) VALUES (%s, %s, %s, %s)", ("DRUG:v1", "drug", "Vector 1", v1))
                 cur.execute("INSERT INTO entities (id, entity_type, name, embedding) VALUES (%s, %s, %s, %s)", ("DRUG:v2", "drug", "Vector 2", v2))
                 conn.commit()
             except Exception as e:
                 if 'extension "vector"' in str(e):
-                    pytest.skip("pgvector extension not installed in Postgres")
+                    pytest.fail("pgvector extension not installed in Postgres container")
                 raise e
 
     # 2. Search for nearest neighbor to v1
@@ -105,15 +73,30 @@ def test_vector_search(setup_database):
 
     query = {"find": "nodes", "node_pattern": {"node_type": "drug", "vector_search": search_vector, "similarity_threshold": 0.8, "var": "drug"}}
 
+    # Mock access to the embeddings model since we can't easily mock the internal call
+    # But wait, SQLQueryExecutor.execute handles the query structure.
+    # The original test logic called executor.execute(query).
+    # However, SQLQueryExecutor makes a call to get specific embeddings if the text is provided.
+    # Here we are passing the vector DIRECTLY in `vector_search`.
+    # Let's double check SQLQueryExecutor implementation.
+
+    # Looking at SQLQueryExecutor.execute_node_query:
+    # if node_pattern.get("vector_search"):
+    #    vector = node_pattern["vector_search"]
+    #    ... uses vector directly.
+
+    # So this test is correct as is, passing a raw vector.
+
     result = executor.execute(query)
     assert len(result["results"]) >= 1
     assert result["results"][0]["drug.name"] == "Vector 1"
     assert "similarity" in result["results"][0]
 
 
-def test_path_query(setup_database):
+def test_path_query(postgres_container):
     """Tests multi-hop path queries in SQL."""
-    executor = SQLQueryExecutor(DATABASE_URL)
+    db_url = postgres_container
+    executor = SQLQueryExecutor(db_url)
 
     # 1. Insert chain: drug -> protein -> gene
     with executor.get_connection() as conn:
@@ -147,7 +130,7 @@ def test_path_query(setup_database):
 
 
 @pytest.mark.skip(reason="Requires live Ollama and PMC access")
-def test_ingestion_to_postgresql(setup_database):
+def test_ingestion_to_postgresql(postgres_container):
     """Tests the ingestion pipeline's ability to save to PostgreSQL."""
     # This would mock the LLM and PMC fetcher
     pass

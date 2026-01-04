@@ -13,24 +13,28 @@ Usage in tests:
 """
 
 from __future__ import annotations
+
 import json
 import logging
 import multiprocessing
+import os
+import shutil
 import socket
+import subprocess
+import tempfile
 import threading
 import time
-import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from socketserver import ThreadingMixIn
 from typing import Generator, Tuple
-
-import pytest
 from urllib.parse import urlparse
+
+import psycopg2
+import pytest
 
 # Import the real client class from the repo so tests exercise it directly.
 from client.python.client import MedicalGraphClient
-
 
 # A small in-memory graph fixture representing a plausible med-lit knowledge graph.
 # Node representation:
@@ -269,6 +273,79 @@ def http_medical_graph_client(mock_med_graph_server) -> MedicalGraphClient:
     return client
 
 
+# ============================================================================
+# PostgreSQL Fixture for Integration Tests
+# ============================================================================
+
+
+def _wait_for_postgres(db_url: str, retries: int = 30) -> bool:
+    """Wait for postgres to be ready."""
+    for _ in range(retries):
+        try:
+            with psycopg2.connect(db_url):
+                return True
+        except psycopg2.OperationalError:
+            time.sleep(1)
+    return False
+
+
+@pytest.fixture(scope="session")
+def postgres_container():
+    """
+    Starts a PostgreSQL container with pgvector using docker-compose.
+    Yields the database connection URL.
+    """
+    # Find a free port
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("", 0))
+        port = s.getsockname()[1]
+
+    # Create a temporary directory for data
+    # Use mkdtemp so we can control cleanup manually to handle Docker permissions
+    temp_data_dir = tempfile.mkdtemp()
+
+    db_url = f"postgresql://postgres:postgres@localhost:{port}/medgraph"
+
+    # Path to the docker-compose file in the root directory
+    docker_compose_file = Path(__file__).parent.parent / "docker-compose.yml"
+
+    # Start the container
+    logger = logging.getLogger(__name__)
+    logger.info(f"Starting PostgreSQL container on port {port} with data in {temp_data_dir}")
+
+    cmd = ["docker", "compose", "-f", str(docker_compose_file), "up", "-d", "postgres"]
+    env = {**os.environ, "POSTGRES_PORT": str(port), "POSTGRES_DATA_DIR": str(temp_data_dir)}
+
+    try:
+        subprocess.run(cmd, env=env, check=True, capture_output=True)
+
+        if not _wait_for_postgres(db_url):
+            pytest.fail("PostgreSQL container failed to start")
+
+        yield db_url
+
+    finally:
+        # Teardown
+        logger.info("Stopping PostgreSQL container")
+        down_cmd = ["docker", "compose", "-f", str(docker_compose_file), "down"]
+        subprocess.run(down_cmd, env=env, check=False, capture_output=True)
+
+        # Cleanup data directory
+        # Docker creates files as root (or postgres user), which we can't delete directly.
+        # Use a docker container to remove the files first.
+        try:
+            cleanup_cmd = ["docker", "run", "--rm", "-v", f"{temp_data_dir}:/data", "alpine", "sh", "-c", "rm -rf /data/*"]
+            subprocess.run(cleanup_cmd, check=False, capture_output=True)
+        except Exception as e:
+            logger.warning(f"Failed to clean up docker files via container: {e}")
+
+        # Now remove the directory
+        try:
+            shutil.rmtree(temp_data_dir, ignore_errors=True)
+        except Exception as e:
+            logger.warning(f"Failed to remove temporary directory {temp_data_dir}: {e}")
+
+
 ##############################
 
 
@@ -396,8 +473,9 @@ def _run_mini_server(port: int):
 
     This function is called in a subprocess to start the uvicorn server.
     """
-    import uvicorn
     import sys
+
+    import uvicorn
 
     # Add mini_server directory to path to allow imports
     mini_server_dir = Path(__file__).parent / "mini_server"
