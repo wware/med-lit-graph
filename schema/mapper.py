@@ -28,7 +28,24 @@ from .entity import (
     EvidenceLine,
     EntityType,
 )
+from .relationship import (
+    BaseRelationship,
+    BaseMedicalRelationship,
+    create_relationship,
+)
+from .base import (
+    PredicateType,
+    BiologicalPredicateType,
+    CausalPredicateType,
+    DiagnosticPredicateType,
+    DrugInteractionPredicateType,
+    LocationPredicateType,
+    ProvenancePredicateType,
+    TreatmentPredicateType,
+)
 from .entity_sqlmodel import Entity
+from .relationship_sqlmodel import Relationship
+
 
 
 def to_persistence(domain: BaseMedicalEntity) -> Entity:
@@ -145,6 +162,7 @@ def to_persistence(domain: BaseMedicalEntity) -> Entity:
         })
 
     return Entity(**base_data)
+
 
 
 def to_domain(persistence: Entity) -> BaseMedicalEntity:
@@ -290,3 +308,66 @@ def to_persistence_batch(domains: list[BaseMedicalEntity]) -> list[Entity]:
 def to_domain_batch(persistences: list[Entity]) -> list[BaseMedicalEntity]:
     """Convert multiple persistence models to domain models."""
     return [to_domain(p) for p in persistences]
+
+
+def relationship_to_persistence(domain: BaseRelationship) -> Relationship:
+    """
+    Convert a domain relationship to a persistence model.
+    """
+    persistence_data = {}
+    domain_data = domain.model_dump()
+    for key in Relationship.model_fields:
+        if key in domain_data:
+            value = domain_data[key]
+            if isinstance(value, list):
+                persistence_data[key] = json.dumps(value) if value else None
+            elif hasattr(value, 'value'):
+                persistence_data[key] = value.value
+            else:
+                persistence_data[key] = value
+    return Relationship(**persistence_data)
+
+
+def relationship_to_domain(persistence: Relationship) -> BaseRelationship:
+    """
+    Convert a persistence relationship back to a domain model.
+    """
+    domain_data = {}
+    persistence_data = persistence.model_dump()
+
+    # Find the correct predicate enum member
+    predicate_value = persistence.predicate
+    predicate = None
+    predicate_enums = [
+        BiologicalPredicateType,
+        CausalPredicateType,
+        DiagnosticPredicateType,
+        DrugInteractionPredicateType,
+        LocationPredicateType,
+        ProvenancePredicateType,
+        TreatmentPredicateType,
+    ]
+    for enum_cls in predicate_enums:
+        try:
+            predicate = enum_cls(predicate_value)
+            break
+        except ValueError:
+            continue
+
+    if predicate is None:
+        raise ValueError(f"Unknown predicate type: {predicate_value}")
+
+    domain_data['predicate'] = predicate
+    
+    # Get the correct class to deserialize into
+    cls = create_relationship(predicate, "", "").__class__
+
+    for key, field in cls.model_fields.items():
+        if key in persistence_data:
+            value = persistence_data[key]
+            if field.annotation == list[str] and value and isinstance(value, str):
+                domain_data[key] = json.loads(value)
+            else:
+                domain_data[key] = value
+    
+    return create_relationship(**domain_data)
