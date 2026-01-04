@@ -93,7 +93,7 @@ entity = Entity(
 )
 ```
 
-### 3. Mapper Layer (**MISSING**)
+### 3. Mapper Layer (`schema/mapper.py`)
 
 **Purpose**: Convert between Domain and Persistence representations.
 
@@ -116,74 +116,69 @@ Data enters as Domain Objects → Mapper converts to Persistence Objects → Sav
 ```
 
 **The Current Reality**:
-The mapper layer doesn't exist yet. This creates a gap between the documented architecture and actual implementation.
+The mapper layer is implemented and tested.
 
 ## Current Implementation Status
 
 ### ✅ What's Implemented
 
-1. **Domain Models (`schema/entity.py`)**
-   - ✅ Complete entity hierarchy with 14+ entity types
-   - ✅ `BaseMedicalEntity` base class with common fields
-   - ✅ Rich Pydantic validation
-   - ✅ Evidence tracking with `EvidenceItem` class
-   - ✅ `EntityCollection` for canonical entity management
-   - ✅ Full ontology support (UMLS, HGNC, RxNorm, UniProt, etc.)
+1.  **Domain Models (`schema/entity.py`)**
+    - ✅ Complete entity hierarchy with 14+ entity types
+    - ✅ `BaseMedicalEntity` base class with common fields
+    - ✅ Rich Pydantic validation
+    - ✅ Evidence tracking with `EvidenceItem` class
+    - ✅ `EntityCollection` for canonical entity management
+    - ✅ Full ontology support (UMLS, HGNC, RxNorm, UniProt, etc.)
 
-2. **Persistence Models (`schema/entity_sqlmodel.py`)**
-   - ✅ Single `Entity` table with polymorphic discriminator
-   - ✅ All entity-specific fields as nullable columns
-   - ✅ JSON serialization for arrays and embeddings
-   - ✅ Matches existing `migration.sql` schema
-   - ✅ SQLModel integration (SQLAlchemy + Pydantic)
+2.  **Persistence Models (`schema/entity_sqlmodel.py`)**
+    - ✅ Single `Entity` table with polymorphic discriminator
+    - ✅ All entity-specific fields as nullable columns
+    - ✅ JSON serialization for arrays and embeddings
+    - ✅ Matches existing `migration.sql` schema
+    - ✅ SQLModel integration (SQLAlchemy + Pydantic)
 
-3. **Relationships (`schema/relationship.py`)**
-   - ✅ Domain models for relationships (`Treats`, `Causes`, etc.)
-   - ✅ Mandatory evidence tracking (provenance-first design)
-   - ✅ `BaseMedicalRelationship` with confidence scoring
-   - ✅ 30+ relationship types across clinical/molecular/provenance domains
+3.  **Relationship Domain Models (`schema/relationship.py`)**
+    - ✅ Domain models for relationships (`Treats`, `Causes`, etc.)
+    - ✅ Mandatory evidence tracking (provenance-first design)
+    - ✅ `BaseMedicalRelationship` with confidence scoring
+    - ✅ 30+ relationship types across clinical/molecular/provenance domains
 
-4. **Testing**
-   - ✅ Domain model tests (`tests/test_schema_entity.py`)
-   - ✅ Persistence model tests (`schema/test_entity_sqlmodel.py`)
-   - ✅ Validation tests for entity creation and queries
+4.  **Mapper Layer (`schema/mapper.py`)**
+    - ✅ `to_persistence()` and `to_domain()` functions for entities
+    - ✅ `relationship_to_persistence()` and `relationship_to_domain()` functions for relationships
+    - ✅ Handles JSON serialization/deserialization for arrays and embeddings
+
+5.  **Persistence Models for Relationships (`schema/relationship_sqlmodel.py`)**
+    - ✅ Single `Relationship` table with predicate as discriminator
+    - ✅ All relationship-specific fields as nullable columns
+    - ✅ SQLModel integration
+
+6.  **Testing**
+    - ✅ Domain model tests (`tests/test_schema_entity.py`)
+    - ✅ Persistence model tests (`schema/test_entity_sqlmodel.py`)
+    - ✅ Validation tests for entity creation and queries
+    - ✅ Mapper tests for entities (`tests/test_mapper.py`)
+    - ✅ Mapper tests for relationships (`tests/test_relationship_mapper.py`)
 
 ### ❌ What's Missing
 
-1. **Mapper Functions** (`schema/mapper.py`)
-   - ❌ `to_persistence()` function doesn't exist
-   - ❌ `to_domain()` function doesn't exist
-   - ❌ No conversion logic between domain ↔ persistence
-
-2. **Mapper Tests**
-   - ❌ No round-trip conversion tests (domain → persistence → domain)
-   - ❌ No JSON serialization/deserialization tests for arrays
-   - ❌ No tests verifying all entity types convert correctly
-
-3. **Relationship Persistence**
-   - ❌ No persistence models for relationships (only entities)
-   - ❌ No `relationship_sqlmodel.py` module
-   - ❌ Only domain models exist for relationships
-
-4. **Integration**
-   - ❌ `EntityCollection` doesn't use persistence layer
-   - ❌ No database connection examples
-   - ❌ No API layer demonstrating the full workflow
+1.  **Integration**
+    - ❌ `EntityCollection` doesn't use persistence layer
+    - ❌ No database connection examples
+    - ❌ No API layer demonstrating the full workflow
 
 ### ⚠️ Known Issues
 
-1. **Polymorphic SQLAlchemy Configuration Disabled** (line 194 in `entity_sqlmodel.py`)
-   ```python
-   # Polymorphic configuration - Removed in favor of explicit type management
-   # __mapper_args__ = {"polymorphic_on": "entity_type", "polymorphic_identity": "entity"}
-   ```
-   - Currently disabled, but unclear if this is intentional
-   - May need to be re-enabled for polymorphic queries
-   - Or document why explicit type management is preferred
+1.  **Polymorphic SQLAlchemy Configuration**
+    - The original intention was to enable polymorphic queries (e.g., `select(DiseaseEntity)`).
+    - This feature proved difficult to implement correctly with `SQLModel` due to subtle instrumentation issues.
+    - For now, polymorphic queries are **disabled and will not be pursued further** due to complexity vs. benefit.
+    - Explicit filtering (`WHERE entity_type = 'disease'`) is used instead.
+    - See [`schema/POLYMORPHIC_QUERIES.md`](POLYMORPHIC_QUERIES.md) for detailed findings and decision rationale.
 
 ## Implementation Roadmap
 
-### Phase 1: Core Mapper (Priority: HIGH)
+### Phase 1: Core Mapper (COMPLETE)
 
 **Goal**: Implement the missing mapper layer to complete the documented architecture.
 
@@ -194,203 +189,7 @@ The mapper layer doesn't exist yet. This creates a gap between the documented ar
 4. Handle JSON serialization for arrays and embeddings
 5. Support polymorphic conversion (detect entity type and return correct class)
 
-**Expected Implementation**:
-
-```python
-"""
-Mapper functions to convert between Domain Models and Persistence Models.
-
-This module bridges the gap between:
-- Domain Models (schema/entity.py) - Rich Pydantic classes for application logic
-- Persistence Models (schema/entity_sqlmodel.py) - Flattened SQLModel for database
-"""
-
-import json
-from typing import Union
-
-from .entity import (
-    BaseMedicalEntity,
-    Disease,
-    Gene,
-    Drug,
-    Protein,
-    Mutation,
-    Symptom,
-    Biomarker,
-    Pathway,
-    Procedure,
-    Paper,
-    Author,
-    Hypothesis,
-    StudyDesign,
-    StatisticalMethod,
-    EvidenceLine,
-    EntityType,
-)
-from .entity_sqlmodel import Entity
-
-
-def to_persistence(domain: BaseMedicalEntity) -> Entity:
-    """
-    Convert a domain model to a persistence model for database storage.
-
-    Args:
-        domain: Any domain entity (Disease, Gene, Drug, etc.)
-
-    Returns:
-        Flattened Entity model ready for database insertion
-
-    Example:
-        >>> disease = Disease(
-        ...     entity_id="C0006142",
-        ...     entity_type=EntityType.DISEASE,
-        ...     name="Breast Cancer",
-        ...     synonyms=["Breast Carcinoma"],
-        ...     umls_id="C0006142"
-        ... )
-        >>> entity = to_persistence(disease)
-        >>> entity.entity_type == "disease"
-        True
-    """
-    # Common fields for all entities
-    base_data = {
-        "id": domain.entity_id,
-        "entity_type": domain.entity_type.value if hasattr(domain.entity_type, 'value') else domain.entity_type,
-        "name": domain.name,
-        "synonyms": json.dumps(domain.synonyms) if domain.synonyms else None,
-        "abbreviations": json.dumps(domain.abbreviations) if domain.abbreviations else None,
-        "embedding": json.dumps(domain.embedding) if domain.embedding else None,
-        "created_at": domain.created_at,
-        "source": domain.source,
-    }
-
-    # Type-specific fields
-    if isinstance(domain, Disease):
-        base_data.update({
-            "umls_id": domain.umls_id,
-            "mesh_id": domain.mesh_id,
-            "icd10_codes": json.dumps(domain.icd10_codes) if domain.icd10_codes else None,
-            "disease_category": domain.category,
-        })
-    elif isinstance(domain, Gene):
-        base_data.update({
-            "symbol": domain.symbol,
-            "hgnc_id": domain.hgnc_id,
-            "chromosome": domain.chromosome,
-            "entrez_id": domain.entrez_id,
-        })
-    elif isinstance(domain, Drug):
-        base_data.update({
-            "rxnorm_id": domain.rxnorm_id,
-            "brand_names": json.dumps(domain.brand_names) if domain.brand_names else None,
-            "drug_class": domain.drug_class,
-            "mechanism": domain.mechanism,
-        })
-    elif isinstance(domain, Protein):
-        base_data.update({
-            "uniprot_id": domain.uniprot_id,
-            "gene_id": domain.gene_id,
-            "function": domain.function,
-            "pathways": json.dumps(domain.pathways) if domain.pathways else None,
-        })
-    # Add other entity types as needed...
-
-    return Entity(**base_data)
-
-
-def to_domain(persistence: Entity) -> BaseMedicalEntity:
-    """
-    Convert a persistence model back to a domain model.
-
-    Args:
-        persistence: Flattened Entity from database
-
-    Returns:
-        Rich domain model (Disease, Gene, Drug, etc.)
-
-    Example:
-        >>> entity = Entity(
-        ...     id="C0006142",
-        ...     entity_type="disease",
-        ...     name="Breast Cancer",
-        ...     umls_id="C0006142"
-        ... )
-        >>> disease = to_domain(entity)
-        >>> isinstance(disease, Disease)
-        True
-    """
-    # Parse common JSON fields
-    synonyms = json.loads(persistence.synonyms) if persistence.synonyms else []
-    abbreviations = json.loads(persistence.abbreviations) if persistence.abbreviations else []
-    embedding = json.loads(persistence.embedding) if persistence.embedding else None
-
-    # Common fields
-    base_data = {
-        "entity_id": persistence.id,
-        "entity_type": persistence.entity_type,
-        "name": persistence.name,
-        "synonyms": synonyms,
-        "abbreviations": abbreviations,
-        "embedding": embedding,
-        "created_at": persistence.created_at,
-        "source": persistence.source,
-    }
-
-    # Polymorphic conversion based on entity_type
-    if persistence.entity_type == EntityType.DISEASE.value or persistence.entity_type == "disease":
-        return Disease(
-            **base_data,
-            umls_id=persistence.umls_id,
-            mesh_id=persistence.mesh_id,
-            icd10_codes=json.loads(persistence.icd10_codes) if persistence.icd10_codes else None,
-            category=persistence.disease_category,
-        )
-    elif persistence.entity_type == EntityType.GENE.value or persistence.entity_type == "gene":
-        return Gene(
-            **base_data,
-            symbol=persistence.symbol,
-            hgnc_id=persistence.hgnc_id,
-            chromosome=persistence.chromosome,
-            entrez_id=persistence.entrez_id,
-        )
-    elif persistence.entity_type == EntityType.DRUG.value or persistence.entity_type == "drug":
-        return Drug(
-            **base_data,
-            rxnorm_id=persistence.rxnorm_id,
-            brand_names=json.loads(persistence.brand_names) if persistence.brand_names else None,
-            drug_class=persistence.drug_class,
-            mechanism=persistence.mechanism,
-        )
-    elif persistence.entity_type == EntityType.PROTEIN.value or persistence.entity_type == "protein":
-        return Protein(
-            **base_data,
-            uniprot_id=persistence.uniprot_id,
-            gene_id=persistence.gene_id,
-            function=persistence.function,
-            pathways=json.loads(persistence.pathways) if persistence.pathways else None,
-        )
-    # Add other entity types...
-    else:
-        raise ValueError(f"Unknown entity type: {persistence.entity_type}")
-
-
-# Convenience functions for batch operations
-def to_persistence_batch(domains: list[BaseMedicalEntity]) -> list[Entity]:
-    """Convert multiple domain models to persistence models."""
-    return [to_persistence(d) for d in domains]
-
-
-def to_domain_batch(persistences: list[Entity]) -> list[BaseMedicalEntity]:
-    """Convert multiple persistence models to domain models."""
-    return [to_domain(p) for p in persistences]
-```
-
-**Estimated Effort**: 2-3 days
-- Day 1: Core functions for Disease, Gene, Drug, Protein
-- Day 2: Remaining entity types (Mutation, Symptom, etc.)
-- Day 3: Edge cases and JSON handling
-
-### Phase 2: Mapper Tests (Priority: HIGH)
+### Phase 2: Mapper Tests (COMPLETE)
 
 **Goal**: Comprehensive test coverage for mapper functions.
 
@@ -401,146 +200,13 @@ def to_domain_batch(persistences: list[Entity]) -> list[BaseMedicalEntity]:
 4. Test edge cases (empty arrays, null fields)
 5. Test error handling (unknown entity types)
 
-**Expected Test Structure**:
-
-```python
-"""
-Tests for mapper functions converting between domain and persistence models.
-"""
-
-import json
-import pytest
-
-from schema.entity import Disease, Gene, Drug, EntityType
-from schema.entity_sqlmodel import Entity
-from schema.mapper import to_persistence, to_domain
-
-
-def test_disease_roundtrip():
-    """Test domain → persistence → domain conversion for Disease."""
-    # Create domain model
-    disease = Disease(
-        entity_id="C0006142",
-        entity_type=EntityType.DISEASE,
-        name="Breast Cancer",
-        synonyms=["Breast Carcinoma", "Mammary Cancer"],
-        abbreviations=["BC"],
-        umls_id="C0006142",
-        mesh_id="D001943",
-        icd10_codes=["C50.9"],
-        category="genetic",
-        source="umls"
-    )
-
-    # Convert to persistence
-    entity = to_persistence(disease)
-    assert entity.id == "C0006142"
-    assert entity.entity_type == "disease"
-    assert entity.name == "Breast Cancer"
-    assert json.loads(entity.synonyms) == ["Breast Carcinoma", "Mammary Cancer"]
-    assert entity.umls_id == "C0006142"
-
-    # Convert back to domain
-    disease2 = to_domain(entity)
-    assert isinstance(disease2, Disease)
-    assert disease2.entity_id == disease.entity_id
-    assert disease2.name == disease.name
-    assert disease2.synonyms == disease.synonyms
-    assert disease2.umls_id == disease.umls_id
-
-
-def test_gene_roundtrip():
-    """Test domain → persistence → domain conversion for Gene."""
-    gene = Gene(
-        entity_id="HGNC:1100",
-        entity_type=EntityType.GENE,
-        name="BRCA1",
-        symbol="BRCA1",
-        hgnc_id="HGNC:1100",
-        chromosome="17q21.31",
-        source="hgnc"
-    )
-
-    entity = to_persistence(gene)
-    gene2 = to_domain(entity)
-
-    assert isinstance(gene2, Gene)
-    assert gene2.entity_id == gene.entity_id
-    assert gene2.symbol == gene.symbol
-
-
-def test_json_array_handling():
-    """Test that arrays are properly serialized/deserialized."""
-    disease = Disease(
-        entity_id="C0001",
-        entity_type=EntityType.DISEASE,
-        name="Test Disease",
-        synonyms=["Syn1", "Syn2", "Syn3"],
-        abbreviations=["TD"],
-        icd10_codes=["C01", "C02"]
-    )
-
-    entity = to_persistence(disease)
-
-    # Check JSON strings are valid
-    assert isinstance(entity.synonyms, str)
-    assert json.loads(entity.synonyms) == ["Syn1", "Syn2", "Syn3"]
-
-    # Round-trip preserves arrays
-    disease2 = to_domain(entity)
-    assert disease2.synonyms == disease.synonyms
-    assert disease2.icd10_codes == disease.icd10_codes
-
-
-def test_empty_arrays():
-    """Test handling of empty arrays."""
-    disease = Disease(
-        entity_id="C0002",
-        entity_type=EntityType.DISEASE,
-        name="Test",
-        synonyms=[],  # Empty
-        abbreviations=[]  # Empty
-    )
-
-    entity = to_persistence(disease)
-    disease2 = to_domain(entity)
-
-    assert disease2.synonyms == []
-    assert disease2.abbreviations == []
-
-
-def test_unknown_entity_type():
-    """Test error handling for unknown entity types."""
-    entity = Entity(
-        id="UNKNOWN:123",
-        entity_type="unknown_type",
-        name="Unknown"
-    )
-
-    with pytest.raises(ValueError, match="Unknown entity type"):
-        to_domain(entity)
-```
-
-**Estimated Effort**: 1-2 days
-
-### Phase 3: Polymorphic Query Configuration (Priority: MEDIUM)
+### Phase 3: Polymorphic Query Configuration (ABANDONED FOR NOW)
 
 **Goal**: Determine if polymorphic SQLAlchemy configuration should be enabled.
 
-**Tasks**:
-1. Research SQLAlchemy single-table inheritance patterns
-2. Test performance with/without polymorphic configuration
-3. Document decision with rationale
-4. Either re-enable with documentation or document why it's disabled
+**Decision**: Abandoned due to implementation complexities. Explicit filtering by `entity_type` will be used instead. Refer to [`schema/POLYMORPHIC_QUERIES.md`](POLYMORPHIC_QUERIES.md) for details.
 
-**Investigation Questions**:
-- Does explicit type filtering (`WHERE entity_type = 'disease'`) perform well?
-- Would polymorphic queries improve API ergonomics?
-- Are there any downsides to re-enabling it?
-
-**Estimated Effort**: 1 day
-
-### Phase 4: Relationship Persistence (Priority: MEDIUM)
+### Phase 4: Relationship Persistence (COMPLETE)
 
 **Goal**: Add persistence layer for relationships (not just entities).
 
@@ -551,14 +217,7 @@ def test_unknown_entity_type():
 4. Add mapper functions for relationships
 5. Add tests for relationship persistence
 
-**Design Considerations**:
-- Should relationships also use single-table inheritance?
-- How to store evidence arrays efficiently?
-- How to query relationships by type and confidence?
-
-**Estimated Effort**: 3-4 days
-
-### Phase 5: Integration Examples (Priority: LOW)
+### Phase 5: Integration Examples (Priority: HIGH)
 
 **Goal**: Demonstrate the full workflow in production-like scenarios.
 
@@ -665,17 +324,15 @@ def to_persistence(disease: Disease) -> Entity:
 
 ## Summary
 
-The schema architecture is **80% complete**:
+The schema architecture is now **~90% complete**:
 - ✅ Domain models fully implemented
 - ✅ Persistence models fully implemented
-- ❌ **Mapper layer missing** (critical gap)
-- ❌ Relationship persistence missing
+- ✅ Mapper layer implemented and tested
+- ✅ Relationship persistence implemented and tested
+- ❌ Integration layer still missing
 
-The documented workflow ("Domain Objects → Mapper → Persistence → DB") cannot currently be executed because the mapper layer doesn't exist. This ARCHITECTURE.md document provides a clear roadmap to complete the implementation.
+The documented workflow ("Domain Objects → Mapper → Persistence → DB") is now fully functional for both entities and relationships.
 
 **Next Steps**:
-1. Implement `schema/mapper.py` (Phase 1)
-2. Add comprehensive mapper tests (Phase 2)
-3. Update documentation with usage examples
-
-Once the mapper is implemented, the architecture will be complete and match the documented design.
+1. Implement Phase 5: Integration Examples.
+2. Update documentation with usage examples for the complete mapper.
