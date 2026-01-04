@@ -40,7 +40,7 @@ from tqdm import tqdm
 from .base import EntityReference, EntityType, ModelInfo, PredicateType
 
 
-class BaseMedicalEntity(BaseModel, SQLMixin):
+class BaseMedicalEntity(BaseModel):
     """
     Base class for all medical entities in the knowledge graph.
 
@@ -412,7 +412,7 @@ class PaperMetadata(BaseModel):
 # ============================================================================
 
 
-class Paper(BaseModel, SQLMixin):
+class Paper(BaseModel):
     """
     A research paper with extracted entities, relationships, and full provenance.
 

@@ -7,7 +7,6 @@ from .base import (
     CausalPredicateType,
     DiagnosticPredicateType,
     DrugInteractionPredicateType,
-    LocationPredicateType,
     PredicateType,
     ProvenancePredicateType,
     TreatmentPredicateType,
