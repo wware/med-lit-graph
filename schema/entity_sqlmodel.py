@@ -190,5 +190,15 @@ class Entity(SQLModel, table=True):
 
     severity_scale: Optional[str] = Field(default=None, description="Severity scale")
 
+    # ========== HYPOTHESIS, STUDY_DESIGN, STATISTICAL_METHOD, EVIDENCE_LINE FIELDS ==========
+
+    description: Optional[str] = Field(default=None, description="Description for various entity types")
+    predicts: Optional[str] = Field(default=None, description="Hypothesis predictions (JSON array)")
+    assumptions: Optional[str] = Field(default=None, description="Method assumptions (JSON array)")
+    supports: Optional[str] = Field(default=None, description="Evidence supports (JSON array)")
+    refutes: Optional[str] = Field(default=None, description="Evidence refutes (JSON array)")
+    evidence_items: Optional[str] = Field(default=None, description="Evidence items (JSON array)")
+
+
     # Polymorphic configuration - Removed in favor of explicit type management
     # __mapper_args__ = {"polymorphic_on": "entity_type", "polymorphic_identity": "entity"}
