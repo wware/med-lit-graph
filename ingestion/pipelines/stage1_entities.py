@@ -23,7 +23,8 @@ from typing import Any, Dict, List
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from langchain_ollama import OllamaLLM
-from utils import (
+
+from ingestion.utils import (
     JSONLWriter,
     ModelInfo,
     PipelineInfo,
@@ -147,7 +148,7 @@ def main():
 
     args = parser.parse_args()
 
-    print(f"Stage 1: Entity Extraction")
+    print("Stage 1: Entity Extraction")
     print(f"  Query: {args.query}")
     print(f"  Limit: {args.limit}")
     print(f"  Model: {args.model}")
@@ -174,7 +175,7 @@ def main():
     )
 
     # Fetch papers
-    print(f"Fetching papers...")
+    print("Fetching papers...")
     papers = fetch_papers(args.query, args.limit)
     print(f"✓ Found {len(papers)} papers")
     print()
@@ -206,7 +207,7 @@ def main():
 
     print()
     print("=" * 70)
-    print(f"✅ Stage 1 Complete!")
+    print("✅ Stage 1 Complete!")
     print(f"  Papers processed: {len(papers)}")
     print(f"  Entities extracted: {len(all_entities)}")
     print(f"  Output: {output_path}")
