@@ -44,7 +44,7 @@ services:
     # 'command' is overridden by the command line arguments you provide.
     # This default is just for documentation.
     command: >
-      python ingest_papers.py
+      python -m ingestion.ingest_papers
       --query "search terms"
       --limit 10
       --model "llama3.1:70b"

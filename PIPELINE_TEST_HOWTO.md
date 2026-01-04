@@ -47,7 +47,7 @@ You can run the Stage 1 pipeline wrapper directly. It accepts `argparse` argumen
 
 ```bash
 # Run from project root
-uv run python ingestion/run_stage1.py \
+uv run python -m ingestion.run_stage1 \
   --query "metformin diabetes" \
   --limit 5 \
   --model "llama3.1:70b" \
@@ -104,5 +104,5 @@ export OLLAMA_HOST="http://<YOUR_INSTANCE_IP>:11434"
 # Run the ingest service
 # Link to postgres so it's available if you run other scripts
 docker compose run -e OLLAMA_HOST=$OLLAMA_HOST ingest \
-  python ingestion/run_stage1.py --query "statins" --limit 5
+  python -m ingestion.run_stage1 --query "statins" --limit 5
 ```
