@@ -2,12 +2,12 @@
 """
 Test flexible relationship parsing with multiple formats.
 """
+
 import sys
-import tempfile
 from pathlib import Path
+import tempfile
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-
 from ingestion.ingest_papers import OllamaPaperPipeline
 
 

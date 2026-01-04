@@ -2,9 +2,8 @@
 Tests for relationship mapper functions.
 """
 
-import pytest
 from schema.relationship import Treats
-from schema.base import TreatmentPredicateType
+from schema.base import PredicateType
 from schema.relationship_sqlmodel import Relationship as PersistenceRelationship
 from schema.mapper import relationship_to_persistence, relationship_to_domain
 
@@ -15,7 +14,7 @@ def test_treats_roundtrip():
     treats = Treats(
         subject_id="RxNorm:1187832",
         object_id="C0006142",
-        predicate=TreatmentPredicateType.TREATS,
+        predicate=PredicateType.TREATS,
         efficacy="significant improvement in PFS",
         response_rate=0.59,
         line_of_therapy="second-line",

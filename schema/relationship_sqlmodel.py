@@ -25,12 +25,12 @@ class Relationship(SQLModel, table=True):
     subject_id: str = Field(index=True)
     object_id: str = Field(index=True)
     predicate: str = Field(index=True)
-    
+
     # Common medical relationship fields
     confidence: Optional[float] = Field(default=None)
     source_papers: Optional[str] = Field(default=None)
     evidence_count: Optional[int] = Field(default=None)
-    
+
     # Type-specific fields
     frequency: Optional[str] = Field(default=None)
     onset: Optional[str] = Field(default=None)
@@ -78,4 +78,3 @@ class Relationship(SQLModel, table=True):
     # Metadata
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-

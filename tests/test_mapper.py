@@ -5,22 +5,7 @@ Tests for mapper functions converting between domain and persistence models.
 import json
 import pytest
 
-from schema.entity import (
-    Disease, 
-    Gene, 
-    Drug, 
-    Protein,
-    Mutation,
-    Symptom,
-    Biomarker,
-    Pathway,
-    Procedure,
-    Hypothesis,
-    StudyDesign,
-    StatisticalMethod,
-    EvidenceLine,
-    EntityType
-)
+from schema.entity import Disease, Gene, Drug, Protein, Mutation, Symptom, Biomarker, Pathway, Procedure, Hypothesis, StudyDesign, StatisticalMethod, EvidenceLine, EntityType
 from schema.entity_sqlmodel import Entity
 from schema.mapper import to_persistence, to_domain
 
@@ -38,7 +23,7 @@ def test_disease_roundtrip():
         mesh_id="D001943",
         icd10_codes=["C50.9"],
         category="genetic",
-        source="umls"
+        source="umls",
     )
 
     # Convert to persistence
@@ -61,15 +46,7 @@ def test_disease_roundtrip():
 
 def test_gene_roundtrip():
     """Test domain → persistence → domain conversion for Gene."""
-    gene = Gene(
-        entity_id="HGNC:1100",
-        entity_type=EntityType.GENE,
-        name="BRCA1",
-        symbol="BRCA1",
-        hgnc_id="HGNC:1100",
-        chromosome="17q21.31",
-        source="hgnc"
-    )
+    gene = Gene(entity_id="HGNC:1100", entity_type=EntityType.GENE, name="BRCA1", symbol="BRCA1", hgnc_id="HGNC:1100", chromosome="17q21.31", source="hgnc")
 
     entity = to_persistence(gene)
     gene2 = to_domain(entity)
@@ -78,6 +55,7 @@ def test_gene_roundtrip():
     assert gene2.entity_id == gene.entity_id
     assert gene2.symbol == gene.symbol
     assert gene2 == gene
+
 
 def test_drug_roundtrip():
     """Test domain → persistence → domain conversion for Drug."""
@@ -88,7 +66,7 @@ def test_drug_roundtrip():
         rxnorm_id="1187832",
         brand_names=["Lynparza"],
         drug_class="PARP inhibitor",
-        mechanism="Inhibits poly ADP-ribose polymerase enzymes"
+        mechanism="Inhibits poly ADP-ribose polymerase enzymes",
     )
 
     entity = to_persistence(drug)
@@ -109,7 +87,7 @@ def test_protein_roundtrip():
         uniprot_id="P38398",
         gene_id="HGNC:1100",
         function="DNA repair and tumor suppression",
-        pathways=["DNA damage response", "Homologous recombination"]
+        pathways=["DNA damage response", "Homologous recombination"],
     )
 
     entity = to_persistence(protein)
@@ -123,14 +101,7 @@ def test_protein_roundtrip():
 
 def test_mutation_roundtrip():
     """Test domain → persistence → domain conversion for Mutation."""
-    mutation = Mutation(
-        entity_id="MUT:BRCA1_c.5266dupC",
-        name="BRCA1 c.5266dupC",
-        gene_id="HGNC:1100",
-        variant_type="Insertion",
-        notation="c.5266dupC",
-        consequence="Frameshift"
-    )
+    mutation = Mutation(entity_id="MUT:BRCA1_c.5266dupC", name="BRCA1 c.5266dupC", gene_id="HGNC:1100", variant_type="Insertion", notation="c.5266dupC", consequence="Frameshift")
 
     entity = to_persistence(mutation)
     mutation2 = to_domain(entity)
@@ -143,11 +114,7 @@ def test_mutation_roundtrip():
 
 def test_symptom_roundtrip():
     """Test domain → persistence → domain conversion for Symptom."""
-    symptom = Symptom(
-        entity_id="SYMP:C0015672",
-        name="Fatigue",
-        severity_scale="Mild, Moderate, Severe"
-    )
+    symptom = Symptom(entity_id="SYMP:C0015672", name="Fatigue", severity_scale="Mild, Moderate, Severe")
 
     entity = to_persistence(symptom)
     symptom2 = to_domain(entity)
@@ -160,12 +127,7 @@ def test_symptom_roundtrip():
 
 def test_procedure_roundtrip():
     """Test domain → persistence → domain conversion for Procedure."""
-    procedure = Procedure(
-        entity_id="PROC:C0005435",
-        name="Biopsy",
-        type="Diagnostic",
-        invasiveness="Minimally invasive"
-    )
+    procedure = Procedure(entity_id="PROC:C0005435", name="Biopsy", type="Diagnostic", invasiveness="Minimally invasive")
 
     entity = to_persistence(procedure)
     procedure2 = to_domain(entity)
@@ -178,13 +140,7 @@ def test_procedure_roundtrip():
 
 def test_biomarker_roundtrip():
     """Test domain → persistence → domain conversion for Biomarker."""
-    biomarker = Biomarker(
-        entity_id="BIOM:LN12345",
-        name="Prostate-Specific Antigen",
-        loinc_code="12345-6",
-        measurement_type="Blood",
-        normal_range="<4 ng/mL"
-    )
+    biomarker = Biomarker(entity_id="BIOM:LN12345", name="Prostate-Specific Antigen", loinc_code="12345-6", measurement_type="Blood", normal_range="<4 ng/mL")
 
     entity = to_persistence(biomarker)
     biomarker2 = to_domain(entity)
@@ -197,14 +153,7 @@ def test_biomarker_roundtrip():
 
 def test_pathway_roundtrip():
     """Test domain → persistence → domain conversion for Pathway."""
-    pathway = Pathway(
-        entity_id="PATH:hsa04110",
-        name="Cell cycle",
-        kegg_id="hsa04110",
-        reactome_id="R-HSA-1640170",
-        category="signaling",
-        genes_involved=["HGNC:1100", "HGNC:1101"]
-    )
+    pathway = Pathway(entity_id="PATH:hsa04110", name="Cell cycle", kegg_id="hsa04110", reactome_id="R-HSA-1640170", category="signaling", genes_involved=["HGNC:1100", "HGNC:1101"])
 
     entity = to_persistence(pathway)
     pathway2 = to_domain(entity)
@@ -221,9 +170,9 @@ def test_hypothesis_roundtrip():
         entity_id="HYP:001",
         name="Amyloid cascade hypothesis",
         description="The amyloid cascade hypothesis postulates that the deposition of amyloid-β is the causative agent in Alzheimer's disease.",
-        predicts=["C0002395"]
+        predicts=["C0002395"],
     )
-    
+
     entity = to_persistence(hypothesis)
     hypothesis2 = to_domain(entity)
 
@@ -232,12 +181,13 @@ def test_hypothesis_roundtrip():
     assert hypothesis2.description == hypothesis.description
     assert hypothesis2 == hypothesis
 
+
 def test_study_design_roundtrip():
     """Test domain → persistence → domain conversion for StudyDesign."""
     study_design = StudyDesign(
         entity_id="OBI:0000008",
         name="Randomized Controlled Trial",
-        description="A study in which a number of similar people are randomly assigned to 2 or more groups to test a specific drug, treatment, or other intervention."
+        description="A study in which a number of similar people are randomly assigned to 2 or more groups to test a specific drug, treatment, or other intervention.",
     )
 
     entity = to_persistence(study_design)
@@ -248,13 +198,14 @@ def test_study_design_roundtrip():
     assert study_design2.description == study_design.description
     assert study_design2 == study_design
 
+
 def test_statistical_method_roundtrip():
     """Test domain → persistence → domain conversion for StatisticalMethod."""
     stat_method = StatisticalMethod(
         entity_id="STATO:0000288",
         name="Student's t-test",
         description="A statistical test that is used to compare the means of two groups.",
-        assumptions=["The two samples are independent.", "The data in each group are approximately normally distributed."]
+        assumptions=["The two samples are independent.", "The data in each group are approximately normally distributed."],
     )
 
     entity = to_persistence(stat_method)
@@ -268,14 +219,8 @@ def test_statistical_method_roundtrip():
 
 def test_evidence_line_roundtrip():
     """Test domain → persistence → domain conversion for EvidenceLine."""
-    evidence_line = EvidenceLine(
-        entity_id="EV:001",
-        name="Evidence for Drug X treating Disease Y",
-        supports=["HYP:001"],
-        refutes=[],
-        evidence_items=["PMC12345", "PMC67890"]
-    )
-    
+    evidence_line = EvidenceLine(entity_id="EV:001", name="Evidence for Drug X treating Disease Y", supports=["HYP:001"], refutes=[], evidence_items=["PMC12345", "PMC67890"])
+
     entity = to_persistence(evidence_line)
     evidence_line2 = to_domain(entity)
 
@@ -287,14 +232,7 @@ def test_evidence_line_roundtrip():
 
 def test_json_array_handling():
     """Test that arrays are properly serialized/deserialized."""
-    disease = Disease(
-        entity_id="C0001",
-        entity_type=EntityType.DISEASE,
-        name="Test Disease",
-        synonyms=["Syn1", "Syn2", "Syn3"],
-        abbreviations=["TD"],
-        icd10_codes=["C01", "C02"]
-    )
+    disease = Disease(entity_id="C0001", entity_type=EntityType.DISEASE, name="Test Disease", synonyms=["Syn1", "Syn2", "Syn3"], abbreviations=["TD"], icd10_codes=["C01", "C02"])
 
     entity = to_persistence(disease)
 
@@ -310,13 +248,7 @@ def test_json_array_handling():
 
 def test_empty_arrays():
     """Test handling of empty arrays."""
-    disease = Disease(
-        entity_id="C0002",
-        entity_type=EntityType.DISEASE,
-        name="Test",
-        synonyms=[],  # Empty
-        abbreviations=[]  # Empty
-    )
+    disease = Disease(entity_id="C0002", entity_type=EntityType.DISEASE, name="Test", synonyms=[], abbreviations=[])  # Empty  # Empty
 
     entity = to_persistence(disease)
     disease2 = to_domain(entity)
@@ -327,12 +259,7 @@ def test_empty_arrays():
 
 def test_unknown_entity_type():
     """Test error handling for unknown entity types."""
-    entity = Entity(
-        id="UNKNOWN:123",
-        entity_type="unknown_type",
-        name="Unknown"
-    )
+    entity = Entity(id="UNKNOWN:123", entity_type="unknown_type", name="Unknown")
 
     with pytest.raises(ValueError, match="Unknown entity type"):
         to_domain(entity)
-

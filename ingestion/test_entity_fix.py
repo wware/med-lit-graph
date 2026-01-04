@@ -2,11 +2,9 @@
 """
 Test that different neurodegenerative diseases don't match each other.
 """
-import sys
 import tempfile
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
+import sys
 
 from ingestion.ingest_papers import EntityDatabase
 

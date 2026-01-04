@@ -1,3 +1,7 @@
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 """
 Stage 1: Entity Extraction
 
@@ -14,13 +18,9 @@ Usage:
 
 import argparse
 import json
-import sys
 from datetime import datetime
-from pathlib import Path
 from typing import Any, Dict, List
 
-# Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from langchain_ollama import OllamaLLM
 from utils import (
@@ -47,8 +47,7 @@ For each entity, identify:
 Text: {text}
 
 Return JSON array of entities:
-[{{"name": "...", "type": "...", "synonyms": [...]}}]
-"""
+[{'name': '...', 'type': '...', 'synonyms': [...]}]"""
         }
     }
 

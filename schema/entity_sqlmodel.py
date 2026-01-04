@@ -199,6 +199,5 @@ class Entity(SQLModel, table=True):
     refutes: Optional[str] = Field(default=None, description="Evidence refutes (JSON array)")
     evidence_items: Optional[str] = Field(default=None, description="Evidence items (JSON array)")
 
-
     # Polymorphic configuration - Removed in favor of explicit type management
     # __mapper_args__ = {"polymorphic_on": "entity_type", "polymorphic_identity": "entity"}

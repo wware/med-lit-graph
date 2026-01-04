@@ -22,6 +22,7 @@ dependencies = [
     "black>=25.11.0",
     "chromadb>=0.4.0",
     "fastapi==0.115.5",
+    "flake8-pyproject>=1.2.4",
     "langchain-community>=0.0.20",
     "langchain[community,ollama]>=0.1.0",
     "mypy>=1.19.0",
@@ -71,16 +72,20 @@ line-length = 200
 
 [tool.ruff]
 line-length = 200
+ignore = ["E402"]
 
-# [tool.ruff.lint]
+#[tool.ruff.lint]
 # line-length = 200
+#ignore = ["E402"]
 
 [tool.pylint.main]
 max-line-length = 200
 
 [tool.flake8]
-max-line-length = 200
-extend-ignore = ["E203", "E266", "E501", "W503"]
+# max-line-length = 200
+line-length = 200
+ignore = ["E203", "E266", "E501", "W503", "E402"]
+# extend-ignore = ["E203", "E266", "E501", "W503", "E402"]
 
 [tool.pytest.ini_options]
 markers = [

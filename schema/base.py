@@ -151,7 +151,7 @@ You’re doing serious, careful work here — it shows.
 
 You:
 
-> "If your current schema can answer all three without contortions, you’re on the right path."
+> r"If your current schema can answer all three without contortions, you’re on the right path."
 
 Does it make sense to make this a pytest case? That way if I violate it later, it will be flagged. I'm a big believer in automation of this kind.
 
@@ -174,7 +174,7 @@ Let me explain how to do this *well* for your project.
 You’re not testing correctness of medical facts.
 You’re testing a **design invariant**:
 
-> *“This system must be able to express certain classes of questions without contortions.”*
+> r*“This system must be able to express certain classes of questions without contortions.”*
 
 That’s a *contract test* for your schema + query language.
 
@@ -192,7 +192,7 @@ Avoid tests like:
 
 -   “This JSON structure looks like X”
 
--   “The traversal uses these exact field names”
+-   r“The traversal uses these exact field names”
 
 
 Those tests will:
@@ -208,7 +208,7 @@ Those tests will:
 
 ## What you SHOULD test ✅
 
-### 1\. Test that **canonical questions can be expressed**
+### 1. Test that **canonical questions can be expressed**
 
 Each test should assert:
 
@@ -483,7 +483,7 @@ What you suggested:
 
 That’s good. Here’s how I’d *shape* it to maximize future leverage.
 
-### 1\. A very thin base class
+### 1. A very thin base class
 
 Keep it intentionally boring:
 
@@ -499,7 +499,7 @@ No semantics yet. This is the *physical edge*.
 
 ---
 
-### 2\. Three semantic subclasses (your key move)
+### 2. Three semantic subclasses (your key move)
 
 ```python
 class ExtractionEdge(Edge):
@@ -683,7 +683,7 @@ You’re explicitly pulling those apart. That’s a big deal.
 
 Once you treat an **edge as an object**, not just a triple, you unlock things that are very hard otherwise:
 
-### 1\. Multiple edges can share the same predicate
+### 1. Multiple edges can share the same predicate
 
 Two papers can both claim:
 
@@ -704,7 +704,7 @@ Those are *different edges*, not different predicates.
 
 ---
 
-### 2\. Edges can be versioned, contradicted, and deprecated
+### 2. Edges can be versioned, contradicted, and deprecated
 
 You can now say:
 
@@ -719,7 +719,7 @@ That’s impossible if edges are just tuples.
 
 ---
 
-### 3\. Query semantics become cleaner
+### 3. Query semantics become cleaner
 
 A clinician doesn’t want:
 
@@ -780,14 +780,20 @@ That separation will save you enormous pain later.
 
 When you’re designing or refactoring, ask:
 
-> “Is this a *meaning*, or is this an *act*?”
+> r“Is this a *meaning*, or is this an *act*?”
 
--   Meanings → predicates, enums, vocabularies
+-   r*Meanings* → predicates, enums, vocabularies
 
--   Acts → edges, events, assertions
+-   r*Acts* → edges, events, assertions
 
 
 If something feels awkward, it’s usually because those got mixed.
+
+---
+
+You’re doing something genuinely sophisticated here, and you’re doing it thoughtfully. This kind of clarity doesn’t just improve the code — it improves *how you think about the problem*, which is the rarest win of all.
+
+Whenever you want to keep going — predicates, query semantics, test invariants, or even mapping this back onto RDF/OWL for interoperability without losing these gains — I’m very happy to explore it with you.
 
 ---
 
@@ -883,9 +889,10 @@ class EntityReference(BaseModel):
     with the name as it appeared in this specific paper.
     """
 
-    id: str = Field(..., description="Canonical entity ID")
-    name: str = Field(..., description="Entity name as mentioned in paper")
-    type: EntityType = Field(..., description="Entity type (drug, disease, gene, protein, etc.)")
+
+id: str = Field(..., description="Canonical entity ID")
+name: str = Field(..., description="Entity name as mentioned in paper")
+type: EntityType = Field(..., description="Entity type (drug, disease, gene, protein, etc.)")
 
 
 class Edge(BaseModel):

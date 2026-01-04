@@ -7,7 +7,6 @@ This module bridges the gap between:
 """
 
 import json
-from typing import Union
 
 from .entity import (
     BaseMedicalEntity,
@@ -20,8 +19,6 @@ from .entity import (
     Biomarker,
     Pathway,
     Procedure,
-    Paper,
-    Author,
     Hypothesis,
     StudyDesign,
     StatisticalMethod,
@@ -30,22 +27,11 @@ from .entity import (
 )
 from .relationship import (
     BaseRelationship,
-    BaseMedicalRelationship,
     create_relationship,
 )
-from .base import (
-    PredicateType,
-    BiologicalPredicateType,
-    CausalPredicateType,
-    DiagnosticPredicateType,
-    DrugInteractionPredicateType,
-    LocationPredicateType,
-    ProvenancePredicateType,
-    TreatmentPredicateType,
-)
+from .base import PredicateType
 from .entity_sqlmodel import Entity
 from .relationship_sqlmodel import Relationship
-
 
 
 def to_persistence(domain: BaseMedicalEntity) -> Entity:
@@ -73,7 +59,7 @@ def to_persistence(domain: BaseMedicalEntity) -> Entity:
     # Common fields for all entities
     base_data = {
         "id": domain.entity_id,
-        "entity_type": domain.entity_type.value if hasattr(domain.entity_type, 'value') else domain.entity_type,
+        "entity_type": domain.entity_type.value if hasattr(domain.entity_type, "value") else domain.entity_type,
         "name": domain.name,
         "synonyms": json.dumps(domain.synonyms) if domain.synonyms else None,
         "abbreviations": json.dumps(domain.abbreviations) if domain.abbreviations else None,
@@ -84,85 +70,110 @@ def to_persistence(domain: BaseMedicalEntity) -> Entity:
 
     # Type-specific fields
     if isinstance(domain, Disease):
-        base_data.update({
-            "umls_id": domain.umls_id,
-            "mesh_id": domain.mesh_id,
-            "icd10_codes": json.dumps(domain.icd10_codes) if domain.icd10_codes else None,
-            "disease_category": domain.category,
-        })
+        base_data.update(
+            {
+                "umls_id": domain.umls_id,
+                "mesh_id": domain.mesh_id,
+                "icd10_codes": json.dumps(domain.icd10_codes) if domain.icd10_codes else None,
+                "disease_category": domain.category,
+            }
+        )
     elif isinstance(domain, Gene):
-        base_data.update({
-            "symbol": domain.symbol,
-            "hgnc_id": domain.hgnc_id,
-            "chromosome": domain.chromosome,
-            "entrez_id": domain.entrez_id,
-        })
+        base_data.update(
+            {
+                "symbol": domain.symbol,
+                "hgnc_id": domain.hgnc_id,
+                "chromosome": domain.chromosome,
+                "entrez_id": domain.entrez_id,
+            }
+        )
     elif isinstance(domain, Drug):
-        base_data.update({
-            "rxnorm_id": domain.rxnorm_id,
-            "brand_names": json.dumps(domain.brand_names) if domain.brand_names else None,
-            "drug_class": domain.drug_class,
-            "mechanism": domain.mechanism,
-        })
+        base_data.update(
+            {
+                "rxnorm_id": domain.rxnorm_id,
+                "brand_names": json.dumps(domain.brand_names) if domain.brand_names else None,
+                "drug_class": domain.drug_class,
+                "mechanism": domain.mechanism,
+            }
+        )
     elif isinstance(domain, Protein):
-        base_data.update({
-            "uniprot_id": domain.uniprot_id,
-            "gene_id": domain.gene_id,
-            "function": domain.function,
-            "pathways": json.dumps(domain.pathways) if domain.pathways else None,
-        })
+        base_data.update(
+            {
+                "uniprot_id": domain.uniprot_id,
+                "gene_id": domain.gene_id,
+                "function": domain.function,
+                "pathways": json.dumps(domain.pathways) if domain.pathways else None,
+            }
+        )
     elif isinstance(domain, Mutation):
-        base_data.update({
-            "mutation_gene_id": domain.gene_id,
-            "variant_type": domain.variant_type,
-            "notation": domain.notation,
-            "consequence": domain.consequence,
-        })
+        base_data.update(
+            {
+                "mutation_gene_id": domain.gene_id,
+                "variant_type": domain.variant_type,
+                "notation": domain.notation,
+                "consequence": domain.consequence,
+            }
+        )
     elif isinstance(domain, Symptom):
-        base_data.update({
-            "severity_scale": domain.severity_scale,
-        })
+        base_data.update(
+            {
+                "severity_scale": domain.severity_scale,
+            }
+        )
     elif isinstance(domain, Procedure):
-        base_data.update({
-            "procedure_type": domain.type,
-            "invasiveness": domain.invasiveness,
-        })
+        base_data.update(
+            {
+                "procedure_type": domain.type,
+                "invasiveness": domain.invasiveness,
+            }
+        )
     elif isinstance(domain, Biomarker):
-        base_data.update({
-            "loinc_code": domain.loinc_code,
-            "measurement_type": domain.measurement_type,
-            "normal_range": domain.normal_range,
-        })
+        base_data.update(
+            {
+                "loinc_code": domain.loinc_code,
+                "measurement_type": domain.measurement_type,
+                "normal_range": domain.normal_range,
+            }
+        )
     elif isinstance(domain, Pathway):
-        base_data.update({
-            "kegg_id": domain.kegg_id,
-            "reactome_id": domain.reactome_id,
-            "pathway_category": domain.category,
-            "genes_involved": json.dumps(domain.genes_involved) if domain.genes_involved else None,
-        })
+        base_data.update(
+            {
+                "kegg_id": domain.kegg_id,
+                "reactome_id": domain.reactome_id,
+                "pathway_category": domain.category,
+                "genes_involved": json.dumps(domain.genes_involved) if domain.genes_involved else None,
+            }
+        )
     elif isinstance(domain, Hypothesis):
-        base_data.update({
-            "description": domain.description,
-            "predicts": json.dumps(domain.predicts) if domain.predicts else None,
-        })
+        base_data.update(
+            {
+                "description": domain.description,
+                "predicts": json.dumps(domain.predicts) if domain.predicts else None,
+            }
+        )
     elif isinstance(domain, StudyDesign):
-        base_data.update({
-            "description": domain.description,
-        })
+        base_data.update(
+            {
+                "description": domain.description,
+            }
+        )
     elif isinstance(domain, StatisticalMethod):
-        base_data.update({
-            "description": domain.description,
-            "assumptions": json.dumps(domain.assumptions) if domain.assumptions else None,
-        })
+        base_data.update(
+            {
+                "description": domain.description,
+                "assumptions": json.dumps(domain.assumptions) if domain.assumptions else None,
+            }
+        )
     elif isinstance(domain, EvidenceLine):
-        base_data.update({
-            "supports": json.dumps(domain.supports) if domain.supports else None,
-            "refutes": json.dumps(domain.refutes) if domain.refutes else None,
-            "evidence_items": json.dumps(domain.evidence_items) if domain.evidence_items else None,
-        })
+        base_data.update(
+            {
+                "supports": json.dumps(domain.supports) if domain.supports else None,
+                "refutes": json.dumps(domain.refutes) if domain.refutes else None,
+                "evidence_items": json.dumps(domain.evidence_items) if domain.evidence_items else None,
+            }
+        )
 
     return Entity(**base_data)
-
 
 
 def to_domain(persistence: Entity) -> BaseMedicalEntity:
@@ -321,7 +332,7 @@ def relationship_to_persistence(domain: BaseRelationship) -> Relationship:
             value = domain_data[key]
             if isinstance(value, list):
                 persistence_data[key] = json.dumps(value) if value else None
-            elif hasattr(value, 'value'):
+            elif hasattr(value, "value"):
                 persistence_data[key] = value.value
             else:
                 persistence_data[key] = value
@@ -337,28 +348,13 @@ def relationship_to_domain(persistence: Relationship) -> BaseRelationship:
 
     # Find the correct predicate enum member
     predicate_value = persistence.predicate
-    predicate = None
-    predicate_enums = [
-        BiologicalPredicateType,
-        CausalPredicateType,
-        DiagnosticPredicateType,
-        DrugInteractionPredicateType,
-        LocationPredicateType,
-        ProvenancePredicateType,
-        TreatmentPredicateType,
-    ]
-    for enum_cls in predicate_enums:
-        try:
-            predicate = enum_cls(predicate_value)
-            break
-        except ValueError:
-            continue
+    try:
+        predicate = PredicateType(predicate_value)
+    except ValueError as e:
+        raise ValueError(f"Unknown predicate type: {predicate_value}") from e
 
-    if predicate is None:
-        raise ValueError(f"Unknown predicate type: {predicate_value}")
+    domain_data["predicate"] = predicate
 
-    domain_data['predicate'] = predicate
-    
     # Get the correct class to deserialize into
     cls = create_relationship(predicate, "", "").__class__
 
@@ -369,5 +365,5 @@ def relationship_to_domain(persistence: Relationship) -> BaseRelationship:
                 domain_data[key] = json.loads(value)
             else:
                 domain_data[key] = value
-    
+
     return create_relationship(**domain_data)
