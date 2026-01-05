@@ -198,12 +198,12 @@ treats = Treats(
 
 ### 2. Immutable JSON Source of Truth
 
-Graph databases can corrupt. Algorithms improve. Papers get retracted.
+Databases can corrupt. Algorithms improve. Papers get retracted.
 
 **Solution**: Per-paper JSON files are immutable source of truth.
-- Graph database regenerates from JSON
-- Paper retracted? Remove JSON, rebuild graph
-- Better NER model? Re-process, regenerate graph
+- PostgreSQL database regenerates from JSON
+- Paper retracted? Remove JSON, rebuild database
+- Better NER model? Re-process, regenerate database
 
 **Trade-off**: Extra storage (~1-5MB per paper) for complete reproducibility.
 
