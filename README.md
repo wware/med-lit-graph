@@ -137,18 +137,20 @@ User Interfaces
          │
     Query API (FastAPI)
          │
-    ┌────┴────┬─────────────────┐
-Vector Search   Graph Database   Object Storage
-(Semantic)      (Relationships)  (Source of Truth)
+    PostgreSQL + pgvector
+    (Graph Queries + Vector Search)
 ```
 
 **Data Flow**:
 ```
 PubMed/PMC → Ingestion Pipeline → Per-Paper JSON (Source of Truth)
                                          │
-                         ┌───────────────┴────────────────────┐
-                   Vector Search                        Graph Database
-                  (Semantic Search)                    (Graph Queries)
+                                    PostgreSQL
+                              (Graph + Vector Storage)
+                              - Entities (nodes)
+                              - Relationships (edges)
+                              - Evidence (provenance)
+                              - Vector embeddings (pgvector)
 ```
 
 <!-- TODO file doesn't exist: [Full architecture docs →](docs/architecture.md) -->
@@ -207,9 +209,9 @@ Graph databases can corrupt. Algorithms improve. Papers get retracted.
 
 ### 3. Vendor-Neutral Query Language
 
-Different graph databases use different query languages (Cypher, Gremlin, SPARQL).
+Traditional graph databases use specialized query languages (Cypher, Gremlin, SPARQL).
 
-**Solution**: JSON query language that translates to any backend.
+**Solution**: JSON query language that executes against PostgreSQL with vendor-neutral design.
 
 ```json
 {
@@ -226,13 +228,12 @@ Different graph databases use different query languages (Cypher, Gremlin, SPARQL
 }
 ```
 
-Translates to openCypher (Neptune), Cypher (Neo4j), or Gremlin.
-
 **Benefits**:
 - LLM-friendly (JSON is easy for AI to generate)
-- Database-agnostic (switch backends without rewriting queries)
+- Database-agnostic design (vendor-neutral schema)
 - Human-readable
 - Programmatically composable
+- Currently executed against PostgreSQL tables
 
 ### 4. Evidence Quality Weighting
 
@@ -255,17 +256,42 @@ Confidence scores = weighted average of evidence quality.
 
 Pure vector search misses multi-hop connections. Pure graph misses semantic similarity.
 
-**Hybrid approach**:
-1. **Vector search**: Find relevant papers semantically
-2. **Graph traversal**: Discover multi-hop relationships
+**Hybrid approach using PostgreSQL with pgvector**:
+1. **Vector search**: Find relevant papers semantically (pgvector with HNSW indexing)
+2. **Graph traversal**: Discover multi-hop relationships (PostgreSQL relationships table)
 3. **Combine**: Rank by both relevance and graph structure
 
 **Example**: "Drugs for BRCA-mutated breast cancer"
-- Vector: Find papers about BRCA, breast cancer, treatments
-- Graph: BRCA1 → increases_risk → breast cancer → treated_by → olaparib
+- Vector: Find papers about BRCA, breast cancer, treatments (pgvector similarity)
+- Graph: BRCA1 → increases_risk → breast cancer → treated_by → olaparib (SQL joins)
 - Result: Drugs with evidence for BRCA-mutated subtype specifically
 
 [Complete design decisions →](./docs/DESIGN_DECISIONS.md)
+
+---
+
+## Database Schema
+
+The system uses **PostgreSQL with pgvector** for both relational and vector storage.
+
+### Storage Architecture
+
+**PostgreSQL Tables** (see [schema/migration.sql](./schema/migration.sql)):
+- `entities` - Graph nodes (genes, drugs, diseases, etc.) with vector embeddings
+- `papers` - Source documents from PubMed/PMC
+- `relationships` - Graph edges with confidence scores
+- `evidence` - Provenance links from relationships to paper segments
+
+**Key Features**:
+- **pgvector extension**: Stores `vector(768)` embeddings for semantic search
+- **HNSW indexing**: Fast approximate nearest neighbor search
+- **JSONB columns**: Flexible properties storage for entity/relationship metadata
+- **Full provenance**: Every relationship traces to specific paper sections via the evidence table
+
+**Schema Documentation**:
+- [schema/README.md](./schema/README.md) - Complete schema overview and design philosophy
+- [schema/ARCHITECTURE.md](./schema/ARCHITECTURE.md) - Domain/Persistence separation pattern
+- [schema/migration.sql](./schema/migration.sql) - Actual PostgreSQL table definitions
 
 ---
 
@@ -479,13 +505,15 @@ interactions = client.find_drug_interactions("warfarin", severity=["major"])
 ```bash
 git clone https://github.com/yourusername/medical-knowledge-graph.git
 cd medical-knowledge-graph
-docker-compose -f ingestion/docker-compose.yml up -d
+docker-compose up -d
 ```
 
 Services:
-- Vector Search: http://localhost:9200
-- API: http://localhost:8000
-- Dashboards: http://localhost:5601
+- PostgreSQL (with pgvector): http://localhost:5432
+- Ollama (LLM): http://localhost:11434
+- API: http://localhost:8000 (when running)
+
+The `docker-compose.yml` file uses the official `pgvector/pgvector:pg16` image and automatically initializes the database schema from `schema/migration.sql`.
 
 ### Cloud Deployment
 
