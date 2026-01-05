@@ -120,7 +120,7 @@ Every result includes PMC paper IDs, section locations, and extraction methods s
 - 🔍 **Provenance-First**: Every relationship traceable to specific papers, sections, and paragraphs
 - 🔗 **Graph-Native**: Multi-hop queries across millions of relationships
 - 📊 **Evidence-Weighted**: Automatic quality scoring (RCT > meta-analysis > case report)
-- 🌐 **Vendor-Neutral**: JSON query language works with any graph database
+- 🌐 **Vendor-Neutral Design**: JSON query language with vendor-neutral schema (currently PostgreSQL)
 - 🔓 **Open Source**: Schema, query language, and client libraries all public
 - 🤖 **LLM-Ready**: MCP server for Claude, ChatGPT, and other AI assistants
 
