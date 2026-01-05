@@ -10,5 +10,5 @@ uv run pylint -E $PYTHONFILES
 uv run flake8 $PYTHONFILES
 # uv run mypy $PYTHONFILES
 uv run docker compose -f docker-compose.yml up -d postgres
-uv run pytest tests/
+uv run pytest tests/ schema/tests/
 uv run docker compose -f docker-compose.yml down

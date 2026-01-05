@@ -32,12 +32,15 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import psycopg2
 import requests
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
 from langchain_ollama import OllamaLLM
+from sqlalchemy.dialects.postgresql import insert
+from sqlmodel import Session, create_engine
+
+from schema import Entity, Evidence, Paper, Relationship
 
 try:
     from medical_prompts import PROMPT_VERSIONS
@@ -244,13 +247,11 @@ class EntityDatabase:
 class PostgresDatabase:
     """
     SQL database for persisting the medical knowledge graph.
+    Uses SQLModel and the 'schema' package for strong typing.
     """
 
     def __init__(self, database_url: str):
-        self.database_url = database_url
-
-    def get_connection(self):
-        return psycopg2.connect(self.database_url)
+        self.engine = create_engine(database_url)
 
     def save_paper_results(self, output: Dict[str, Any]):
         """Save paper, entities, relationships, and evidence to PostgreSQL."""
@@ -260,61 +261,103 @@ class PostgresDatabase:
         entities = output["entities"]
         relationships = output["relationships"]
 
-        with self.get_connection() as conn:
-            with conn.cursor() as cur:
-                # 1. Upsert Paper
-                cur.execute(
-                    """
-                    INSERT INTO papers (id, title, abstract, entity_count, relationship_count)
-                    VALUES (%s, %s, %s, %s, %s)
-                    ON CONFLICT (id) DO UPDATE SET
-                        title = EXCLUDED.title,
-                        abstract = EXCLUDED.abstract,
-                        entity_count = EXCLUDED.entity_count,
-                        relationship_count = EXCLUDED.relationship_count
-                """,
-                    (paper_id, title, abstract, len(entities), len(relationships)),
+        timestamp = datetime.utcnow()
+
+        with Session(self.engine) as session:
+            # 1. Upsert Paper
+            # Note: authors field is list[str] -> Postgres ARRAY
+            paper_data = {
+                "id": paper_id,
+                "title": title,
+                "abstract": abstract,
+                "entity_count": len(entities),
+                "relationship_count": len(relationships),
+                "created_at": timestamp,
+                # "authors": []  # Add if available in output
+            }
+            stmt = insert(Paper).values(**paper_data)
+            stmt = stmt.on_conflict_do_update(
+                index_elements=["id"],
+                set_={
+                    "title": stmt.excluded.title,
+                    "abstract": stmt.excluded.abstract,
+                    "entity_count": stmt.excluded.entity_count,
+                    "relationship_count": stmt.excluded.relationship_count,
+                },
+            )
+            session.exec(stmt)
+
+            # 2. Upsert Entities
+            for entity in entities:
+                # Prepare embedding as JSON string if present
+                emb_val = entity.get("embedding")
+                if emb_val and isinstance(emb_val, list):
+                    emb_val = json.dumps(emb_val)
+
+                # Map ingestion entity dict to SQLModel fields
+                # id is the canonical_id from ingestion
+                entity_data = {
+                    "id": entity["id"],  # canonical_id
+                    "entity_type": entity["type"],
+                    "name": entity["name"],
+                    "embedding": emb_val,
+                    "updated_at": timestamp,
+                    "source": "extracted",
+                }
+
+                # We need to handle 'mentions' which was in the old SQL but not in the new SQLModel shown?
+                # The viewed Entity SQLModel DID NOT show a 'mentions' field.
+                # However, the old SQL had: mentions = mentions + 1.
+                # If the schema package doesn't have it, I can't sync it.
+                # I will adhere to the provided schema package definition.
+
+                stmt = insert(Entity).values(**entity_data)
+                stmt = stmt.on_conflict_do_update(
+                    index_elements=["id"],
+                    set_={
+                        "embedding": stmt.excluded.embedding,
+                        "updated_at": stmt.excluded.updated_at,
+                    },
                 )
+                session.exec(stmt)
 
-                # 2. Upsert Entities
-                for entity in entities:
-                    cur.execute(
-                        """
-                        INSERT INTO entities (id, entity_type, name, canonical_id, mentions, embedding)
-                        VALUES (%s, %s, %s, %s, 1, %s)
-                        ON CONFLICT (id) DO UPDATE SET
-                            mentions = entities.mentions + 1,
-                            embedding = EXCLUDED.embedding,
-                            updated_at = CURRENT_TIMESTAMP
-                    """,
-                        (entity["id"], entity["type"], entity["name"], entity["canonical_id"], entity.get("embedding")),
-                    )
+            # 3. Upsert Relationships and Evidence
+            for rel in relationships:
+                # Upsert Relationship
+                # Flatten the data to match Relationship model fields
+                rel_data = {
+                    "subject_id": rel["subject_id"],
+                    "object_id": rel["object_id"],
+                    "predicate": rel["predicate"],
+                    "confidence": rel["confidence"],
+                    "updated_at": timestamp,
+                    # Type-specific fields could be populated here if available
+                }
 
-                # 3. Upsert Relationships and Evidence
-                for rel in relationships:
-                    # Upsert Relationship
-                    cur.execute(
-                        """
-                        INSERT INTO relationships (subject_id, object_id, predicate, confidence)
-                        VALUES (%s, %s, %s, %s)
-                        ON CONFLICT (subject_id, object_id, predicate) DO UPDATE SET
-                            confidence = (relationships.confidence + EXCLUDED.confidence) / 2.0
-                        RETURNING id
-                    """,
-                        (rel["subject_id"], rel["object_id"], rel["predicate"], rel["confidence"]),
-                    )
-                    rel_id = cur.fetchone()[0]
+                # We can't easily return ID with SQLModel exec like raw SQL
+                # So we select it after upsert or use one statement.
 
-                    # Insert Evidence
-                    cur.execute(
-                        """
-                        INSERT INTO evidence (relationship_id, paper_id, section, text_span, confidence)
-                        VALUES (%s, %s, %s, %s, %s)
-                    """,
-                        (rel_id, paper_id, rel.get("section", "unknown"), rel.get("evidence", ""), rel["confidence"]),
-                    )
+                stmt = insert(Relationship).values(**rel_data)
+                stmt = stmt.on_conflict_do_update(
+                    index_elements=["subject_id", "object_id", "predicate"],
+                    set_={"confidence": stmt.excluded.confidence, "updated_at": stmt.excluded.updated_at},
+                ).returning(Relationship.id)
 
-            conn.commit()
+                result = session.exec(stmt)
+                rel_id = result.one()  # Should return the ID
+
+                # Insert Evidence
+                evidence_data = {
+                    "relationship_id": rel_id,
+                    "paper_id": paper_id,
+                    "section": rel.get("section", "unknown"),
+                    "text_span": rel.get("evidence", ""),
+                    "confidence": rel["confidence"],
+                    "created_at": timestamp,
+                }
+                session.add(Evidence(**evidence_data))
+
+            session.commit()
 
 
 class OllamaPaperPipeline:

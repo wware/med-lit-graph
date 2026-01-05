@@ -47,3 +47,6 @@ Thumbs.db
 
 # Ingestion Data
 ingestion/data/
+
+# Database data
+data/
