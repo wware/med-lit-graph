@@ -23,7 +23,6 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - "${POSTGRES_DATA_DIR:-./data/postgres}:/var/lib/postgresql/data"
-      - ./schema/migration.sql:/docker-entrypoint-initdb.d/init.sql
 
   ingest:
     build:

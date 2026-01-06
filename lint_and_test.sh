@@ -47,16 +47,16 @@ uv run pylint *.py tests/*.py || true  # Don't fail on pylint warnings
 
 echo ""
 echo "=========================================="
-echo "Starting Docker services (PostgreSQL & Redis)..."
+echo "Starting Docker services (PostgreSQL)..."
 echo "=========================================="
-docker compose up -d postgres redis
+docker compose up -d postgres
 
 # Wait for services to be healthy
 echo "Waiting for services to be ready..."
 timeout=60
 elapsed=0
 while [ $elapsed -lt $timeout ]; do
-    if docker compose ps postgres redis | grep -q "healthy"; then
+    if docker compose ps postgres | grep -q "healthy"; then
         echo "Services are ready!"
         break
     fi
@@ -66,7 +66,7 @@ while [ $elapsed -lt $timeout ]; do
 done
 
 # Check if services are actually ready
-if ! docker compose ps postgres redis | grep -q "healthy"; then
+if ! docker compose ps postgres | grep -q "healthy"; then
     echo "Warning: Services may not be fully ready, but continuing..."
 fi
 

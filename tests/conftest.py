@@ -322,6 +322,13 @@ def postgres_container():
         if not _wait_for_postgres(db_url):
             pytest.fail("PostgreSQL container failed to start")
 
+        # Set up the database schema using SQLModel
+        logger.info("Setting up database schema...")
+        from med_lit_schema.setup_database import setup_database
+
+        setup_database(db_url, skip_vector_index=True)  # Skip vector index for faster test setup
+        logger.info("Database schema setup complete")
+
         yield db_url
 
     finally:

@@ -2,6 +2,7 @@
 """
 Test that different neurodegenerative diseases don't match each other.
 """
+
 import tempfile
 from pathlib import Path
 import sys

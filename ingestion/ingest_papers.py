@@ -136,7 +136,9 @@ class EntityDatabase:
 
         # Use HuggingFace medical embeddings
         self.embeddings = HuggingFaceEmbeddings(
-            model_name=embedding_model, model_kwargs={"device": "cpu"}, encode_kwargs={"normalize_embeddings": True}  # Use 'cuda' if you have GPU  # Better for similarity search
+            model_name=embedding_model,
+            model_kwargs={"device": "cpu"},
+            encode_kwargs={"normalize_embeddings": True},  # Use 'cuda' if you have GPU  # Better for similarity search
         )
 
         # Initialize vector store
@@ -595,7 +597,7 @@ class OllamaPaperPipeline:
                     except Exception as pg_e:
                         print(f"  × PostgreSQL error: {pg_e}")
 
-                print(f"  ✓ Extracted {len(output['entities'])} entities, " f"{len(output['relationships'])} relationships")
+                print(f"  ✓ Extracted {len(output['entities'])} entities, {len(output['relationships'])} relationships")
                 print(f"  ✓ Pipeline ID: {self.tracker.generate_pipeline_id(provenance)}")
 
                 return output

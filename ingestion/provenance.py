@@ -92,7 +92,7 @@ class ProvenanceTracker:
             "execution": {
                 "timestamp": processing_start.isoformat() + "Z",
                 "hostname": os.uname().nodename,
-                "python_version": f"{sys.version_info.major}.{sys.version_info. minor}. {sys.version_info.micro}",
+                "python_version": f"{sys.version_info.major}.{sys.version_info.minor}. {sys.version_info.micro}",
                 "duration_seconds": duration,
             },
         }
@@ -116,7 +116,7 @@ class ProvenanceTracker:
             Unique pipeline identifier (short hash)
         """
         # Create a stable string representation of the pipeline config
-        pipeline_config = f"{provenance['extraction_pipeline']['git_commit_short']}_" f"{provenance['models']['llm']['name']}_" f"{provenance['prompt']['version']}"
+        pipeline_config = f"{provenance['extraction_pipeline']['git_commit_short']}_{provenance['models']['llm']['name']}_{provenance['prompt']['version']}"
 
         # Generate short hash
         pipeline_hash = hashlib.sha256(pipeline_config.encode()).hexdigest()[:8]
