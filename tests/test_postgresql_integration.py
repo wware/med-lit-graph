@@ -1,4 +1,6 @@
 import pytest
+from datetime import datetime
+from uuid import uuid4
 
 from tests.mini_server.query_executor import SQLQueryExecutor
 
@@ -12,9 +14,10 @@ def test_sql_query_executor(postgres_container):
     # 1. Manually insert some data
     with executor.get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("INSERT INTO entities (id, entity_type, name) VALUES (%s, %s, %s)", ("DRUG:aspirin", "drug", "Aspirin"))
-            cur.execute("INSERT INTO entities (id, entity_type, name) VALUES (%s, %s, %s)", ("DISEASE:headache", "disease", "Headache"))
-            cur.execute("INSERT INTO relationships (subject_id, object_id, predicate, confidence) VALUES (%s, %s, %s, %s)", ("DRUG:aspirin", "DISEASE:headache", "TREATS", 0.9))
+            cur.execute("INSERT INTO entities (id, entity_type, name, mentions, source) VALUES (%s, %s, %s, %s, %s)", ("DRUG:aspirin", "drug", "Aspirin", 0, "extracted"))
+            cur.execute("INSERT INTO entities (id, entity_type, name, mentions, source) VALUES (%s, %s, %s, %s, %s)", ("DISEASE:headache", "disease", "Headache", 0, "extracted"))
+            now = datetime.utcnow()
+            cur.execute("INSERT INTO relationships (id, subject_id, object_id, predicate, confidence, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s, %s)", (uuid4(), "DRUG:aspirin", "DISEASE:headache", "TREATS", 0.9, now, now))
         conn.commit()
 
     # 2. Run a node query
@@ -58,8 +61,12 @@ def test_vector_search(postgres_container):
         with conn.cursor() as cur:
             # Check if vector extension is enabled (should be by docker image)
             try:
-                cur.execute("INSERT INTO entities (id, entity_type, name, embedding) VALUES (%s, %s, %s, %s)", ("DRUG:v1", "drug", "Vector 1", v1))
-                cur.execute("INSERT INTO entities (id, entity_type, name, embedding) VALUES (%s, %s, %s, %s)", ("DRUG:v2", "drug", "Vector 2", v2))
+                # Format vectors as PostgreSQL vector strings: '[1,2,3]'
+                v1_str = "[" + ",".join(str(x) for x in v1) + "]"
+                v2_str = "[" + ",".join(str(x) for x in v2) + "]"
+                # Cast to vector type during insert
+                cur.execute("INSERT INTO entities (id, entity_type, name, embedding, mentions, source) VALUES (%s, %s, %s, %s::vector(768), %s, %s)", ("DRUG:v1", "drug", "Vector 1", v1_str, 0, "extracted"))
+                cur.execute("INSERT INTO entities (id, entity_type, name, embedding, mentions, source) VALUES (%s, %s, %s, %s::vector(768), %s, %s)", ("DRUG:v2", "drug", "Vector 2", v2_str, 0, "extracted"))
                 conn.commit()
             except Exception as e:
                 if 'extension "vector"' in str(e):
@@ -101,12 +108,13 @@ def test_path_query(postgres_container):
     # 1. Insert chain: drug -> protein -> gene
     with executor.get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("INSERT INTO entities (id, entity_type, name) VALUES (%s, %s, %s)", ("DRUG:metformin", "drug", "Metformin"))
-            cur.execute("INSERT INTO entities (id, entity_type, name) VALUES (%s, %s, %s)", ("PROTEIN:ampk", "protein", "AMPK"))
-            cur.execute("INSERT INTO entities (id, entity_type, name) VALUES (%s, %s, %s)", ("GENE:prkaa1", "gene", "PRKAA1"))
+            cur.execute("INSERT INTO entities (id, entity_type, name, mentions, source) VALUES (%s, %s, %s, %s, %s)", ("DRUG:metformin", "drug", "Metformin", 0, "extracted"))
+            cur.execute("INSERT INTO entities (id, entity_type, name, mentions, source) VALUES (%s, %s, %s, %s, %s)", ("PROTEIN:ampk", "protein", "AMPK", 0, "extracted"))
+            cur.execute("INSERT INTO entities (id, entity_type, name, mentions, source) VALUES (%s, %s, %s, %s, %s)", ("GENE:prkaa1", "gene", "PRKAA1", 0, "extracted"))
 
-            cur.execute("INSERT INTO relationships (subject_id, object_id, predicate) VALUES (%s, %s, %s)", ("DRUG:metformin", "PROTEIN:ampk", "activates"))
-            cur.execute("INSERT INTO relationships (subject_id, object_id, predicate) VALUES (%s, %s, %s)", ("PROTEIN:ampk", "GENE:prkaa1", "encoded_by"))
+            now = datetime.utcnow()
+            cur.execute("INSERT INTO relationships (id, subject_id, object_id, predicate, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s)", (uuid4(), "DRUG:metformin", "PROTEIN:ampk", "activates", now, now))
+            cur.execute("INSERT INTO relationships (id, subject_id, object_id, predicate, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s)", (uuid4(), "PROTEIN:ampk", "GENE:prkaa1", "encoded_by", now, now))
             conn.commit()
 
     # 2. Execute path query

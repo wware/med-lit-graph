@@ -324,6 +324,9 @@ def postgres_container():
 
         # Set up the database schema using SQLModel
         logger.info("Setting up database schema...")
+        # Import models first so they register with SQLModel.metadata
+        # Only import Entity and Relationship which are needed for these tests
+        from med_lit_schema import entity_sqlmodel, relationship_sqlmodel  # noqa: F401
         from med_lit_schema.setup_database import setup_database
 
         setup_database(db_url, skip_vector_index=True)  # Skip vector index for faster test setup

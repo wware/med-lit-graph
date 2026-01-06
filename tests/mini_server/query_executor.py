@@ -1109,20 +1109,26 @@ class SQLQueryExecutor:
         # Vector similarity search (pgvector)
         if node_pattern.get("vector_search"):
             vector = node_pattern["vector_search"]
+            # Format vector as PostgreSQL vector string: '[1,2,3]'
+            if isinstance(vector, list):
+                vector_str = "[" + ",".join(str(x) for x in vector) + "]"
+            else:
+                vector_str = str(vector)
             # pgvector uses <=> for cosine distance
             # Similarity = 1 - Distance
-            select_clause += f", (1 - ({var_name}.embedding <=> %s)) as similarity"
+            # Cast both column and parameter to vector(768) type
+            select_clause += f", (1 - ({var_name}.embedding::vector(768) <=> %s::vector(768))) as similarity"
 
             threshold = node_pattern.get("similarity_threshold")
             if threshold:
-                where_clauses.append(f"({var_name}.embedding <=> %s) <= %s")
-                params.append(str(vector))
+                where_clauses.append(f"({var_name}.embedding::vector(768) <=> %s::vector(768)) <= %s")
+                params.append(vector_str)
                 params.append(1.0 - threshold)
 
             # If no other order_by is specified, order by similarity
             if not order_by:
                 order_by = [["similarity", "desc"]]
-            params.insert(0, str(vector))
+            params.insert(0, vector_str)
 
         # Edge pattern filters (requires JOIN)
         if edge_pattern:
