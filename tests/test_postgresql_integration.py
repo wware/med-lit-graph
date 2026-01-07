@@ -17,7 +17,10 @@ def test_sql_query_executor(postgres_container):
             cur.execute("INSERT INTO entities (id, entity_type, name, mentions, source) VALUES (%s, %s, %s, %s, %s)", ("DRUG:aspirin", "drug", "Aspirin", 0, "extracted"))
             cur.execute("INSERT INTO entities (id, entity_type, name, mentions, source) VALUES (%s, %s, %s, %s, %s)", ("DISEASE:headache", "disease", "Headache", 0, "extracted"))
             now = datetime.utcnow()
-            cur.execute("INSERT INTO relationships (id, subject_id, object_id, predicate, confidence, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s, %s)", (uuid4(), "DRUG:aspirin", "DISEASE:headache", "TREATS", 0.9, now, now))
+            cur.execute(
+                "INSERT INTO relationships (id, subject_id, object_id, predicate, confidence, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                (uuid4(), "DRUG:aspirin", "DISEASE:headache", "TREATS", 0.9, now, now),
+            )
         conn.commit()
 
     # 2. Run a node query
@@ -65,8 +68,12 @@ def test_vector_search(postgres_container):
                 v1_str = "[" + ",".join(str(x) for x in v1) + "]"
                 v2_str = "[" + ",".join(str(x) for x in v2) + "]"
                 # Cast to vector type during insert
-                cur.execute("INSERT INTO entities (id, entity_type, name, embedding, mentions, source) VALUES (%s, %s, %s, %s::vector(768), %s, %s)", ("DRUG:v1", "drug", "Vector 1", v1_str, 0, "extracted"))
-                cur.execute("INSERT INTO entities (id, entity_type, name, embedding, mentions, source) VALUES (%s, %s, %s, %s::vector(768), %s, %s)", ("DRUG:v2", "drug", "Vector 2", v2_str, 0, "extracted"))
+                cur.execute(
+                    "INSERT INTO entities (id, entity_type, name, embedding, mentions, source) VALUES (%s, %s, %s, %s::vector(768), %s, %s)", ("DRUG:v1", "drug", "Vector 1", v1_str, 0, "extracted")
+                )
+                cur.execute(
+                    "INSERT INTO entities (id, entity_type, name, embedding, mentions, source) VALUES (%s, %s, %s, %s::vector(768), %s, %s)", ("DRUG:v2", "drug", "Vector 2", v2_str, 0, "extracted")
+                )
                 conn.commit()
             except Exception as e:
                 if 'extension "vector"' in str(e):
@@ -113,8 +120,14 @@ def test_path_query(postgres_container):
             cur.execute("INSERT INTO entities (id, entity_type, name, mentions, source) VALUES (%s, %s, %s, %s, %s)", ("GENE:prkaa1", "gene", "PRKAA1", 0, "extracted"))
 
             now = datetime.utcnow()
-            cur.execute("INSERT INTO relationships (id, subject_id, object_id, predicate, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s)", (uuid4(), "DRUG:metformin", "PROTEIN:ampk", "activates", now, now))
-            cur.execute("INSERT INTO relationships (id, subject_id, object_id, predicate, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s)", (uuid4(), "PROTEIN:ampk", "GENE:prkaa1", "encoded_by", now, now))
+            cur.execute(
+                "INSERT INTO relationships (id, subject_id, object_id, predicate, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s)",
+                (uuid4(), "DRUG:metformin", "PROTEIN:ampk", "activates", now, now),
+            )
+            cur.execute(
+                "INSERT INTO relationships (id, subject_id, object_id, predicate, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s)",
+                (uuid4(), "PROTEIN:ampk", "GENE:prkaa1", "encoded_by", now, now),
+            )
             conn.commit()
 
     # 2. Execute path query

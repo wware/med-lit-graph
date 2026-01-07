@@ -278,14 +278,25 @@ def http_medical_graph_client(mock_med_graph_server) -> MedicalGraphClient:
 # ============================================================================
 
 
-def _wait_for_postgres(db_url: str, retries: int = 30) -> bool:
+def _wait_for_postgres(db_url: str, retries: int = 60) -> bool:
     """Wait for postgres to be ready."""
-    for _ in range(retries):
+    logger = logging.getLogger(__name__)
+    last_error = None
+    for i in range(retries):
         try:
-            with psycopg2.connect(db_url):
+            with psycopg2.connect(db_url, connect_timeout=2):
+                logger.info(f"PostgreSQL is ready after {i+1} attempts")
                 return True
-        except psycopg2.OperationalError:
+        except psycopg2.OperationalError as e:
+            last_error = str(e)
+            if i % 10 == 0:  # Log every 10 attempts
+                logger.debug(f"Waiting for PostgreSQL... (attempt {i+1}/{retries}): {e}")
             time.sleep(1)
+        except Exception as e:
+            last_error = str(e)
+            logger.warning(f"Unexpected error connecting to PostgreSQL (attempt {i+1}/{retries}): {e}")
+            time.sleep(1)
+    logger.error(f"PostgreSQL failed to become ready after {retries} attempts. Last error: {last_error}")
     return False
 
 
@@ -294,66 +305,125 @@ def postgres_container():
     """
     Starts a PostgreSQL container with pgvector using docker-compose.
     Yields the database connection URL.
+
+    If running inside Docker (detected via /proc/self/cgroup), uses internal
+    service names. Otherwise, uses localhost with dynamic ports.
     """
-    # Find a free port
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(("", 0))
-        port = s.getsockname()[1]
+    # Check if we're running inside Docker
+    # More reliable check: look for docker in cgroup and check if /.dockerenv exists
+    in_docker = False
+    if os.path.exists("/.dockerenv"):
+        in_docker = True
+    elif os.path.exists("/proc/self/cgroup"):
+        try:
+            with open("/proc/self/cgroup", "r") as f:
+                if "docker" in f.read():
+                    in_docker = True
+        except Exception:
+            pass
 
-    # Create a temporary directory for data
-    # Use mkdtemp so we can control cleanup manually to handle Docker permissions
-    temp_data_dir = tempfile.mkdtemp()
+    if in_docker:
+        # Running in Docker - use internal service names
+        db_url = "postgresql://postgres:postgres@postgres:5432/medgraph"
+        logger = logging.getLogger(__name__)
+        logger.info("Running in Docker container, using internal service name 'postgres'")
 
-    db_url = f"postgresql://postgres:postgres@localhost:{port}/medgraph"
-
-    # Path to the docker-compose file in the root directory
-    docker_compose_file = Path(__file__).parent.parent / "docker-compose.yml"
-
-    # Start the container
-    logger = logging.getLogger(__name__)
-    logger.info(f"Starting PostgreSQL container on port {port} with data in {temp_data_dir}")
-
-    cmd = ["docker", "compose", "-f", str(docker_compose_file), "up", "-d", "postgres"]
-    env = {**os.environ, "POSTGRES_PORT": str(port), "POSTGRES_DATA_DIR": str(temp_data_dir)}
-
-    try:
-        subprocess.run(cmd, env=env, check=True, capture_output=True)
-
+        # Wait for postgres to be ready
         if not _wait_for_postgres(db_url):
             pytest.fail("PostgreSQL container failed to start")
 
         # Set up the database schema using SQLModel
         logger.info("Setting up database schema...")
-        # Import models first so they register with SQLModel.metadata
-        # Only import Entity and Relationship which are needed for these tests
         from med_lit_schema import entity_sqlmodel, relationship_sqlmodel  # noqa: F401
         from med_lit_schema.setup_database import setup_database
 
-        setup_database(db_url, skip_vector_index=True)  # Skip vector index for faster test setup
+        setup_database(db_url, skip_vector_index=True)
         logger.info("Database schema setup complete")
 
         yield db_url
+    else:
+        # Running on host - use dynamic ports and docker-compose with unique project name
+        # Use a unique project name to avoid conflicts with other test runs
+        import uuid
 
-    finally:
-        # Teardown
-        logger.info("Stopping PostgreSQL container")
-        down_cmd = ["docker", "compose", "-f", str(docker_compose_file), "down"]
-        subprocess.run(down_cmd, env=env, check=False, capture_output=True)
+        project_name = f"medlit-test-{uuid.uuid4().hex[:8]}"
 
-        # Cleanup data directory
-        # Docker creates files as root (or postgres user), which we can't delete directly.
-        # Use a docker container to remove the files first.
+        # Find a free port
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(("", 0))
+            port = s.getsockname()[1]
+
+        # Create a temporary directory for data
+        temp_data_dir = tempfile.mkdtemp()
+
+        db_url = f"postgresql://postgres:postgres@localhost:{port}/medgraph"
+
+        # Path to the docker-compose file in the root directory
+        docker_compose_file = Path(__file__).parent.parent / "docker-compose.yml"
+
+        # Start the container with unique project name
+        logger = logging.getLogger(__name__)
+        logger.info(f"Starting PostgreSQL container on port {port} with data in {temp_data_dir} (project: {project_name})")
+
+        cmd = ["docker", "compose", "-p", project_name, "-f", str(docker_compose_file), "up", "-d", "postgres"]
+        env = {**os.environ, "POSTGRES_PORT": str(port), "POSTGRES_DATA_DIR": str(temp_data_dir)}
+
         try:
-            cleanup_cmd = ["docker", "run", "--rm", "-v", f"{temp_data_dir}:/data", "alpine", "sh", "-c", "rm -rf /data/*"]
-            subprocess.run(cleanup_cmd, check=False, capture_output=True)
-        except Exception as e:
-            logger.warning(f"Failed to clean up docker files via container: {e}")
+            result = subprocess.run(cmd, env=env, check=False, capture_output=True, text=True)
+            if result.returncode != 0:
+                error_msg = result.stderr or result.stdout or "Unknown error"
+                logger.error(f"Failed to start container: {error_msg}")
+                logger.error(f"Command: {' '.join(cmd)}")
+                logger.error(f"Environment: POSTGRES_PORT={port}, POSTGRES_DATA_DIR={temp_data_dir}")
+                pytest.fail(f"PostgreSQL container failed to start: {error_msg}")
 
-        # Now remove the directory
-        try:
-            shutil.rmtree(temp_data_dir, ignore_errors=True)
-        except Exception as e:
-            logger.warning(f"Failed to remove temporary directory {temp_data_dir}: {e}")
+            # Wait for container to be running
+            for i in range(30):
+                status_cmd = ["docker", "compose", "-p", project_name, "-f", str(docker_compose_file), "ps", "postgres"]
+                status_result = subprocess.run(status_cmd, env=env, capture_output=True, text=True)
+                if "Up" in status_result.stdout:
+                    break
+                time.sleep(1)
+            else:
+                logger.warning("Container may not be fully started")
+
+            # Give PostgreSQL a moment to initialize
+            time.sleep(3)
+
+            if not _wait_for_postgres(db_url):
+                # Check container logs for debugging
+                logs_cmd = ["docker", "compose", "-p", project_name, "-f", str(docker_compose_file), "logs", "postgres"]
+                logs_result = subprocess.run(logs_cmd, env=env, capture_output=True, text=True)
+                logger.error(f"PostgreSQL container logs:\n{logs_result.stdout}\n{logs_result.stderr}")
+                pytest.fail("PostgreSQL container failed to start")
+
+            # Set up the database schema using SQLModel
+            logger.info("Setting up database schema...")
+            from med_lit_schema import entity_sqlmodel, relationship_sqlmodel  # noqa: F401
+            from med_lit_schema.setup_database import setup_database
+
+            setup_database(db_url, skip_vector_index=True)
+            logger.info("Database schema setup complete")
+
+            yield db_url
+
+        finally:
+            # Teardown
+            logger.info(f"Stopping PostgreSQL container (project: {project_name})")
+            down_cmd = ["docker", "compose", "-p", project_name, "-f", str(docker_compose_file), "down", "-v"]
+            subprocess.run(down_cmd, env=env, check=False, capture_output=True)
+
+            # Cleanup data directory
+            try:
+                cleanup_cmd = ["docker", "run", "--rm", "-v", f"{temp_data_dir}:/data", "alpine", "sh", "-c", "rm -rf /data/*"]
+                subprocess.run(cleanup_cmd, check=False, capture_output=True)
+            except Exception as e:
+                logger.warning(f"Failed to clean up docker files via container: {e}")
+
+            try:
+                shutil.rmtree(temp_data_dir, ignore_errors=True)
+            except Exception as e:
+                logger.warning(f"Failed to remove temporary directory {temp_data_dir}: {e}")
 
 
 ##############################

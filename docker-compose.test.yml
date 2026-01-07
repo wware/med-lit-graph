@@ -1,0 +1,66 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: med-lit-test-postgres
+    environment:
+      - POSTGRES_DB=medgraph
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    # No port mapping - only accessible within Docker network
+    volumes:
+      - "${POSTGRES_DATA_DIR:-./data/postgres-test}:/var/lib/postgresql/data"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d medgraph"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: med-lit-test-redis
+    command: >
+      redis-server
+      --save 60 1
+      --loglevel warning
+      --maxmemory 2gb
+      --maxmemory-policy allkeys-lru
+      --appendonly yes
+      --appendfsync everysec
+    # No port mapping - only accessible within Docker network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test-network
+
+  test-runner:
+    build:
+      context: .
+      dockerfile: tests/Dockerfile.test
+    container_name: med-lit-test-runner
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/medgraph
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - .:/app
+      - test-venv:/app/.venv
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - test-network
+    # Command can be overridden: docker compose -f docker-compose.test.yml run test-runner pytest tests/test_postgresql_integration.py
+    command: pytest tests/ -v
+
+networks:
+  test-network:
+    driver: bridge
+
+volumes:
+  test-venv:
