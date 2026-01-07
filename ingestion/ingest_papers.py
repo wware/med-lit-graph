@@ -40,7 +40,10 @@ from langchain_ollama import OllamaLLM
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import Session, create_engine
 
-from schema import Entity, Evidence, Paper, Relationship
+from med_lit_schema.entity_sqlmodel import Entity
+from med_lit_schema.evidence_sqlmodel import Evidence
+from med_lit_schema.paper_sqlmodel import Paper
+from med_lit_schema.relationship_sqlmodel import Relationship
 
 try:
     from medical_prompts import PROMPT_VERSIONS
@@ -291,10 +294,8 @@ class PostgresDatabase:
 
             # 2. Upsert Entities
             for entity in entities:
-                # Prepare embedding as JSON string if present
+                # Prepare embedding for pgvector
                 emb_val = entity.get("embedding")
-                if emb_val and isinstance(emb_val, list):
-                    emb_val = json.dumps(emb_val)
 
                 # Map ingestion entity dict to SQLModel fields
                 # id is the canonical_id from ingestion
@@ -305,6 +306,19 @@ class PostgresDatabase:
                     "embedding": emb_val,
                     "updated_at": timestamp,
                     "source": "extracted",
+                    "iao_id": entity.get("iao_id"),
+                    "sepio_id": entity.get("sepio_id"),
+                    "status": entity.get("status"),
+                    "obi_id": entity.get("obi_id"),
+                    "stato_id": entity.get("stato_id"),
+                    "strength": entity.get("strength"),
+                    "description": entity.get("description"),
+                    "predicts": json.dumps(entity.get("predicts")) if entity.get("predicts") else None,
+                    "assumptions": json.dumps(entity.get("assumptions")) if entity.get("assumptions") else None,
+                    "supports": json.dumps(entity.get("supports")) if entity.get("supports") else None,
+                    "refutes": json.dumps(entity.get("refutes")) if entity.get("refutes") else None,
+                    "evidence_items": json.dumps(entity.get("evidence_items")) if entity.get("evidence_items") else None,
+                    "evidence_level": entity.get("evidence_level"),
                 }
 
                 # We need to handle 'mentions' which was in the old SQL but not in the new SQLModel shown?
@@ -371,7 +385,7 @@ class OllamaPaperPipeline:
         output_dir: Path = Path("./data/papers"),
         entity_db_dir: Path = Path("./data/entity_db"),
         embedding_model: str = "microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext",
-        prompt_version: str = "v1_detailed",
+        prompt_version: str = "v4_scientific_method",
         database_url: Optional[str] = None,
     ):
         self.llm = OllamaLLM(model=model_name, base_url=os.getenv("OLLAMA_HOST", "http://localhost:11434"), temperature=0.1)  # Low temp for more consistent extraction

@@ -1,0 +1,161 @@
+wware@wware-Inspiron-5570:~/med-lit-graph/ingestion$ docker compose run ingest   python ingest_papers.py   --query "brca1 breast cancer" --limit 100 --model llama3.1:8b
+[+] Creating 3/3
+ ✔ Network ingestion_default       Created                                                                                                                              0.1s 
+ ✔ Container ingestion-ollama-1    Created                                                                                                                              0.1s 
+ ✔ Container ingestion-postgres-1  Running                                                                                                                              0.0s 
+[+] Running 1/1
+ ✔ Container ingestion-ollama-1  Started                                                                                                                                0.2s 
+Loading medical embeddings: microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext
+/app/ingest_papers.py:135: LangChainDeprecationWarning: The class `HuggingFaceEmbeddings` was deprecated in LangChain 0.2.2 and will be removed in 1.0. An updated version of the class exists in the `langchain-huggingface package and should be used instead. To use it run `pip install -U `langchain-huggingface` and import as `from `langchain_huggingface import HuggingFaceEmbeddings``.
+  self.embeddings = HuggingFaceEmbeddings(
+No sentence-transformers model found with name microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext. Creating a new one with mean pooling.
+config.json: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 385/385 [00:00<00:00, 1.05MB/s]
+pytorch_model.bin: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 440M/440M [01:13<00:00, 6.01MB/s]
+tokenizer_config.json: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████| 28.0/28.0 [00:00<00:00, 113kB/s]
+vocab.txt: 226kB [00:00, 4.75MB/s]                                                                                                                | 0.00/28.0 [00:00<?, ?B/s]
+/app/ingest_papers.py:143: LangChainDeprecationWarning: The class `Chroma` was deprecated in LangChain 0.2.9 and will be removed in 1.0. An updated version of the class exists in the `langchain-chroma package and should be used instead. To use it run `pip install -U `langchain-chroma` and import as `from `langchain_chroma import Chroma``.
+  self.db = Chroma(
+Connecting to PostgreSQL: postgresql://postgres:postgres@postgres:5432/medgraph
+Using LLM model: llama3.1:8b
+Using embeddings: microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext
+Using prompt: v1_detailed
+Found 100 papers for query: brca1 breast cancer
+
+[1/100] Processing PMC12292934...
+  Error: Request URL is missing an 'http://' or 'https://' protocol.
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/httpx/_transports/default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "/usr/local/lib/python3.12/site-packages/httpx/_transports/default.py", line 250, in handle_request
+    resp = self._pool.handle_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/httpcore/_sync/connection_pool.py", line 207, in handle_request
+    raise UnsupportedProtocol(
+httpcore.UnsupportedProtocol: Request URL is missing an 'http://' or 'https://' protocol.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/ingest_papers.py", line 509, in process_paper
+    extracted = self.extract_entities_with_ollama(paper_text, pmc_id)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/ingest_papers.py", line 407, in extract_entities_with_ollama
+    response = self.llm.invoke(prompt)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/langchain_core/language_models/llms.py", line 375, in invoke
+    self.generate_prompt(
+  File "/usr/local/lib/python3.12/site-packages/langchain_core/language_models/llms.py", line 786, in generate_prompt
+    return self.generate(prompt_strings, stop=stop, callbacks=callbacks, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/langchain_core/language_models/llms.py", line 1008, in generate
+    return self._generate_helper(
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/langchain_core/language_models/llms.py", line 812, in _generate_helper
+    self._generate(
+  File "/usr/local/lib/python3.12/site-packages/langchain_ollama/llms.py", line 456, in _generate
+    final_chunk = self._stream_with_aggregation(
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/langchain_ollama/llms.py", line 415, in _stream_with_aggregation
+    for stream_resp in self._create_generate_stream(prompt, stop, **kwargs):
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/langchain_ollama/llms.py", line 359, in _create_generate_stream
+    yield from self._client.generate(
+  File "/usr/local/lib/python3.12/site-packages/ollama/_client.py", line 174, in inner
+    with self._client.stream(*args, **kwargs) as r:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/httpx/_client.py", line 868, in stream
+    response = self.send(
+               ^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/httpx/_transports/default.py", line 249, in handle_request
+    with map_httpcore_exceptions():
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/contextlib.py", line 158, in __exit__
+    self.gen.throw(value)
+  File "/usr/local/lib/python3.12/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.UnsupportedProtocol: Request URL is missing an 'http://' or 'https://' protocol.
+
+[2/100] Processing PMC9537519...
+  Error: Request URL is missing an 'http://' or 'https://' protocol.
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/httpx/_transports/default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "/usr/local/lib/python3.12/site-packages/httpx/_transports/default.py", line 250, in handle_request
+    resp = self._pool.handle_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/httpcore/_sync/connection_pool.py", line 207, in handle_request
+    raise UnsupportedProtocol(
+httpcore.UnsupportedProtocol: Request URL is missing an 'http://' or 'https://' protocol.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/ingest_papers.py", line 509, in process_paper
+    extracted = self.extract_entities_with_ollama(paper_text, pmc_id)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/ingest_papers.py", line 407, in extract_entities_with_ollama
+    response = self.llm.invoke(prompt)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/langchain_core/language_models/llms.py", line 375, in invoke
+    self.generate_prompt(
+  File "/usr/local/lib/python3.12/site-packages/langchain_core/language_models/llms.py", line 786, in generate_prompt
+    return self.generate(prompt_strings, stop=stop, callbacks=callbacks, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/langchain_core/language_models/llms.py", line 1008, in generate
+    return self._generate_helper(
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/langchain_core/language_models/llms.py", line 812, in _generate_helper
+    self._generate(
+  File "/usr/local/lib/python3.12/site-packages/langchain_ollama/llms.py", line 456, in _generate
+    final_chunk = self._stream_with_aggregation(
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/langchain_ollama/llms.py", line 415, in _stream_with_aggregation
+    for stream_resp in self._create_generate_stream(prompt, stop, **kwargs):
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/langchain_ollama/llms.py", line 359, in _create_generate_stream
+    yield from self._client.generate(
+  File "/usr/local/lib/python3.12/site-packages/ollama/_client.py", line 174, in inner
+    with self._client.stream(*args, **kwargs) as r:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/httpx/_client.py", line 868, in stream
+    response = self.send(
+               ^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/httpx/_transports/default.py", line 249, in handle_request
+    with map_httpcore_exceptions():
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/contextlib.py", line 158, in __exit__
+    self.gen.throw(value)
+  File "/usr/local/lib/python3.12/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.UnsupportedProtocol: Request URL is missing an 'http://' or 'https://' protocol.
+

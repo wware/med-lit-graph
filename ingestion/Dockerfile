@@ -5,11 +5,16 @@ WORKDIR /app
 # Copy requirements and install dependencies
 COPY ingestion/requirements.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install langchain langchain-community langchain-ollama
+
 
 # Copy code preserving package structure
 COPY ingestion /app/ingestion
 COPY schema /app/schema
+
+# Install schema package
+WORKDIR /app/schema
+RUN pip install -e .
+WORKDIR /app
 
 # Set python path to allow absolute imports
 ENV PYTHONPATH=/app

@@ -1,0 +1,114 @@
+services:
+  ollama:
+    build:
+      context: .
+      dockerfile: Dockerfile.ollama
+    #ports:
+    #- "11434:11434"
+    environment:
+      - LANGUAGE_MODEL=${LANGUAGE_MODEL:-llama3.1:70b}
+    volumes:
+      # Use a host directory to persist Ollama models
+      - ~/ollama_data:/root/.ollama
+      # This line is optional. You can use it to mount pre-downloaded models.
+      # - ${OLLAMA_MODELS:-./models}:/models
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: medgraph
+      # Optional: set shared_buffers and work_mem for better performance
+      # POSTGRES_INITDB_ARGS: "-c shared_buffers=256MB -c work_mem=16MB"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      # Optional: mount initialization scripts
+      # - ./init-scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d medgraph"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - medlit-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: med-lit-redis
+    command: >
+      redis-server
+      --save 60 1
+      --loglevel warning
+      --maxmemory 2gb
+      --maxmemory-policy allkeys-lru
+      --appendonly yes
+      --appendfsync everysec
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+      # Optional: mount custom redis.conf
+      # - ./redis.conf:/usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - medlit-network
+
+  # Optional: Redis Commander for GUI management
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: med-lit-redis-commander
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - medlit-network
+    profiles:
+      - tools
+
+  ingest:
+    build:
+      context: ..
+      dockerfile: ingestion/Dockerfile
+    environment:
+      # The ingest script needs to know where the Ollama API is.
+      # 'ollama' is the service name in this docker-compose file.
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://ollama:11434}
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/medgraph
+    depends_on:
+      - ollama
+      - postgres
+    # 'command' is overridden by the command line arguments you provide.
+    # This default is just for documentation.
+    command: >
+      python ingest_papers.py
+      --query "search terms"
+      --limit 10
+      --model "llama3.1:70b"
+    networks:
+      - medlit-network
+
+volumes:
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+  pgadmin-data:
+    driver: local
+
+networks:
+  medlit-network:
+    driver: bridge
+

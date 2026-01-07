@@ -1,0 +1,50 @@
+wware@wware-Inspiron-5570:~/med-lit-graph/ingestion$ docker compose run --rm ingest python ingest_papers.py --query "brca1 breast cancer" --limit 5 --model llama3.1:8b
+WARN[0000] Found orphan containers ([ingestion-ingest-run-fb926aecaac9]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up. 
+[+] Creating 2/2
+ ✔ Container ingestion-ollama-1    Running                                                                                                                              0.0s 
+ ✔ Container ingestion-postgres-1  Running                                                                                                                              0.0s 
+Loading medical embeddings: microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext
+/app/ingest_papers.py:135: LangChainDeprecationWarning: The class `HuggingFaceEmbeddings` was deprecated in LangChain 0.2.2 and will be removed in 1.0. An updated version of the class exists in the `langchain-huggingface package and should be used instead. To use it run `pip install -U `langchain-huggingface` and import as `from `langchain_huggingface import HuggingFaceEmbeddings``.
+  self.embeddings = HuggingFaceEmbeddings(
+No sentence-transformers model found with name microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext. Creating a new one with mean pooling.
+config.json: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 385/385 [00:00<00:00, 2.16MB/s]
+pytorch_model.bin: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 440M/440M [01:12<00:00, 6.05MB/s]
+tokenizer_config.json: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████| 28.0/28.0 [00:00<00:00, 177kB/s]
+vocab.txt: 226kB [00:00, 5.51MB/s]                                                                                                                | 0.00/28.0 [00:00<?, ?B/s]
+/app/ingest_papers.py:143: LangChainDeprecationWarning: The class `Chroma` was deprecated in LangChain 0.2.9 and will be removed in 1.0. An updated version of the class exists in the `langchain-chroma package and should be used instead. To use it run `pip install -U `langchain-chroma` and import as `from `langchain_chroma import Chroma``.
+  self.db = Chroma(
+Connecting to PostgreSQL: postgresql://postgres:postgres@postgres:5432/medgraph
+Using LLM model: llama3.1:8b
+Using embeddings: microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext
+Using prompt: v1_detailed
+Found 5 papers for query: brca1 breast cancer
+
+[1/5] Processing PMC12292934...
+  Created new: S100P -> UniProt:P31151
+  Created new: BRCA1 -> HGNC:1146
+  Created new: Breast Cancer -> UMLS:C0011860
+  Created new: iPSC-MCs -> BIOMARKER:ipsc-mcs
+  Created new: BRCA1 mutation -> DISEASE:brca1_mutation
+  Warning: Object 'cancer stemness' not found in entities
+  × PostgreSQL error: connection to server at "postgres" (172.18.0.3), port 5432 failed: FATAL:  database "medgraph" does not exist
+
+  ✓ Extracted 5 entities, 2 relationships
+  ✓ Pipeline ID: pipeline_c304b362
+
+[2/5] Processing PMC9537519...
+  Found existing: BRCA1 -> HGNC:1146
+  Created new: BRCA2 -> HGNC:1144
+  Created new: SULT1A1 -> HGNC:1113
+  Created new: Copy number variants (CNVs) -> BIOMARKER:copy_number_variants_(cnvs)
+  Warning: Object 'breast cancer' not found in entities
+  Warning: Object 'breast cancer' not found in entities
+  Warning: Subject 'SULT1A1 deletions' not found in entities
+  Warning: Object 'breast cancer' not found in entities
+  Warning: Subject 'SULT1A1 deletions' not found in entities
+  Warning: Object 'reduced cellular proliferation and reduced DNA damage after treatment with DNA damaging agents' not found in entities
+  Warning: Object 'variable breast cancer risk in BRCA1 carriers' not found in entities
+  × PostgreSQL error: connection to server at "postgres" (172.18.0.3), port 5432 failed: FATAL:  database "medgraph" does not exist
+
+  ✓ Extracted 4 entities, 0 relationships
+  ✓ Pipeline ID: pipeline_c304b362
+
