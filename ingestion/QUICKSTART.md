@@ -33,6 +33,18 @@ Before running the pipeline, it's helpful to identify good search terms.
 3.  Filter for "Open Access" to ensure full text availability.
 4.  Note a few relevant PMC IDs (e.g., `PMC1234567`) or just keep your search query handy.
 
+### Using the get_pmcids.py script
+
+A helper script `get_pmcids.py` is provided to fetch a list of PMCIDs from the PubMed Central API based on a search query.
+
+**Example Usage:**
+
+To get 100 PMCIDs for the query `"metformin type 2 diabetes"` and save them to a file named `pmcids.txt`:
+
+```bash
+uv run python get_pmcids.py --query "metformin type 2 diabetes" --limit 100 > pmcids.txt
+```
+
 ## 2. Starting the Stack
 
 ### Option A: GPU-Accelerated (Recommended)
