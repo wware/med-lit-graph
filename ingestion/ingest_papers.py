@@ -361,16 +361,17 @@ class PostgresDatabase:
                 ).returning(Relationship.id)
 
                 result = session.exec(stmt)
-                rel_id = result.one()  # Should return the ID
+                # Use scalar_one() to get the single scalar value directly
+                rel_id = result.scalar_one()  # Should return the ID
 
                 # Insert Evidence
                 evidence_data = {
                     "relationship_id": rel_id,
                     "paper_id": paper_id,
-                    "section": rel.get("section", "unknown"),
+                    "evidence_type": "literature_evidence",  # Default evidence type
+                    "confidence_score": rel.get("confidence", 0.5), # Default confidence score if not provided
+                    "metadata_": rel.get("metadata", {}),
                     "text_span": rel.get("evidence", ""),
-                    "confidence": rel["confidence"],
-                    "created_at": timestamp,
                 }
                 session.add(Evidence(**evidence_data))
 
@@ -489,7 +490,8 @@ class OllamaPaperPipeline:
         response = re.sub(r'\n\s+\n', '\n', response)
 
         try:
-            extracted_data = json.loads(response)
+            import dirtyjson
+            extracted_data = dirtyjson.loads(response)
             extracted_data["paper_id"] = pmc_id
             extracted_data["title"] = paper_text["title"]
             extracted_data["abstract"] = paper_text["abstract"]
@@ -499,7 +501,7 @@ class OllamaPaperPipeline:
 
             return extracted_data
 
-        except json.JSONDecodeError as e:
+        except Exception as e:
             print(f"  Failed to parse LLM response: {e}")
             print(f"  Response preview: {response[:500]}")
             return None

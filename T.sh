@@ -1,6 +1,6 @@
 #!/bin/bash -xe
 cd ~/med-lit-graph/ingestion
-uv run docker compose down -v # Cleans up any old volumes and services
+uv run docker compose down # Cleans up any old volumes and services
 uv run docker compose build ingest # Rebuilds the ingest image to pick up requirements.txt changes
 uv run docker compose up -d postgres redis redis-commander # Starts the database and other services
 
@@ -22,4 +22,4 @@ uv run docker compose run ingest \
     --model llama3.1:8b
 
 # uv run pytest tests/test_postgresql_integration.py
-uv run docker compose down -v
+uv run docker compose down

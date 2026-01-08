@@ -11,3 +11,4 @@ langchain-ollama
 psycopg2-binary
 langchain-chroma>=1.1.0
 sqlmodel>=0.0.16
+dirtyjson
