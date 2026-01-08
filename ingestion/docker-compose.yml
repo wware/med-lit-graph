@@ -84,11 +84,10 @@ services:
       dockerfile: ingestion/Dockerfile
     environment:
       # The ingest script needs to know where the Ollama API is.
-      # 'ollama' is the service name in this docker-compose file.
-      - OLLAMA_HOST=${OLLAMA_HOST:-http://ollama:11434}
+      # Using cloud GPU Ollama server for faster processing
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://129.153.184.176:11434}
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/medgraph
     depends_on:
-      - ollama
       - postgres
     # 'command' is overridden by the command line arguments you provide.
     # This default is just for documentation.

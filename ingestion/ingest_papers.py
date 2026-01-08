@@ -385,7 +385,7 @@ class OllamaPaperPipeline:
         output_dir: Path = Path("./data/papers"),
         entity_db_dir: Path = Path("./data/entity_db"),
         embedding_model: str = "microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext",
-        prompt_version: str = "v4_scientific_method",
+        prompt_version: str = "v1_detailed",
         database_url: Optional[str] = None,
     ):
         self.llm = OllamaLLM(model=model_name, base_url=os.getenv("OLLAMA_HOST", "http://localhost:11434"), temperature=0.1)  # Low temp for more consistent extraction
@@ -472,6 +472,20 @@ class OllamaPaperPipeline:
         json_match = re.search(r"\{.*\}", response, re.DOTALL)
         if json_match:
             response = json_match.group(0)
+
+        # Strip JavaScript-style comments that LLMs sometimes add
+        # Remove single-line comments: // comment
+        response = re.sub(r'//[^\n]*', '', response)
+        # Remove multi-line comments: /* comment */
+        response = re.sub(r'/\*.*?\*/', '', response, flags=re.DOTALL)
+
+        # Clean up common JSON formatting issues from LLMs
+        # Remove trailing commas before closing brackets/braces
+        response = re.sub(r',(\s*[}\]])', r'\1', response)
+        # Remove multiple consecutive blank lines
+        response = re.sub(r'\n\s*\n\s*\n+', '\n\n', response)
+        # Remove blank lines that might cause parsing issues
+        response = re.sub(r'\n\s+\n', '\n', response)
 
         try:
             extracted_data = json.loads(response)

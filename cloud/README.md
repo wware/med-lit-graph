@@ -220,6 +220,65 @@ ssh ubuntu@<EC2_IP>
 nvidia-smi
 ```
 
+## Optimizing BioBERT Model Loading
+
+The BioBERT embedding model (`microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext`) is ~400MB and takes 5-10 minutes to download/load on first run. To avoid reloading it every time:
+
+### Solution: Cache the HuggingFace Models
+
+Add a volume mount to cache models between container restarts.
+
+**For local development** (in `ingestion/docker-compose.yml`):
+```yaml
+  ingest:
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+```
+
+**For cloud server**, pre-download the model:
+```bash
+# On cloud server (Lambda Labs or AWS)
+mkdir -p ~/huggingface_cache
+
+# Pre-download BioBERT model
+docker run --rm \
+  -v ~/huggingface_cache:/root/.cache/huggingface \
+  python:3.12-slim \
+  bash -c "pip install -q sentence-transformers && python -c \"from sentence_transformers import SentenceTransformer; SentenceTransformer('microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext')\""
+```
+
+Then mount it in docker-compose.yml:
+```yaml
+  ingest:
+    volumes:
+      - ~/huggingface_cache:/root/.cache/huggingface
+```
+
+### Performance Impact:
+- **Without cache**: 5-10 minutes loading time per container start
+- **With cache**: ~10-30 seconds loading time
+- **Recommendation**: Always cache models in production!
+
+### Alternative: Use a Lighter Embedding Model
+
+If BioBERT is too slow, consider switching to a lighter model in `ingest_papers.py`:
+
+```python
+# Option 1: Lighter general-purpose model (~80MB, very fast)
+model_name = "sentence-transformers/all-MiniLM-L6-v2"
+
+# Option 2: Nomic embeddings (~140MB, good quality)
+model_name = "nomic-embed-text"
+
+# Current: BioBERT (~400MB, best for medical text)
+model_name = "microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext"
+```
+
+Trade-offs:
+- **BioBERT**: Best medical domain accuracy, slowest loading
+- **Nomic**: Good general embeddings, faster
+- **MiniLM**: Fastest, but less medical-specific
+
 ## Cleanup
 
 **Important:** Don't forget to terminate the instance when done!
@@ -230,4 +289,7 @@ terraform destroy
 
 # Or via AWS Console
 # EC2 → Instances → Select instance → Instance State → Terminate
+
+# Via Lambda Labs Console
+# Instances → Select instance → Terminate
 ```
