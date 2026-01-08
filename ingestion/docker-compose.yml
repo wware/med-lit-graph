@@ -89,6 +89,8 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/medgraph
     depends_on:
       - postgres
+    volumes:
+      - hf-cache:/app/data/huggingface_cache
     # 'command' is overridden by the command line arguments you provide.
     # This default is just for documentation.
     command: >
@@ -105,6 +107,8 @@ volumes:
   redis-data:
     driver: local
   pgadmin-data:
+    driver: local
+  hf-cache:
     driver: local
 
 networks:

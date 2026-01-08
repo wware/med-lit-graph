@@ -240,8 +240,8 @@ Add a volume mount to cache models between container restarts.
 # On cloud server (Lambda Labs or AWS)
 mkdir -p ~/huggingface_cache
 
-# Pre-download BioBERT model
-docker run --rm \
+# Pre-download BioBERT model (do this on the cloud server, not locally)
+sudo docker run --rm \
   -v ~/huggingface_cache:/root/.cache/huggingface \
   python:3.12-slim \
   bash -c "pip install -q sentence-transformers && python -c \"from sentence_transformers import SentenceTransformer; SentenceTransformer('microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext')\""

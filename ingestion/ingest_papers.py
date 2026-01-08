@@ -28,13 +28,13 @@ import json
 import os
 import subprocess
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import requests
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_community.vectorstores import Chroma
+from langchain_huggingface.embeddings import HuggingFaceEmbeddings
+from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_ollama import OllamaLLM
 from sqlalchemy.dialects.postgresql import insert
@@ -105,7 +105,7 @@ def get_extraction_provenance(model_name: str, embedding_model: str, prompt_vers
             "template": "medical_extraction_prompt_v1",
         },
         "execution": {
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             "hostname": os.uname().nodename,
             "python_version": f"{os.sys.version_info.major}.{os.sys.version_info.minor}.{os.sys.version_info.micro}",
         },
@@ -140,6 +140,7 @@ class EntityDatabase:
         # Use HuggingFace medical embeddings
         self.embeddings = HuggingFaceEmbeddings(
             model_name=embedding_model,
+            cache_folder="./data/huggingface_cache",
             model_kwargs={"device": "cpu"},
             encode_kwargs={"normalize_embeddings": True},  # Use 'cuda' if you have GPU  # Better for similarity search
         )
@@ -266,7 +267,7 @@ class PostgresDatabase:
         entities = output["entities"]
         relationships = output["relationships"]
 
-        timestamp = datetime.utcnow()
+        timestamp = datetime.now(timezone.utc)
 
         with Session(self.engine) as session:
             # 1. Upsert Paper

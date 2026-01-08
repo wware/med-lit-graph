@@ -23,6 +23,7 @@ dependencies = [
     "chromadb>=0.4.0",
     "fastapi==0.115.5",
     "flake8-pyproject>=1.2.4",
+    "langchain-chroma>=0.2.6",
     "langchain-community>=0.0.20",
     "langchain[community,ollama]>=0.1.0",
     "med-lit-schema",
